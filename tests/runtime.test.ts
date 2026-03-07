@@ -30,6 +30,10 @@ function place(runtime: BattleRuntime, unitId: string, x: number, y: number): vo
   unit.defeated = false
 }
 
+function pointKey(x: number, y: number): string {
+  return `${x},${y}`
+}
+
 describe('Battle runtime', () => {
   it('orders turns by initiative speed', () => {
     const runtime = makeRuntime()
@@ -155,5 +159,31 @@ describe('Battle runtime', () => {
     })
 
     expect(runtime.state.phase).toBe('victory')
+  })
+
+  it('keeps the original move range available until an action is chosen', () => {
+    const runtime = makeRuntime()
+    setActive(runtime, 'rowan')
+
+    const originalRange = runtime.getReachableTiles('rowan')
+    const allowedPoints = originalRange.map((tile) => tile.point)
+    const originalKeys = new Set(originalRange.map((tile) => pointKey(tile.point.x, tile.point.y)))
+    const firstDestination = originalRange.find((tile) => tile.point.x === 3 && tile.point.y === 10)
+
+    expect(firstDestination).toBeDefined()
+    expect(runtime.repositionActiveUnit(firstDestination!.point, allowedPoints)).toBe(true)
+
+    const secondDestination = originalRange.find((tile) => tile.point.x === 1 && tile.point.y === 11)
+    expect(secondDestination).toBeDefined()
+    expect(runtime.repositionActiveUnit(secondDestination!.point, allowedPoints)).toBe(true)
+    expect(runtime.getUnit('rowan')?.position).toEqual(secondDestination!.point)
+
+    const expandedOnlyFromNewPosition = runtime
+      .getReachableTiles('rowan')
+      .find((tile) => !originalKeys.has(pointKey(tile.point.x, tile.point.y)))
+
+    expect(expandedOnlyFromNewPosition).toBeDefined()
+    expect(runtime.repositionActiveUnit(expandedOnlyFromNewPosition!.point, allowedPoints)).toBe(false)
+    expect(runtime.getUnit('rowan')?.position).toEqual(secondDestination!.point)
   })
 })

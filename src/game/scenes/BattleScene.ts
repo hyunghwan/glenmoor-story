@@ -1,4 +1,9 @@
 import Phaser from 'phaser'
+import {
+  buildInitiativeEntries,
+  resolveActiveTurnMode,
+  resolveIdleUnitSelection,
+} from '../battle-ui-model'
 import { classDefinitions, statusDefinitions, terrainDefinitions } from '../content'
 import { TILE_HEIGHT, TILE_WIDTH, tileDiamond, tileToWorld } from '../iso'
 import { I18n } from '../i18n'
@@ -15,6 +20,10 @@ import type {
   UnitState,
 } from '../types'
 
+function samePoint(left: GridPoint, right: GridPoint): boolean {
+  return left.x === right.x && left.y === right.y
+}
+
 export class BattleScene extends Phaser.Scene {
   private readonly uiBus: Phaser.Events.EventEmitter
   private readonly i18n: I18n
@@ -25,6 +34,7 @@ export class BattleScene extends Phaser.Scene {
   private hoveredPoint?: GridPoint
   private selectedUnitId?: string
   private mode: HudViewModel['mode'] = 'idle'
+  private moveRangeTiles: ReachableTile[] = []
   private reachableTiles: ReachableTile[] = []
   private targetOptions: ActionTarget[] = []
   private pendingAiDelayMs = 0
@@ -108,8 +118,7 @@ export class BattleScene extends Phaser.Scene {
     if (command === 'start-battle') {
       this.currentModal = undefined
       this.runtime.startBattle()
-      this.selectedUnitId = this.runtime.getActiveUnit().id
-      this.refreshPresentation()
+      this.syncPresentationFromActiveUnit(true)
       return
     }
 
@@ -129,10 +138,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (command === 'move') {
-      this.mode = 'move'
-      this.reachableTiles = this.runtime.getReachableTiles(active.id)
-      this.targetOptions = []
-      this.refreshPresentation()
+      this.enterMoveMode()
       return
     }
 
@@ -162,8 +168,14 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (command === 'cancel') {
-      this.mode = 'idle'
-      this.reachableTiles = []
+      const shouldRestoreMove =
+        (this.mode === 'attack' || this.mode === 'skill') &&
+        this.runtime.state.phase === 'active' &&
+        active.team === 'allies' &&
+        !active.hasActedThisTurn &&
+        this.moveRangeTiles.length > 0
+      this.mode = shouldRestoreMove ? 'move' : 'idle'
+      this.reachableTiles = shouldRestoreMove ? this.moveRangeTiles : []
       this.targetOptions = []
       this.refreshPresentation()
     }
@@ -216,29 +228,23 @@ export class BattleScene extends Phaser.Scene {
     this.runtime.state.messages = []
     this.runtime.state.phase = 'active'
     this.currentModal = undefined
-    this.mode = 'idle'
-    this.reachableTiles = []
-    this.targetOptions = []
 
     if (stage === 'engagement') {
       this.placeUnit('rowan', { x: 7, y: 8 }, 12)
       this.placeUnit('brigandCaptain', { x: 7, y: 7 }, 20)
       this.runtime.state.activeUnitId = 'rowan'
-      this.selectedUnitId = 'rowan'
     }
 
     if (stage === 'skill-demo') {
       this.placeUnit('maelin', { x: 8, y: 9 }, 20)
       this.placeUnit('brigandCaptain', { x: 8, y: 7 }, 24)
       this.runtime.state.activeUnitId = 'maelin'
-      this.selectedUnitId = 'maelin'
     }
 
     if (stage === 'push-demo') {
       this.placeUnit('rowan', { x: 0, y: 1 }, 30)
       this.placeUnit('brigandCaptain', { x: 0, y: 0 }, 24)
       this.runtime.state.activeUnitId = 'rowan'
-      this.selectedUnitId = 'rowan'
     }
 
     if (stage === 'victory-demo') {
@@ -248,12 +254,11 @@ export class BattleScene extends Phaser.Scene {
       this.placeUnit('rowan', { x: 7, y: 8 }, 18)
       this.placeUnit('brigandCaptain', { x: 7, y: 7 }, 5)
       this.runtime.state.activeUnitId = 'rowan'
-      this.selectedUnitId = 'rowan'
     }
 
     this.lastActiveUnitId = undefined
     this.pendingAiDelayMs = 0
-    this.refreshPresentation()
+    this.syncPresentationFromActiveUnit(true)
   }
 
   private resetBattle(): void {
@@ -262,16 +267,11 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.runtime.reset(this.mapData)
-    this.mode = 'idle'
-    this.reachableTiles = []
-    this.targetOptions = []
-    this.hoveredPoint = undefined
-    this.selectedUnitId = this.runtime.getActiveUnit().id
     this.currentModal = this.buildModal('briefing')
     this.lastActiveUnitId = undefined
     this.pendingAiDelayMs = 0
     this.syncUnits()
-    this.refreshPresentation()
+    this.syncPresentationFromActiveUnit(false)
   }
 
   private resolveAction(action: BattleAction): void {
@@ -305,14 +305,14 @@ export class BattleScene extends Phaser.Scene {
 
     if (this.runtime.state.phase === 'victory') {
       this.currentModal = this.buildModal('victory')
+      this.syncPresentationFromActiveUnit(false)
     } else if (this.runtime.state.phase === 'defeat') {
       this.currentModal = this.buildModal('defeat')
+      this.syncPresentationFromActiveUnit(false)
     } else {
       this.currentModal = undefined
-      this.selectedUnitId = this.runtime.getActiveUnit().id
+      this.syncPresentationFromActiveUnit(true)
     }
-
-    this.refreshPresentation()
   }
 
   private createTileInputs(): void {
@@ -326,10 +326,18 @@ export class BattleScene extends Phaser.Scene {
         const zone = this.add.zone(world.x, world.y, TILE_WIDTH * 0.72, TILE_HEIGHT * 0.78)
         zone.setInteractive({ useHandCursor: true })
         zone.on('pointerover', () => {
+          if (this.currentModal || this.mode === 'busy' || this.mode === 'move') {
+            return
+          }
+
           this.hoveredPoint = tile.point
           this.refreshPresentation()
         })
         zone.on('pointerout', () => {
+          if (this.currentModal || this.mode === 'busy' || this.mode === 'move') {
+            return
+          }
+
           this.hoveredPoint = undefined
           this.refreshPresentation()
         })
@@ -343,39 +351,31 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
-    if (this.mode === 'move') {
-      if (this.runtime.repositionActiveUnit(point)) {
-        this.mode = 'idle'
-        this.reachableTiles = []
-        this.selectedUnitId = this.runtime.getActiveUnit().id
-        this.syncUnits()
-      }
+    const occupant = this.findUnitAt(point)
 
-      this.refreshPresentation()
+    if (this.mode === 'move') {
+      this.handleMoveModeTileClick(point, occupant)
       return
     }
 
     if (this.mode === 'attack' || this.mode === 'skill') {
-      const occupant = this.findUnitAt(point)
-      const forecast = this.targetOptions.find((option) => option.unitId === occupant?.id)
-
-      if (forecast && occupant) {
-        this.resolveAction({
-          actorId: this.runtime.getActiveUnit().id,
-          kind: this.mode === 'attack' ? 'attack' : 'skill',
-          skillId:
-            this.mode === 'skill'
-              ? classDefinitions[this.runtime.getActiveUnit().classId].signatureSkillId
-              : undefined,
-          targetId: occupant.id,
-        })
+      if (occupant) {
+        this.handleTargetUnitClick(occupant)
       }
 
       return
     }
 
-    const occupant = this.findUnitAt(point)
-    this.selectedUnitId = occupant?.id ?? this.runtime.getActiveUnit().id
+    if (occupant) {
+      this.handleUnitClick(occupant)
+      return
+    }
+
+    if (!this.isPlayerTurnInteractive()) {
+      return
+    }
+
+    this.selectedUnitId = this.runtime.getActiveUnit().id
     this.refreshPresentation()
   }
 
@@ -470,7 +470,8 @@ export class BattleScene extends Phaser.Scene {
     const world = tileToWorld(unit.position, this.runtime!.state.map.tiles[unit.position.y][unit.position.x].height)
     const container = this.add.container(world.x, world.y - 16)
     const teamTint = unit.team === 'allies' ? 0x86baf7 : 0xf49274
-    const outline = unit.id === this.runtime?.state.activeUnitId ? 0xf5d18c : unit.id === this.selectedUnitId ? 0xffffff : 0x233341
+    const isActive = unit.id === this.runtime?.state.activeUnitId
+    const outline = isActive ? 0xf5d18c : unit.id === this.selectedUnitId ? 0xffffff : 0x233341
     const graphic = this.add.graphics()
 
     graphic.fillStyle(0x061015, 0.55)
@@ -479,6 +480,12 @@ export class BattleScene extends Phaser.Scene {
     graphic.fillRoundedRect(-20, -26, 40, 40, 12)
     graphic.lineStyle(2, outline, 1)
     graphic.strokeRoundedRect(-20, -26, 40, 40, 12)
+    if (isActive) {
+      graphic.lineStyle(3, 0xf7e7b0, 0.92)
+      graphic.strokeRoundedRect(-24, -30, 48, 48, 15)
+      graphic.lineStyle(2, 0xf0b35f, 0.8)
+      graphic.strokeEllipse(0, 24, 48, 18)
+    }
     graphic.fillStyle(0x10202c, 0.8)
     graphic.fillTriangle(0, -33, 7, -22, -7, -22)
 
@@ -496,7 +503,40 @@ export class BattleScene extends Phaser.Scene {
     hp.fillStyle(unit.team === 'allies' ? 0x7de0b4 : 0xff8e75, 1)
     hp.fillRoundedRect(-22, 22, 44 * hpRatio, 7, 3)
 
-    container.add([graphic, label, hp])
+    const markerObjects: Array<Phaser.GameObjects.Graphics | Phaser.GameObjects.Text> = []
+    if (isActive) {
+      const markerText = this.add
+        .text(0, -47, this.i18n.t('hud.initiative.now').toUpperCase(), {
+          fontFamily: 'Outfit',
+          fontSize: '11px',
+          color: '#081117',
+          fontStyle: '700',
+        })
+        .setOrigin(0.5)
+      const markerWidth = Math.max(40, markerText.width + 16)
+      const marker = this.add.graphics()
+      marker.fillStyle(0xf5d18c, 0.96)
+      marker.lineStyle(1, 0xf7f0dd, 0.95)
+      marker.fillRoundedRect(-markerWidth / 2, -56, markerWidth, 18, 9)
+      marker.strokeRoundedRect(-markerWidth / 2, -56, markerWidth, 18, 9)
+      markerObjects.push(marker, markerText)
+    }
+
+    graphic.setInteractive(new Phaser.Geom.Rectangle(-28, -40, 56, 80), Phaser.Geom.Rectangle.Contains)
+    graphic.on(
+      'pointerdown',
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation()
+        this.handleUnitClick(unit)
+      },
+    )
+
+    container.add([graphic, label, hp, ...markerObjects])
     container.setDepth(world.y + 160)
     return container
   }
@@ -514,12 +554,15 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.overlayGraphics.clear()
+    const active = this.runtime.getActiveUnit()
 
     for (const tile of this.reachableTiles) {
       const height = this.runtime.state.map.tiles[tile.point.y][tile.point.x].height
       const diamond = tileDiamond(tile.point, height)
-      this.overlayGraphics.fillStyle(0x67b9ff, tile.cost === 0 ? 0 : 0.18)
+      this.overlayGraphics.fillStyle(0x67b9ff, tile.cost === 0 ? 0.1 : 0.28)
       this.overlayGraphics.fillPoints(diamond, true)
+      this.overlayGraphics.lineStyle(tile.cost === 0 ? 2 : 1, tile.cost === 0 ? 0xf5d18c : 0x99d5ff, 0.74)
+      this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
     }
 
     for (const option of this.targetOptions) {
@@ -536,6 +579,13 @@ export class BattleScene extends Phaser.Scene {
       this.overlayGraphics.lineStyle(2, 0xf6dc9f, 1)
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
     }
+
+    const activeHeight = this.runtime.state.map.tiles[active.position.y][active.position.x].height
+    const activeDiamond = tileDiamond(active.position, activeHeight)
+    this.overlayGraphics.fillStyle(active.team === 'allies' ? 0xf0b35f : 0xff9b7b, this.mode === 'move' ? 0.12 : 0.18)
+    this.overlayGraphics.fillPoints(activeDiamond, true)
+    this.overlayGraphics.lineStyle(3, 0xf5d18c, 0.96)
+    this.overlayGraphics.strokePoints([...activeDiamond, activeDiamond[0]], true)
   }
 
   private publishHud(): void {
@@ -553,15 +603,27 @@ export class BattleScene extends Phaser.Scene {
       title: this.i18n.t('game.title'),
       objective: this.i18n.t(this.runtime.definition.objectiveKey),
       subtitle: this.i18n.t(this.runtime.definition.titleKey),
+      currentTurnLabel: this.i18n.t('hud.currentTurn'),
+      activeTeamLabel: this.i18n.t(`hud.team.${active.team}`),
       activeTeam: active.team,
       phase: this.runtime.state.phase,
       mode: this.mode,
       activeUnit: this.asUnitCard(active),
       selectedUnit: selected ? this.asUnitCard(selected) : undefined,
       forecastText: hoveredForecast ? this.describeForecast(hoveredForecast) : this.i18n.t(`hud.mode.${this.mode}`),
-      timeline: this.runtime
-        .getInitiativeOrder()
-        .map((unit) => `${this.i18n.t(unit.nameKey)} · ${this.i18n.t(classDefinitions[unit.classId].nameKey)}`),
+      initiative: buildInitiativeEntries(
+        this.runtime
+          .getInitiativeOrder(Object.values(this.runtime.state.units).filter((unit) => !unit.defeated).length)
+          .map((unit) => ({
+            id: unit.id,
+            name: this.i18n.t(unit.nameKey),
+            className: this.i18n.t(classDefinitions[unit.classId].nameKey),
+            team: unit.team,
+            active: unit.id === active.id,
+            selected: unit.id === this.selectedUnitId,
+          })),
+        this.i18n.t('hud.initiative.now'),
+      ),
       messages: this.runtime.state.messages.map((message) => this.translateMessage(message)),
       buttons: this.buildButtons(),
       modal: this.currentModal,
@@ -632,7 +694,12 @@ export class BattleScene extends Phaser.Scene {
       : []
 
     return [
-      { id: 'move', label: this.i18n.t('hud.action.move'), disabled: !interactive || active.hasMovedThisTurn, active: this.mode === 'move' },
+      {
+        id: 'move',
+        label: this.i18n.t('hud.action.move'),
+        disabled: !interactive || active.hasActedThisTurn || this.moveRangeTiles.length === 0,
+        active: this.mode === 'move',
+      },
       { id: 'attack', label: this.i18n.t('hud.action.attack'), disabled: !interactive || attackTargets.length === 0, active: this.mode === 'attack' },
       { id: 'skill', label: this.i18n.t('hud.action.skill'), disabled: !interactive || skillTargets.length === 0, active: this.mode === 'skill' },
       { id: 'wait', label: this.i18n.t('hud.action.wait'), disabled: !interactive, active: false },
@@ -741,5 +808,149 @@ export class BattleScene extends Phaser.Scene {
     unit.position = point
     unit.hp = Math.max(0, hp)
     unit.defeated = hp <= 0
+  }
+
+  private isPlayerTurnInteractive(): boolean {
+    return Boolean(
+      this.runtime &&
+        this.runtime.state.phase === 'active' &&
+        this.runtime.getActiveUnit().team === 'allies' &&
+        !this.currentModal &&
+        this.mode !== 'busy',
+    )
+  }
+
+  private enterMoveMode(): void {
+    if (!this.runtime || !this.isPlayerTurnInteractive()) {
+      return
+    }
+
+    const active = this.runtime.getActiveUnit()
+
+    if (active.hasActedThisTurn) {
+      return
+    }
+
+    if (this.moveRangeTiles.length === 0) {
+      this.moveRangeTiles = this.runtime.getReachableTiles(active.id)
+    }
+
+    this.selectedUnitId = active.id
+    this.mode = 'move'
+    this.reachableTiles = this.moveRangeTiles
+    this.targetOptions = []
+    this.refreshPresentation()
+  }
+
+  private syncPresentationFromActiveUnit(autoOpenMove: boolean): void {
+    if (!this.runtime) {
+      return
+    }
+
+    const active = this.runtime.getActiveUnit()
+    this.selectedUnitId = active.id
+    this.hoveredPoint = undefined
+    this.targetOptions = []
+    this.moveRangeTiles =
+      this.runtime.state.phase === 'active' && active.team === 'allies' && !active.hasActedThisTurn
+        ? this.runtime.getReachableTiles(active.id)
+        : []
+    this.mode = autoOpenMove
+      ? resolveActiveTurnMode({
+          phase: this.runtime.state.phase,
+          activeTeam: active.team,
+          activeHasMoved: active.hasMovedThisTurn,
+          activeHasActed: active.hasActedThisTurn,
+        })
+      : 'idle'
+    this.reachableTiles = this.mode === 'move' ? this.moveRangeTiles : []
+    this.refreshPresentation()
+  }
+
+  private handleUnitClick(unit: UnitState): void {
+    if (!this.runtime || this.currentModal || this.mode === 'busy') {
+      return
+    }
+
+    if (this.mode === 'move') {
+      return
+    }
+
+    if (this.mode === 'attack' || this.mode === 'skill') {
+      this.handleTargetUnitClick(unit)
+      return
+    }
+
+    const active = this.runtime.getActiveUnit()
+    const action = resolveIdleUnitSelection({
+      phase: this.runtime.state.phase,
+      mode: this.mode,
+      activeTeam: active.team,
+      activeUnitId: active.id,
+      clickedUnitId: unit.id,
+      activeHasMoved: active.hasMovedThisTurn,
+      activeHasActed: active.hasActedThisTurn,
+    })
+
+    if (action === 'ignore') {
+      return
+    }
+
+    this.selectedUnitId = unit.id
+    this.reachableTiles = []
+    this.targetOptions = []
+
+    if (action === 'enter-move') {
+      this.enterMoveMode()
+      return
+    }
+
+    this.refreshPresentation()
+  }
+
+  private handleMoveModeTileClick(point: GridPoint, occupant?: UnitState): void {
+    if (!this.runtime) {
+      return
+    }
+
+    const active = this.runtime.getActiveUnit()
+    const allowed = this.moveRangeTiles.map((tile) => tile.point)
+
+    if (occupant || samePoint(point, active.position)) {
+      return
+    }
+
+    if (this.runtime.repositionActiveUnit(point, allowed)) {
+      this.mode = 'move'
+      this.reachableTiles = this.moveRangeTiles
+      this.targetOptions = []
+      this.selectedUnitId = active.id
+      this.refreshPresentation()
+      return
+    }
+
+    this.refreshPresentation()
+  }
+
+  private handleTargetUnitClick(unit: UnitState): void {
+    if (!this.runtime || (this.mode !== 'attack' && this.mode !== 'skill')) {
+      return
+    }
+
+    const forecast = this.targetOptions.find((option) => option.unitId === unit.id)
+
+    if (!forecast) {
+      return
+    }
+
+    this.resolveAction({
+      actorId: this.runtime.getActiveUnit().id,
+      kind: this.mode === 'attack' ? 'attack' : 'skill',
+      skillId:
+        this.mode === 'skill'
+          ? classDefinitions[this.runtime.getActiveUnit().classId].signatureSkillId
+          : undefined,
+      targetId: unit.id,
+    })
   }
 }

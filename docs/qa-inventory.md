@@ -6,9 +6,12 @@ Any final signoff claim for the prototype must map back to one or more entries h
 ## User-Visible Claims To Sign Off On
 
 - The game boots into a polished single-battle prototype
+- The game fills the browser viewport on load instead of sitting inside a reduced framed card
 - The player can read a mission briefing, start the battle, and reach a victory or defeat result screen
 - The battlefield is isometric, readable, and visually differentiated by terrain
 - Initiative order, unit information, objective text, and combat forecast are visible in the HUD
+- The current active unit is visually obvious on both the map and the initiative HUD
+- After choosing a destination, move tiles remain visible until the player commits to `Attack`, `Skill`, or `Wait`
 - The player can move, attack, use a signature skill, wait, and cancel or reselect where appropriate
 - Every combat exchange opens a duel scene and returns to the battlefield without desync
 - English and Korean both render correctly for HUD and story-wrapper text
@@ -33,7 +36,9 @@ Any final signoff claim for the prototype must map back to one or more entries h
 
 - Battle starts in briefing state, then enters playable battle state
 - Active unit changes according to initiative order
-- Reachable move tiles update when unit selection changes
+- Allied turn start auto-opens reachable move tiles for the active unit
+- The original turn-start move range remains available after the first destination is chosen
+- Reachable move tiles clear when initiative passes to an enemy turn
 - Forecast updates when target or skill changes
 - HP, statuses, and facing update after an exchange
 - Push succeeds on valid tiles and fails cleanly at edges or blocked tiles
@@ -46,12 +51,15 @@ Any final signoff claim for the prototype must map back to one or more entries h
 ## Required Functional Checks
 
 - Start the battle from the briefing screen
+- Confirm the first allied turn auto-selects the active unit and opens move range immediately
+- Confirm the player can choose one move tile, then choose another move tile before committing an action
 - Complete at least one normal move plus basic attack flow
 - Complete at least one signature skill flow
 - Observe at least one counterattack
 - Observe at least one status application and one stacked-status case
 - Observe at least one successful push and one blocked push
 - Confirm initiative order advances after each committed turn
+- Confirm `Wait` selects the next initiative actor automatically, including enemy turns
 - Confirm AI chooses a meaningful action on its turn
 - Reach either victory or defeat and verify the result wrapper
 
@@ -61,8 +69,10 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - Smaller desktop pass at `1280x720`
 - Battlefield readability in the densest mid-battle state
 - HUD spacing, layering, and text legibility
+- Active-unit marker and initiative `Now` row remain easy to identify at a glance
 - Duel scene composition, readability, and transition quality
 - Briefing and result screen layout
+- Initial viewport fit for the gameplay shell, HUD, and controls with no clipped primary controls
 - English text fit
 - Korean text fit
 
@@ -89,8 +99,29 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - `output/web-game/playthrough/10-push-after.json`
 - `output/web-game/playthrough/11-victory.png`
 - `output/web-game/playthrough/11-victory.json`
+- `output/web-game/viewport-fit/desktop-1600x900-briefing.png`
+- `output/web-game/viewport-fit/desktop-1600x900-battle.png`
+- `output/web-game/viewport-fit/desktop-1280x720-briefing.png`
+- `output/web-game/viewport-fit/desktop-1280x720-battle.png`
+- `output/web-game/viewport-fit/desktop-1600x900.json`
+- `output/web-game/viewport-fit/desktop-1280x720.json`
+- `output/web-game/auto-active-turn/ally-turn-1600x900.png`
+- `output/web-game/auto-active-turn/ally-turn-1280x720.png`
+- `output/web-game/auto-active-turn/enemy-turn-1600x900.png`
+- `output/web-game/auto-active-turn/enemy-turn-1280x720.png`
+- `output/web-game/auto-active-turn/ally-turn-1600x900.json`
+- `output/web-game/auto-active-turn/after-first-wait.json`
+- `output/web-game/auto-active-turn/enemy-turn-1600x900.json`
+- `output/web-game/button-click-fix/state-0.json`
+- `output/web-game/move-retarget/01-turn-start.png`
+- `output/web-game/move-retarget/02-after-first-move.png`
+- `output/web-game/move-retarget/03-after-retarget.png`
+- `output/web-game/move-retarget/02-after-first-move.json`
+- `output/web-game/move-retarget/03-after-retarget.json`
 
 ## Current Gap
 
 - Tactical flows, locale rendering, duel presentation, blocked push handling, and victory wrapping are covered by artifacts plus automated tests.
-- A true pointer-driven Playwright pass is still pending because DOM click delivery was unreliable in the current session; `js_repl` has been enabled for the next Codex session to continue with `playwright-interactive`.
+- Auto-active turn presentation, briefing start, and provisional movement retargeting are now covered by screenshots plus state snapshots.
+- Tactical tile-selection regression checks still use the debug bridge instead of raw pointer choreography because it is faster and deterministic for scripted validation.
+- The viewport-fit regression for the fullscreen shell must be rechecked at `1600x900` and `1280x720` after any future HUD layout changes.

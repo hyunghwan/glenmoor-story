@@ -300,18 +300,30 @@ export interface HudActionButton {
   active: boolean
 }
 
+export interface InitiativeEntryViewModel {
+  id: string
+  name: string
+  className: string
+  team: Team
+  active: boolean
+  selected: boolean
+  order: string
+}
+
 export interface HudViewModel {
   locale: Locale
   title: string
   objective: string
   subtitle: string
+  currentTurnLabel: string
+  activeTeamLabel: string
   activeTeam: Team
   phase: BattleState['phase']
   mode: 'idle' | 'move' | 'attack' | 'skill' | 'busy'
   activeUnit?: UnitCardViewModel
   selectedUnit?: UnitCardViewModel
   forecastText?: string
-  timeline: string[]
+  initiative: InitiativeEntryViewModel[]
   messages: string[]
   buttons: HudActionButton[]
   modal?: {

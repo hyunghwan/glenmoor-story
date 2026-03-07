@@ -5,10 +5,60 @@ export class HudController {
   private readonly root: HTMLElement
   private readonly bus: Phaser.Events.EventEmitter
   private currentView?: HudViewModel
+  private suppressNextClick = false
+
+  private extractOrigin(event: Event): Element | undefined {
+    return event.target instanceof Element
+      ? event.target
+      : event.composedPath().find((node): node is Element => node instanceof Element)
+  }
+
+  private emitActionFromEvent(event: Event): boolean {
+    const origin = this.extractOrigin(event)
+    const command = origin?.closest<HTMLButtonElement>('[data-command]')?.dataset.command
+
+    if (command) {
+      this.bus.emit('hud:command', command)
+      return true
+    }
+
+    const locale = origin?.closest<HTMLButtonElement>('[data-locale]')?.dataset.locale as Locale | undefined
+
+    if (locale) {
+      this.bus.emit('hud:locale', locale)
+      return true
+    }
+
+    return false
+  }
+
+  private readonly handleRootPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0) {
+      return
+    }
+
+    if (this.emitActionFromEvent(event)) {
+      this.suppressNextClick = true
+      event.preventDefault()
+    }
+  }
+
+  private readonly handleRootClick = (event: MouseEvent) => {
+    if (this.suppressNextClick) {
+      this.suppressNextClick = false
+      return
+    }
+
+    if (this.emitActionFromEvent(event)) {
+      event.preventDefault()
+    }
+  }
 
   constructor(root: HTMLElement, bus: Phaser.Events.EventEmitter) {
     this.root = root
     this.bus = bus
+    this.root.addEventListener('pointerdown', this.handleRootPointerDown)
+    this.root.addEventListener('click', this.handleRootClick)
     this.bus.on('hud:update', (view: HudViewModel) => {
       this.currentView = view
       this.render()
@@ -59,6 +109,29 @@ export class HudController {
 
         <aside class="hud-panel hud-panel-right">
           <section class="hud-card">
+            <span class="hud-label">Initiative</span>
+            <div class="hud-turn-focus is-${view.activeTeam}">
+              <p class="hud-label">${view.currentTurnLabel}</p>
+              <strong>${activeUnit?.name ?? 'Unavailable'}</strong>
+              <span>${activeUnit ? `${activeUnit.className} · ${view.activeTeamLabel}` : view.activeTeamLabel}</span>
+            </div>
+            <div class="hud-initiative-list">
+              ${view.initiative
+                .map(
+                  (entry) => `
+                    <div class="hud-initiative-row ${entry.active ? 'is-active' : ''} ${entry.selected ? 'is-selected' : ''} is-${entry.team}">
+                      <span class="hud-initiative-order">${entry.order}</span>
+                      <div class="hud-initiative-body">
+                        <strong>${entry.name}</strong>
+                        <span>${entry.className}</span>
+                      </div>
+                    </div>
+                  `,
+                )
+                .join('')}
+            </div>
+          </section>
+          <section class="hud-card">
             <span class="hud-label">Commands</span>
             <div class="hud-actions">
               ${view.buttons
@@ -75,12 +148,6 @@ export class HudController {
           <section class="hud-card">
             <span class="hud-label">Forecast</span>
             <p class="hud-copy">${view.forecastText ?? 'Hover a target or choose a command.'}</p>
-          </section>
-          <section class="hud-card">
-            <span class="hud-label">Initiative</span>
-            <div class="hud-timeline">
-              ${view.timeline.map((entry) => `<span>${entry}</span>`).join('')}
-            </div>
           </section>
         </aside>
 
@@ -112,19 +179,6 @@ export class HudController {
         }
       </div>
     `
-
-    this.root.querySelectorAll<HTMLButtonElement>('[data-command]').forEach((button) => {
-      button.addEventListener('click', () => {
-        this.bus.emit('hud:command', button.dataset.command)
-      })
-    })
-
-    this.root.querySelectorAll<HTMLButtonElement>('[data-locale]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const locale = button.dataset.locale as Locale
-        this.bus.emit('hud:locale', locale)
-      })
-    })
   }
 
   private renderLocaleButton(locale: Locale, activeLocale: Locale): string {

@@ -738,14 +738,16 @@ export class BattleRuntime {
     return getReachableTilesForState(this.state, unitId)
   }
 
-  repositionActiveUnit(destination: GridPoint): boolean {
+  repositionActiveUnit(destination: GridPoint, allowedDestinations?: GridPoint[]): boolean {
     const actor = this.getActiveUnit()
 
-    if (!actor || actor.defeated || actor.hasMovedThisTurn || actor.hasActedThisTurn) {
+    if (!actor || actor.defeated || actor.hasActedThisTurn) {
       return false
     }
 
-    const reachable = this.getReachableTiles(actor.id).find((tile) => samePoint(tile.point, destination))
+    const reachable = allowedDestinations
+      ? allowedDestinations.find((point) => samePoint(point, destination))
+      : this.getReachableTiles(actor.id).find((tile) => samePoint(tile.point, destination))?.point
 
     if (!reachable) {
       return false
@@ -755,8 +757,6 @@ export class BattleRuntime {
       const previous = clonePoint(actor.position)
       actor.position = clonePoint(destination)
       actor.facing = directionFromTo(previous, destination)
-      actor.hasMovedThisTurn = true
-      addMessage(this.state, `move:${actor.id}`)
     }
 
     return true
