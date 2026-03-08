@@ -146,6 +146,25 @@ export class HudController {
             </div>
           </section>
           <section class="hud-card">
+            <span class="hud-label">${view.viewTitle}</span>
+            <div class="hud-view-status ${view.camera.panModeActive ? 'is-pan-active' : ''}">
+              <span>${view.camera.rotationLabel}</span>
+              <span>${view.camera.zoomLabel}</span>
+              <span>${view.camera.panLabel}</span>
+            </div>
+            <div class="hud-view-actions">
+              ${view.viewButtons
+                .map(
+                  (button) => `
+                  <button class="hud-button hud-button-compact ${button.active ? 'is-active' : ''}" data-command="${button.id}" ${button.disabled ? 'disabled' : ''}>
+                    ${button.label}
+                  </button>
+                `,
+                )
+                .join('')}
+            </div>
+          </section>
+          <section class="hud-card">
             <span class="hud-label">Forecast</span>
             <p class="hud-copy">${view.forecastText ?? 'Hover a target or choose a command.'}</p>
           </section>

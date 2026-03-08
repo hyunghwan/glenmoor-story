@@ -17,6 +17,10 @@ The canonical implementation log lives in `docs/progress.md`.
   - the active actor now has a stronger map marker plus a structured initiative queue with a dedicated current-turn readout
   - `Commence Battle` now responds to real pointer clicks reliably
   - after moving, the player can retarget to another tile inside the original move range until choosing `Attack`, `Skill`, or `Wait`
+  - the battle camera now supports `90°` rotation, wheel/HUD zoom, threshold drag pan, and an explicit `Pan` toggle
+  - battlefield clicks now route cleanly to Phaser because `hud-root` no longer intercepts canvas input
+  - move mode no longer lets oversized unit hitboxes block nearby destination tiles
+  - dedicated camera QA coverage now lives in `scripts/qa/camera-controls.mjs`
   - Vitest tactical coverage passes
   - Playwright QA artifacts are stored in `output/web-game/playthrough/`
   - fullscreen viewport-fit artifacts are stored in `output/web-game/viewport-fit/`
@@ -30,5 +34,6 @@ The canonical implementation log lives in `docs/progress.md`.
 - Keep docs English-first to match code and localization keys
 - Treat `docs/qa-inventory.md` as the shared checklist for future browser validation
 - Current Playwright limitation in this session:
-  - programmatic debug commands and screenshot capture work
-  - tile-selection regression checks still use the debug bridge because it is faster and deterministic for scripted tactical validation
+  - raw pointer choreography now covers rotated tile clicks, wheel zoom, drag pan, and pan toggle suppression
+  - the remaining debug assist is only `window.__glenmoorDebug.projectTile(x, y)`, which converts a logical tile into an exact browser click point for automation
+  - at `1280x720`, the lower `View` and `Forecast` cards live behind the right-panel's internal scroll area

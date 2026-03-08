@@ -12,6 +12,8 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - Initiative order, unit information, objective text, and combat forecast are visible in the HUD
 - The current active unit is visually obvious on both the map and the initiative HUD
 - After choosing a destination, move tiles remain visible until the player commits to `Attack`, `Skill`, or `Wait`
+- The player can rotate the battlefield in `90°` steps, zoom in/out, and pan without breaking tile interaction
+- HUD camera tools mirror the same view state as mouse-wheel zoom and drag pan
 - The player can move, attack, use a signature skill, wait, and cancel or reselect where appropriate
 - Every combat exchange opens a duel scene and returns to the battlefield without desync
 - English and Korean both render correctly for HUD and story-wrapper text
@@ -31,6 +33,14 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - Click locale switch
 - Click briefing start button
 - Click result screen restart or return button if implemented
+- Spin the mouse wheel to zoom in and out
+- Drag the battlefield beyond the pan threshold
+- Click HUD camera buttons:
+  - Rotate Left
+  - Rotate Right
+  - Zoom In
+  - Zoom Out
+  - Pan
 
 ## State Changes To Verify
 
@@ -47,12 +57,21 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - Battle exits to victory when all enemies are down
 - Battle exits to defeat if all allies are down
 - Locale swap updates all supported visible text
+- Camera telemetry updates when the board is rotated, zoomed, or panned
+- Rotated tile clicks still resolve against the visible board at `90°`, `180°`, and `270°`
+- Pan mode suppresses tactical tile clicks while still allowing camera movement
+- Restarting the battle resets rotation, zoom, and pan state
 
 ## Required Functional Checks
 
 - Start the battle from the briefing screen
 - Confirm the first allied turn auto-selects the active unit and opens move range immediately
 - Confirm the player can choose one move tile, then choose another move tile before committing an action
+- Rotate the battlefield to `90°`, `180°`, and `270°` and confirm the active unit can still retarget using visible tiles
+- Use the mouse wheel and HUD zoom controls to change zoom without breaking selection
+- Drag beyond the camera threshold and confirm the board pans instead of triggering a tactical click
+- Toggle `Pan` and confirm map clicks stop changing tactical state until `Pan` is turned back off
+- Restart the battle and confirm the camera resets to its default state
 - Complete at least one normal move plus basic attack flow
 - Complete at least one signature skill flow
 - Observe at least one counterattack
@@ -73,6 +92,8 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - Duel scene composition, readability, and transition quality
 - Briefing and result screen layout
 - Initial viewport fit for the gameplay shell, HUD, and controls with no clipped primary controls
+- Rotated move overlays remain aligned with the visible terrain and unit positions
+- Zoomed and panned views remain readable and keep tile targeting aligned
 - English text fit
 - Korean text fit
 
@@ -118,10 +139,19 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - `output/web-game/move-retarget/03-after-retarget.png`
 - `output/web-game/move-retarget/02-after-first-move.json`
 - `output/web-game/move-retarget/03-after-retarget.json`
+- `output/web-game/camera-controls/01-battle-1600x900.png`
+- `output/web-game/camera-controls/02-rotated-1600x900.png`
+- `output/web-game/camera-controls/03-zoom-pan-1600x900.png`
+- `output/web-game/camera-controls/04-pan-mode-1600x900.png`
+- `output/web-game/camera-controls/05-restart-reset-1600x900.json`
+- `output/web-game/camera-controls/06-rotated-1280x720.png`
+- `output/web-game/camera-controls/06-rotated-1280x720.json`
+- `output/web-game/camera-controls-smoke-final/state-0.json`
 
 ## Current Gap
 
 - Tactical flows, locale rendering, duel presentation, blocked push handling, and victory wrapping are covered by artifacts plus automated tests.
 - Auto-active turn presentation, briefing start, and provisional movement retargeting are now covered by screenshots plus state snapshots.
-- Tactical tile-selection regression checks still use the debug bridge instead of raw pointer choreography because it is faster and deterministic for scripted validation.
+- Raw pointer camera and rotated tile-selection checks are now covered; the remaining debug assist is only the tile-projection helper that converts logical tiles into browser click coordinates for automation.
 - The viewport-fit regression for the fullscreen shell must be rechecked at `1600x900` and `1280x720` after any future HUD layout changes.
+- At `1280x720`, the lower `View` and `Forecast` cards are reachable through the right-panel's internal scroll area rather than fitting fully in the first visible panel frame.

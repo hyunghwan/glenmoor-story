@@ -41,6 +41,16 @@ This is the canonical implementation log for `Glenmoor Story`.
   - the unit can be retargeted to another tile inside the original turn-start move range
   - pressing `attack` or `skill` hides move tiles, and `cancel` restores them for repositioning
   - pressing `wait` finalizes the turn and advances initiative as before
+- Added battle camera controls for crowded maps:
+  - `Rotate Left` and `Rotate Right` now re-project the battlefield in `90°` steps without changing logical grid coordinates
+  - mouse-wheel zoom and HUD zoom buttons share the same clamped camera zoom path
+  - drag-to-pan now activates after a short threshold, and the `Pan` toggle forces camera-only drag behavior
+  - battle restart resets rotation, zoom, and pan mode back to defaults
+- Fixed the underlying pointer-routing issues that blocked reliable board interaction:
+  - `hud-root` no longer intercepts battlefield clicks meant for the canvas
+  - tile zones now stop propagation before the full-battlefield pan catcher can overwrite the clicked tile candidate
+  - unit hit areas are disabled during move mode so nearby destination tiles stay clickable
+- Added camera-specific browser QA coverage in `scripts/qa/camera-controls.mjs`
 
 ### Verification
 
@@ -83,13 +93,27 @@ This is the canonical implementation log for `Glenmoor Story`.
     - `output/web-game/move-retarget/03-after-retarget.png`
     - `output/web-game/move-retarget/02-after-first-move.json`
     - `output/web-game/move-retarget/03-after-retarget.json`
+- Camera-control verification now passes with fresh evidence:
+  - real pointer clicks still retarget the active unit after `90°`, `180°`, and `270°` rotations
+  - mouse-wheel zoom and drag pan update camera telemetry and keep overlays aligned
+  - `Pan` mode suppresses tactical tile clicks until the toggle is turned back off
+  - battle restart resets camera state to `rotation=0`, `zoom=1`, and `panModeActive=false`
+  - artifacts:
+    - `output/web-game/camera-controls/01-battle-1600x900.png`
+    - `output/web-game/camera-controls/02-rotated-1600x900.png`
+    - `output/web-game/camera-controls/03-zoom-pan-1600x900.png`
+    - `output/web-game/camera-controls/04-pan-mode-1600x900.png`
+    - `output/web-game/camera-controls/05-restart-reset-1600x900.json`
+    - `output/web-game/camera-controls/06-rotated-1280x720.png`
+    - `output/web-game/camera-controls/06-rotated-1280x720.json`
+    - `output/web-game/camera-controls-smoke-final/state-0.json`
 
 ### Next Steps
 
 - Sync the implementation backlog into GitHub Project items and keep those cards updated as scope changes
 - Restart Codex in a new session so `js_repl` is available for persistent `playwright-interactive`
 - Replace placeholder generated visuals/audio with curated open-source packs when the concept stabilizes
-- Extend pointer-driven browser coverage from HUD buttons into fully scripted tile-selection and action-confirmation passes
+- Extend raw-pointer browser coverage from camera + tile retargeting into complete attack / skill confirmation flows
 
 ### Notes
 
@@ -97,4 +121,5 @@ This is the canonical implementation log for `Glenmoor Story`.
 - Keep GitHub Project items synchronized with actual implementation status, not aspirational status
 - Do not let the prototype expand into campaign systems
 - Headless Playwright `page.click()` on the briefing button now succeeds after the HUD input-path fix
-- Gameplay-state QA for movement retargeting still uses the debug bridge for tile selection because it is faster and deterministic for scripted regression checks
+- Camera QA now uses real pointer clicks for movement, rotation, zoom, and pan; the only remaining debug assist is the tile-projection helper that converts logical tiles into browser click coordinates
+- At `1280x720`, the lower `View` and `Forecast` cards rely on the right-panel's internal scroll area rather than fitting fully above the fold

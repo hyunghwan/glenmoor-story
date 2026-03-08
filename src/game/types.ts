@@ -310,6 +310,15 @@ export interface InitiativeEntryViewModel {
   order: string
 }
 
+export interface BattleCameraViewModel {
+  rotationDegrees: number
+  zoomPercent: number
+  panModeActive: boolean
+  rotationLabel: string
+  zoomLabel: string
+  panLabel: string
+}
+
 export interface HudViewModel {
   locale: Locale
   title: string
@@ -323,6 +332,9 @@ export interface HudViewModel {
   activeUnit?: UnitCardViewModel
   selectedUnit?: UnitCardViewModel
   forecastText?: string
+  viewTitle: string
+  camera: BattleCameraViewModel
+  viewButtons: HudActionButton[]
   initiative: InitiativeEntryViewModel[]
   messages: string[]
   buttons: HudActionButton[]

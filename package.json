@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "qa:playthrough": "node scripts/qa/playthrough.mjs"
+    "qa:playthrough": "node scripts/qa/playthrough.mjs",
+    "qa:camera": "node scripts/qa/camera-controls.mjs"
   },
   "dependencies": {
     "phaser": "^3.90.0"
