@@ -76,111 +76,85 @@ export class HudController {
       return
     }
 
-    const activeUnit = view.activeUnit
-    const selectedUnit = view.selectedUnit
+    const statusItems = [
+      view.statusLine.objectiveLabel,
+      view.statusLine.modeLabel,
+      view.statusLine.logLabel,
+    ].filter((item, index, items) => item && items.indexOf(item) === index)
 
     this.root.innerHTML = `
       <div class="hud-overlay ${view.mode === 'busy' ? 'is-busy' : ''}">
-        <div class="hud-brand">
-          <div>
-            <p class="hud-eyebrow">Prototype Vertical Slice</p>
-            <h1>${view.title}</h1>
+        <div class="hud-topbar">
+          <section class="hud-view-cluster hud-card" aria-label="${view.viewControls.label}">
+            <div class="hud-view-actions">
+              ${view.viewControls.buttons
+                .map(
+                  (button) => `
+                    <button
+                      class="hud-icon-button ${button.active ? 'is-active' : ''}"
+                      data-command="${button.id}"
+                      title="${button.label}"
+                      aria-label="${button.label}"
+                      ${button.disabled ? 'disabled' : ''}
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">${button.icon}</span>
+                    </button>
+                  `,
+                )
+                .join('')}
+            </div>
+          </section>
+
+          <div class="hud-status-line hud-card">
+            <span class="hud-status-tag">${view.statusLine.phaseLabel}</span>
+            <div class="hud-status-columns is-inline">
+              ${statusItems
+                .map(
+                  (item) => `
+                    <p><span>${item}</span></p>
+                  `,
+                )
+                .join('')}
+            </div>
           </div>
+
           <div class="hud-locales">
             ${this.renderLocaleButton('en', view.locale)}
             ${this.renderLocaleButton('ko', view.locale)}
           </div>
         </div>
 
-        <aside class="hud-panel hud-panel-left">
-          <section class="hud-card">
-            <span class="hud-label">${view.objective}</span>
-            <h2>${view.subtitle}</h2>
-          </section>
-          <section class="hud-card">
-            <span class="hud-label">Active Unit</span>
-            ${activeUnit ? this.renderUnitCard(activeUnit) : '<p class="hud-empty">No active unit</p>'}
-          </section>
-          <section class="hud-card">
-            <span class="hud-label">Selection</span>
-            ${selectedUnit ? this.renderUnitCard(selectedUnit) : '<p class="hud-empty">No selected unit</p>'}
-          </section>
-        </aside>
+        ${this.renderFloatingCommandMenu(view)}
+        ${this.renderTargetMarkers(view)}
+        ${this.renderTargetDetail(view)}
 
-        <aside class="hud-panel hud-panel-right">
-          <section class="hud-card">
-            <span class="hud-label">Initiative</span>
-            <div class="hud-turn-focus is-${view.activeTeam}">
-              <p class="hud-label">${view.currentTurnLabel}</p>
-              <strong>${activeUnit?.name ?? 'Unavailable'}</strong>
-              <span>${activeUnit ? `${activeUnit.className} · ${view.activeTeamLabel}` : view.activeTeamLabel}</span>
-            </div>
-            <div class="hud-initiative-list">
-              ${view.initiative
-                .map(
-                  (entry) => `
-                    <div class="hud-initiative-row ${entry.active ? 'is-active' : ''} ${entry.selected ? 'is-selected' : ''} is-${entry.team}">
-                      <span class="hud-initiative-order">${entry.order}</span>
-                      <div class="hud-initiative-body">
-                        <strong>${entry.name}</strong>
-                        <span>${entry.className}</span>
+        <div class="hud-bottom-shell">
+          <div class="hud-bottom-band">
+            ${view.activeUnitPanel ? this.renderActiveUnitPanel(view.activeUnitPanel) : ''}
+            <section class="hud-initiative-rail hud-card">
+              <div class="hud-initiative-head">
+                <span class="hud-label">${view.initiativeRail.label}</span>
+                <span class="hud-initiative-now">${view.initiativeRail.currentTurnLabel}</span>
+              </div>
+              <div class="hud-initiative-strip">
+                ${view.initiativeRail.entries
+                  .map(
+                    (entry) => `
+                      <div class="hud-initiative-chip is-${entry.team} is-${entry.emphasis}">
+                        <span class="hud-initiative-order">${entry.orderLabel}</span>
+                        <span class="hud-initiative-token">${entry.initials}</span>
+                        <div class="hud-initiative-meta">
+                          <strong>${entry.name}</strong>
+                          <span>${entry.className}</span>
+                        </div>
                       </div>
-                    </div>
-                  `,
-                )
-                .join('')}
-            </div>
-          </section>
-          <section class="hud-card">
-            <span class="hud-label">Commands</span>
-            <div class="hud-actions">
-              ${view.buttons
-                .map(
-                  (button) => `
-                  <button class="hud-button ${button.active ? 'is-active' : ''}" data-command="${button.id}" ${button.disabled ? 'disabled' : ''}>
-                    ${button.label}
-                  </button>
-                `,
-                )
-                .join('')}
-            </div>
-          </section>
-          <section class="hud-card">
-            <span class="hud-label">${view.viewTitle}</span>
-            <div class="hud-view-status ${view.camera.panModeActive ? 'is-pan-active' : ''}">
-              <span>${view.camera.rotationLabel}</span>
-              <span>${view.camera.zoomLabel}</span>
-              <span>${view.camera.panLabel}</span>
-            </div>
-            <div class="hud-view-actions">
-              ${view.viewButtons
-                .map(
-                  (button) => `
-                  <button class="hud-button hud-button-compact ${button.active ? 'is-active' : ''}" data-command="${button.id}" ${button.disabled ? 'disabled' : ''}>
-                    ${button.label}
-                  </button>
-                `,
-                )
-                .join('')}
-            </div>
-          </section>
-          <section class="hud-card">
-            <span class="hud-label">Forecast</span>
-            <div class="hud-forecast-lines">
-              ${view.forecastLines.map((line) => `<p class="hud-copy">${line}</p>`).join('')}
-            </div>
-          </section>
-        </aside>
-
-        <section class="hud-feed hud-card">
-          <div class="hud-feed-header">
-            <span class="hud-label">Battle Feed</span>
-            <span class="hud-feed-phase">${view.phase.toUpperCase()}</span>
+                    `,
+                  )
+                  .join('')}
+              </div>
+            </section>
           </div>
-          <div class="hud-feed-messages">
-            ${view.messages.map((message) => `<p>${message}</p>`).join('')}
-          </div>
-        </section>
+        </div>
 
         ${
           view.modal
@@ -210,30 +184,132 @@ export class HudController {
     `
   }
 
-  private renderUnitCard(unit: HudViewModel['activeUnit']): string {
-    if (!unit) {
-      return '<p class="hud-empty">Unavailable</p>'
+  private renderActiveUnitPanel(unit: NonNullable<HudViewModel['activeUnitPanel']>): string {
+    const hpPercent = Math.max(0, Math.min(100, Math.round(unit.hpRatio * 100)))
+    const labels =
+      this.currentView?.locale === 'ko'
+        ? { move: '이동', action: '행동', tile: '타일', facing: '방향' }
+        : { move: 'Move', action: 'Action', tile: 'Tile', facing: 'Facing' }
+
+    return `
+      <section class="hud-active-card hud-card is-${unit.team}">
+        <div class="hud-active-crest">
+          <span>${unit.initials}</span>
+        </div>
+        <div class="hud-active-body">
+          <div class="hud-active-head">
+            <div>
+              <span class="hud-label">${unit.turnStateLabel}</span>
+              <h2>${unit.name}</h2>
+            </div>
+            <div class="hud-active-role">
+              <strong>${unit.className}</strong>
+              <span>${unit.teamLabel}</span>
+            </div>
+          </div>
+          <div class="hud-hp-row">
+            <span>HP ${unit.hp}/${unit.maxHp}</span>
+            <strong>${hpPercent}%</strong>
+          </div>
+          <div class="hud-hp-bar">
+            <span style="width:${hpPercent}%"></span>
+          </div>
+          <div class="hud-active-metrics">
+            <div>
+              <span class="hud-label">${labels.move}</span>
+              <strong>${unit.moveStateLabel}</strong>
+            </div>
+            <div>
+              <span class="hud-label">${labels.action}</span>
+              <strong>${unit.actionStateLabel}</strong>
+            </div>
+            <div>
+              <span class="hud-label">${labels.tile}</span>
+              <strong>${unit.positionLabel}</strong>
+            </div>
+            <div>
+              <span class="hud-label">${labels.facing}</span>
+              <strong>${unit.facing.toUpperCase()}</strong>
+            </div>
+          </div>
+          <div class="hud-statuses">
+            ${unit.statuses.map((status) => this.renderStatusChip(status.label, status.stacks, status.tone)).join('')}
+          </div>
+        </div>
+      </section>
+    `
+  }
+
+  private renderStatusChip(
+    label: string,
+    stacks: number | undefined,
+    tone: 'neutral' | 'accent' | 'ally' | 'enemy',
+  ): string {
+    return `
+      <span class="hud-status-chip is-${tone}">
+        ${label}${stacks ? ` x${stacks}` : ''}
+      </span>
+    `
+  }
+
+  private renderFloatingCommandMenu(view: HudViewModel): string {
+    if (!view.floatingActionMenu) {
+      return ''
     }
 
     return `
-      <div class="hud-unit-card">
-        <div class="hud-unit-head">
-          <strong>${unit.name}</strong>
-          <span>${unit.className}</span>
-        </div>
-        <div class="hud-unit-metrics">
-          <span>HP ${unit.hp}/${unit.maxHp}</span>
-          <span>${unit.team.toUpperCase()}</span>
-          <span>${unit.position.x}, ${unit.position.y}</span>
-        </div>
-        <div class="hud-statuses">
-          ${
-            unit.statuses.length > 0
-              ? unit.statuses.map((status) => `<span>${status.label} x${status.stacks}</span>`).join('')
-              : '<span>Stable</span>'
-          }
-        </div>
-      </div>
+      <section
+        class="hud-floating-menu is-${view.floatingActionMenu.anchor.placement}"
+        style="${this.anchorStyle(view.floatingActionMenu.anchor.clientX, view.floatingActionMenu.anchor.clientY)}"
+      >
+        ${view.floatingActionMenu.buttons
+          .map(
+            (button) => `
+              <button class="hud-command-button ${button.active ? 'is-active' : ''}" data-command="${button.id}" ${button.disabled ? 'disabled' : ''}>
+                ${button.label}
+              </button>
+            `,
+          )
+          .join('')}
+      </section>
     `
+  }
+
+  private renderTargetMarkers(view: HudViewModel): string {
+    return view.targetMarkers
+      .map(
+        (marker) => `
+          <div
+            class="hud-target-marker is-${marker.amountKind} ${marker.emphasis ? 'is-emphasis' : ''}"
+            style="${this.anchorStyle(marker.anchor.clientX, marker.anchor.clientY)}"
+          >
+            ${marker.amountLabel}
+          </div>
+        `,
+      )
+      .join('')
+  }
+
+  private renderTargetDetail(view: HudViewModel): string {
+    if (!view.targetDetail) {
+      return ''
+    }
+
+    return `
+      <section
+        class="hud-target-detail is-${view.targetDetail.anchor.placement}"
+        style="${this.anchorStyle(view.targetDetail.anchor.clientX, view.targetDetail.anchor.clientY)}"
+      >
+        <span class="hud-label">${view.targetDetail.subtitle}</span>
+        <h3>${view.targetDetail.title}</h3>
+        <p>${view.targetDetail.amountLabel}</p>
+        <p>${view.targetDetail.counterLabel}</p>
+        <p>${view.targetDetail.effectLabel}</p>
+      </section>
+    `
+  }
+
+  private anchorStyle(clientX: number, clientY: number): string {
+    return `left:${clientX}px;top:${clientY}px;`
   }
 }

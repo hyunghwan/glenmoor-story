@@ -4,17 +4,21 @@ import {
   DEFAULT_BATTLE_ZOOM,
   MAX_BATTLE_ZOOM,
   MIN_BATTLE_ZOOM,
-  quarterTurnsToDegrees,
   rotateQuarterTurns,
   stepBattleZoom,
   type RotationQuarterTurns,
 } from '../battle-camera'
 import {
+  buildCommandButtons,
   buildInitiativeEntries,
+  buildRangeTiles,
+  buildTargetPreviewStrings,
+  buildTurnStateSummary,
+  buildUnitInitials,
   resolveActiveTurnMode,
   resolveIdleUnitSelection,
 } from '../battle-ui-model'
-import { classDefinitions, statusDefinitions, terrainDefinitions } from '../content'
+import { classDefinitions, skillDefinitions, statusDefinitions, terrainDefinitions } from '../content'
 import {
   BOARD_ORIGIN,
   HEIGHT_STEP,
@@ -25,17 +29,19 @@ import {
   tileToWorld,
 } from '../iso'
 import { I18n } from '../i18n'
-import { buildCombatForecastLines, formatBattleFeedEntry } from '../combat-text'
+import { formatBattleFeedEntry } from '../combat-text'
 import { BattleRuntime } from '../runtime'
 import type {
   ActionTarget,
   BattleAction,
   GridPoint,
+  HudAnchor,
   HudViewModel,
   Locale,
   ReachableTile,
   TiledMapData,
   UnitState,
+  ViewControlButtonViewModel,
 } from '../types'
 
 function samePoint(left: GridPoint, right: GridPoint): boolean {
@@ -110,6 +116,7 @@ export class BattleScene extends Phaser.Scene {
     this.createBattlefieldZone()
     this.mapGraphics = this.add.graphics()
     this.overlayGraphics = this.add.graphics()
+    this.scale.on(Phaser.Scale.Events.RESIZE, this.handleScaleResize, this)
 
     this.createTileInputs()
     this.syncTileInputs()
@@ -136,6 +143,7 @@ export class BattleScene extends Phaser.Scene {
       this.uiBus.off('debug:advance', this.handleDebugAdvance, this)
       this.uiBus.off('debug:tile-click', this.handleDebugTileClick, this)
       this.uiBus.off('debug:stage', this.handleDebugStage, this)
+      this.scale.off(Phaser.Scale.Events.RESIZE, this.handleScaleResize, this)
       this.input.off('pointermove', this.handlePointerMove, this)
       this.input.off('pointerup', this.handlePointerUp, this)
       this.input.off('gameout', this.handlePointerCancel, this)
@@ -188,6 +196,11 @@ export class BattleScene extends Phaser.Scene {
     this.input.on('pointerup', this.handlePointerUp, this)
     this.input.on('gameout', this.handlePointerCancel, this)
     this.input.on('wheel', this.handleWheel, this)
+  }
+
+  private handleScaleResize(): void {
+    this.applyCameraView(false)
+    this.refreshPresentation()
   }
 
   private getProjectionOptions(): ProjectionOptions {
@@ -260,6 +273,7 @@ export class BattleScene extends Phaser.Scene {
     this.clampCameraScroll()
     this.hoveredPoint = undefined
     this.drawOverlays()
+    this.publishHud()
     this.updateBattlefieldCursor(true)
   }
 
@@ -945,6 +959,36 @@ export class BattleScene extends Phaser.Scene {
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         cursor: 'pointer',
       })
+      graphic.on('pointerover', () => {
+        if (
+          this.currentModal ||
+          this.mode === 'busy' ||
+          this.viewState.panModeActive ||
+          this.pointerState?.isDragging
+        ) {
+          return
+        }
+
+        this.hoveredPoint = unit.position
+        this.drawOverlays()
+        this.publishHud()
+      })
+      graphic.on('pointerout', () => {
+        if (
+          this.currentModal ||
+          this.mode === 'busy' ||
+          this.viewState.panModeActive ||
+          this.pointerState?.isDragging
+        ) {
+          return
+        }
+
+        if (this.hoveredPoint && samePoint(this.hoveredPoint, unit.position)) {
+          this.hoveredPoint = undefined
+          this.drawOverlays()
+          this.publishHud()
+        }
+      })
       graphic.on(
         'pointerdown',
         (
@@ -978,6 +1022,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.overlayGraphics.clear()
     const active = this.runtime.getActiveUnit()
+    const actionRangeTiles = this.getActionRangeTiles()
 
     for (const tile of this.reachableTiles) {
       const height = this.runtime.state.map.tiles[tile.point.y][tile.point.x].height
@@ -988,11 +1033,22 @@ export class BattleScene extends Phaser.Scene {
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
     }
 
+    for (const point of actionRangeTiles) {
+      const height = this.runtime.state.map.tiles[point.y][point.x].height
+      const diamond = this.projectTileDiamond(point, height)
+      this.overlayGraphics.fillStyle(0xa31f2f, 0.28)
+      this.overlayGraphics.fillPoints(diamond, true)
+      this.overlayGraphics.lineStyle(1, 0xff7f6b, 0.62)
+      this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
+    }
+
     for (const option of this.targetOptions) {
       const unit = this.runtime.state.units[option.unitId]
       const height = this.runtime.state.map.tiles[unit.position.y][unit.position.x].height
       const diamond = this.projectTileDiamond(unit.position, height)
-      this.overlayGraphics.lineStyle(2, unit.team === 'allies' ? 0x79d8bc : 0xffa88f, 0.95)
+      this.overlayGraphics.fillStyle(0xfde1b5, 0.08)
+      this.overlayGraphics.fillPoints(diamond, true)
+      this.overlayGraphics.lineStyle(3, 0xf6d18b, 0.98)
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
     }
 
@@ -1017,37 +1073,20 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const active = this.runtime.getActiveUnit()
-    const selected = this.selectedUnitId ? this.runtime.getUnit(this.selectedUnitId) : undefined
-    const hoverUnit = this.hoveredPoint ? this.findUnitAt(this.hoveredPoint) : undefined
-    const hoveredForecast = hoverUnit ? this.targetOptions.find((option) => option.unitId === hoverUnit.id)?.forecast : undefined
     const combatText = this.createCombatTextContext()
+    const latestMessage = this.runtime.state.messages[0]
+      ? formatBattleFeedEntry(this.runtime.state.messages[0], combatText)
+      : this.i18n.t(`hud.mode.${this.mode}`)
 
     const view: HudViewModel = {
       locale: this.i18n.getLocale(),
-      title: this.i18n.t('game.title'),
-      objective: this.i18n.t(this.runtime.definition.objectiveKey),
-      subtitle: this.i18n.t(this.runtime.definition.titleKey),
-      currentTurnLabel: this.i18n.t('hud.currentTurn'),
-      activeTeamLabel: this.i18n.t(`hud.team.${active.team}`),
-      activeTeam: active.team,
       phase: this.runtime.state.phase,
       mode: this.mode,
-      activeUnit: this.asUnitCard(active),
-      selectedUnit: selected ? this.asUnitCard(selected) : undefined,
-      forecastLines: hoveredForecast ? buildCombatForecastLines(hoveredForecast, combatText) : [this.i18n.t(`hud.mode.${this.mode}`)],
-      viewTitle: this.i18n.t('hud.view'),
-      camera: {
-        rotationDegrees: quarterTurnsToDegrees(this.viewState.rotationQuarterTurns),
-        zoomPercent: Math.round(this.viewState.zoom * 100),
-        panModeActive: this.viewState.panModeActive,
-        rotationLabel: `${this.i18n.t('hud.view.rotation')} ${quarterTurnsToDegrees(this.viewState.rotationQuarterTurns)}°`,
-        zoomLabel: `${this.i18n.t('hud.view.zoom')} ${Math.round(this.viewState.zoom * 100)}%`,
-        panLabel: `${this.i18n.t('hud.view.pan')} ${this.i18n.t(
-          this.viewState.panModeActive ? 'hud.view.on' : 'hud.view.off',
-        )}`,
-      },
-      viewButtons: this.buildViewButtons(),
-      initiative: buildInitiativeEntries(
+      activeUnitPanel: this.buildActiveUnitPanel(active),
+      initiativeRail: {
+        label: this.i18n.t('hud.initiative'),
+        currentTurnLabel: this.i18n.t('hud.initiative.now'),
+        entries: buildInitiativeEntries(
         this.runtime
           .getInitiativeOrder(Object.values(this.runtime.state.units).filter((unit) => !unit.defeated).length)
           .map((unit) => ({
@@ -1058,10 +1097,22 @@ export class BattleScene extends Phaser.Scene {
             active: unit.id === active.id,
             selected: unit.id === this.selectedUnitId,
           })),
-        this.i18n.t('hud.initiative.now'),
-      ),
-      messages: this.runtime.state.messages.map((message) => formatBattleFeedEntry(message, combatText)),
-      buttons: this.buildButtons(),
+          this.i18n.t('hud.initiative.now'),
+        ),
+      },
+      floatingActionMenu: this.buildFloatingActionMenu(active),
+      targetMarkers: this.buildTargetMarkers(),
+      targetDetail: this.buildTargetDetail(),
+      viewControls: this.buildViewControls(),
+      statusLine: {
+        objectiveLabel: this.i18n.t(this.runtime.definition.objectiveKey),
+        modeLabel: this.i18n.t(`hud.mode.${this.mode}`),
+        logLabel: latestMessage,
+        phaseLabel:
+          this.runtime.state.phase === 'active'
+            ? `${this.i18n.t('hud.currentTurn')}: ${this.i18n.t(`hud.team.${active.team}`)}`
+            : this.i18n.t(`hud.phase.${this.runtime.state.phase}`),
+      },
       modal: this.currentModal,
     }
 
@@ -1084,6 +1135,7 @@ export class BattleScene extends Phaser.Scene {
       selectedUnitId: this.selectedUnitId,
       hoveredTile: this.hoveredPoint,
       reachableTiles: this.reachableTiles.map((tile) => tile.point),
+      actionRangeTiles: this.getActionRangeTiles(),
       targetableUnitIds: this.targetOptions.map((option) => option.unitId),
       units: Object.values(this.runtime.state.units).map((unit) => ({
         id: unit.id,
@@ -1123,26 +1175,147 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private asUnitCard(unit: UnitState): HudViewModel['activeUnit'] {
+  private buildActiveUnitPanel(unit: UnitState): HudViewModel['activeUnitPanel'] {
+    const turnState = buildTurnStateSummary({
+      hasMoved: unit.hasMovedThisTurn,
+      hasActed: unit.hasActedThisTurn,
+      move: {
+        ready: this.i18n.t('hud.turn.moveReady'),
+        spent: this.i18n.t('hud.turn.moveSpent'),
+        committed: this.i18n.t('hud.turn.commit'),
+      },
+      action: {
+        ready: this.i18n.t('hud.turn.actionReady'),
+        spent: this.i18n.t('hud.turn.actionSpent'),
+        committed: this.i18n.t('hud.turn.commit'),
+      },
+      overall: {
+        ready: this.i18n.t('hud.turn.ready'),
+        spent: this.i18n.t('hud.turn.commit'),
+        committed: this.i18n.t('hud.turn.commit'),
+      },
+    })
+
     return {
       id: unit.id,
       name: this.i18n.t(unit.nameKey),
       className: this.i18n.t(classDefinitions[unit.classId].nameKey),
       team: unit.team,
+      teamLabel: this.i18n.t(`hud.team.${unit.team}`),
+      initials: buildUnitInitials(this.i18n.t(unit.nameKey)),
       hp: unit.hp,
       maxHp: classDefinitions[unit.classId].stats.maxHp,
+      hpRatio: unit.hp / classDefinitions[unit.classId].stats.maxHp,
       position: unit.position,
+      positionLabel: `${unit.position.x}, ${unit.position.y}`,
       facing: unit.facing,
-      statuses: unit.statuses.map((status) => ({
-        id: status.id,
-        label: this.i18n.t(statusDefinitions[status.id].labelKey),
-        stacks: status.stacks,
-      })),
-      active: unit.id === this.runtime?.state.activeUnitId,
+      statuses:
+        unit.statuses.length > 0
+          ? unit.statuses.map((status) => ({
+              id: status.id,
+              label: this.i18n.t(statusDefinitions[status.id].labelKey),
+              stacks: status.stacks,
+              tone: unit.team === 'allies' ? 'ally' : 'enemy',
+            }))
+          : [{
+              id: 'stable',
+              label: this.i18n.t('duel.statusStable'),
+              tone: 'neutral',
+            }],
+      moveStateLabel: turnState.moveStateLabel,
+      actionStateLabel: turnState.actionStateLabel,
+      turnStateLabel: turnState.turnStateLabel,
     }
   }
 
-  private buildButtons(): HudViewModel['buttons'] {
+  private buildFloatingActionMenu(unit: UnitState): HudViewModel['floatingActionMenu'] {
+    if (!this.isPlayerTurnInteractive()) {
+      return undefined
+    }
+
+    const anchor = this.buildUnitAnchor(unit, 'above-right', { x: 42, y: -62 })
+
+    if (!anchor) {
+      return undefined
+    }
+
+    return {
+      anchor,
+      buttons: this.buildCommandButtons(),
+    }
+  }
+
+  private buildTargetMarkers(): HudViewModel['targetMarkers'] {
+    if (!this.runtime) {
+      return []
+    }
+
+    const hoveredUnitId = this.hoveredPoint ? this.findUnitAt(this.hoveredPoint)?.id : undefined
+    const combatText = this.createCombatTextContext()
+
+    return this.targetOptions.flatMap((option) => {
+      const unit = this.runtime?.state.units[option.unitId]
+
+      if (!unit) {
+        return []
+      }
+
+      const anchor = this.buildUnitAnchor(unit, 'above', { x: 0, y: -76 })
+
+      if (!anchor) {
+        return []
+      }
+
+      const preview = buildTargetPreviewStrings(option.forecast, combatText)
+
+      return [{
+        unitId: unit.id,
+        team: unit.team,
+        anchor,
+        amountLabel: preview.markerLabel,
+        amountKind: preview.markerKind,
+        emphasis: unit.id === hoveredUnitId,
+      }]
+    })
+  }
+
+  private buildTargetDetail(): HudViewModel['targetDetail'] {
+    if (!this.runtime || !this.hoveredPoint) {
+      return undefined
+    }
+
+    const hoveredUnit = this.findUnitAt(this.hoveredPoint)
+
+    if (!hoveredUnit) {
+      return undefined
+    }
+
+    const target = this.targetOptions.find((option) => option.unitId === hoveredUnit.id)
+
+    if (!target) {
+      return undefined
+    }
+
+    const anchor = this.buildUnitAnchor(hoveredUnit, 'above-right', { x: 124, y: -96 })
+
+    if (!anchor) {
+      return undefined
+    }
+
+    const preview = buildTargetPreviewStrings(target.forecast, this.createCombatTextContext())
+
+    return {
+      unitId: hoveredUnit.id,
+      anchor,
+      title: preview.title,
+      subtitle: preview.subtitle,
+      amountLabel: preview.amountLabel,
+      counterLabel: preview.counterLabel,
+      effectLabel: preview.effectLabel,
+    }
+  }
+
+  private buildCommandButtons(): NonNullable<HudViewModel['floatingActionMenu']>['buttons'] {
     if (!this.runtime) {
       return []
     }
@@ -1158,53 +1331,140 @@ export class BattleScene extends Phaser.Scene {
         })
       : []
 
-    return [
-      {
-        id: 'move',
-        label: this.i18n.t('hud.action.move'),
-        disabled: !interactive || active.hasActedThisTurn || this.moveRangeTiles.length === 0,
-        active: this.mode === 'move',
+    return buildCommandButtons({
+      interactive,
+      mode: this.mode,
+      canMove: !active.hasActedThisTurn && this.moveRangeTiles.length > 0,
+      canAttack: attackTargets.length > 0,
+      canSkill: skillTargets.length > 0,
+      labels: {
+        move: this.i18n.t('hud.action.move'),
+        attack: this.i18n.t('hud.action.attack'),
+        skill: this.i18n.t('hud.action.skill'),
+        wait: this.i18n.t('hud.action.wait'),
+        cancel: this.i18n.t('hud.action.cancel'),
       },
-      { id: 'attack', label: this.i18n.t('hud.action.attack'), disabled: !interactive || attackTargets.length === 0, active: this.mode === 'attack' },
-      { id: 'skill', label: this.i18n.t('hud.action.skill'), disabled: !interactive || skillTargets.length === 0, active: this.mode === 'skill' },
-      { id: 'wait', label: this.i18n.t('hud.action.wait'), disabled: !interactive, active: false },
-      { id: 'cancel', label: this.i18n.t('hud.action.cancel'), disabled: !interactive || this.mode === 'idle', active: false },
-    ]
+    })
   }
 
-  private buildViewButtons(): HudViewModel['viewButtons'] {
-    return [
+  private buildViewControls(): HudViewModel['viewControls'] {
+    const buttons: ViewControlButtonViewModel[] = [
       {
         id: 'view-rotate-left',
         label: this.i18n.t('hud.action.rotateLeft'),
+        icon: 'rotate_left',
         disabled: false,
         active: false,
       },
       {
         id: 'view-rotate-right',
         label: this.i18n.t('hud.action.rotateRight'),
+        icon: 'rotate_right',
         disabled: false,
         active: false,
       },
       {
         id: 'view-zoom-in',
         label: this.i18n.t('hud.action.zoomIn'),
+        icon: 'zoom_in',
         disabled: this.viewState.zoom >= MAX_BATTLE_ZOOM,
         active: false,
       },
       {
         id: 'view-zoom-out',
         label: this.i18n.t('hud.action.zoomOut'),
+        icon: 'zoom_out',
         disabled: this.viewState.zoom <= MIN_BATTLE_ZOOM,
         active: false,
       },
       {
         id: 'view-pan-toggle',
         label: this.i18n.t('hud.action.pan'),
+        icon: 'open_with',
         disabled: false,
         active: this.viewState.panModeActive,
       },
     ]
+
+    return {
+      label: this.i18n.t('hud.view'),
+      buttons,
+    }
+  }
+
+  private buildUnitAnchor(
+    unit: UnitState,
+    placement: HudAnchor['placement'],
+    offset: { x: number; y: number },
+  ): HudAnchor | undefined {
+    if (!this.runtime) {
+      return undefined
+    }
+
+    const tile = this.runtime.state.map.tiles[unit.position.y]?.[unit.position.x]
+
+    if (!tile) {
+      return undefined
+    }
+
+    const world = this.projectTilePoint(unit.position, tile.height)
+    const camera = this.cameras.main
+    const canvasBounds = this.game.canvas.getBoundingClientRect()
+    const unclampedScreenX = (world.x - camera.scrollX) * camera.zoom + offset.x
+    const unclampedScreenY = (world.y - camera.scrollY) * camera.zoom + offset.y
+    const unclampedClientX =
+      canvasBounds.left + unclampedScreenX * (canvasBounds.width / camera.width)
+    const unclampedClientY =
+      canvasBounds.top + unclampedScreenY * (canvasBounds.height / camera.height)
+    const margin = 18
+    const clientX = Phaser.Math.Clamp(
+      unclampedClientX,
+      canvasBounds.left + margin,
+      canvasBounds.right - margin,
+    )
+    const clientY = Phaser.Math.Clamp(
+      unclampedClientY,
+      canvasBounds.top + margin,
+      canvasBounds.bottom - margin,
+    )
+    const screenX = ((clientX - canvasBounds.left) / canvasBounds.width) * camera.width
+    const screenY = ((clientY - canvasBounds.top) / canvasBounds.height) * camera.height
+
+    return {
+      screenX,
+      screenY,
+      clientX,
+      clientY,
+      placement,
+    }
+  }
+
+  private getActionRangeTiles(): GridPoint[] {
+    if (!this.runtime || (this.mode !== 'attack' && this.mode !== 'skill')) {
+      return []
+    }
+
+    const active = this.runtime.getActiveUnit()
+    const range =
+      this.mode === 'attack'
+        ? {
+            min: classDefinitions[active.classId].basicAttackRangeMin,
+            max: classDefinitions[active.classId].basicAttackRangeMax,
+          }
+        : (() => {
+            const skillId = classDefinitions[active.classId].signatureSkillId
+            const skill = skillDefinitions[skillId]
+
+            return {
+              min: skill.rangeMin,
+              max: skill.rangeMax,
+            }
+          })()
+
+    return buildRangeTiles(active.position, range.min, range.max, {
+      width: this.runtime.state.map.width,
+      height: this.runtime.state.map.height,
+    })
   }
 
   private buildModal(kind: 'briefing' | 'victory' | 'defeat'): HudViewModel['modal'] {

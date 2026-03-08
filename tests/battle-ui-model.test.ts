@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildCommandButtons,
   buildInitiativeEntries,
+  buildRangeTiles,
+  buildTargetPreviewStrings,
+  buildTurnStateSummary,
+  buildUnitInitials,
   resolveActiveTurnMode,
   resolveIdleUnitSelection,
 } from '../src/game/battle-ui-model'
@@ -109,27 +114,33 @@ describe('battle UI model', () => {
         name: 'Sable',
         className: 'Skirmisher',
         team: 'allies',
+        initials: 'SA',
         active: true,
         selected: true,
-        order: 'Now',
+        emphasis: 'active',
+        orderLabel: 'Now',
       },
       {
         id: 'rowan',
         name: 'Rowan',
         className: 'Vanguard',
         team: 'allies',
+        initials: 'RO',
         active: false,
         selected: false,
-        order: '2',
+        emphasis: 'normal',
+        orderLabel: '2',
       },
       {
         id: 'cutpurse',
         name: 'Cutpurse',
         className: 'Skirmisher',
         team: 'enemies',
+        initials: 'CU',
         active: false,
         selected: true,
-        order: '3',
+        emphasis: 'selected',
+        orderLabel: '3',
       },
     ])
   })
@@ -161,5 +172,138 @@ describe('battle UI model', () => {
         activeHasActed: false,
       }),
     ).toBe('idle')
+  })
+
+  it('builds current turn state labels for the active card', () => {
+    expect(
+      buildTurnStateSummary({
+        hasMoved: false,
+        hasActed: true,
+        move: { ready: 'Move Ready', spent: 'Moved', committed: 'Committed' },
+        action: { ready: 'Action Ready', spent: 'Acted', committed: 'Committed' },
+        overall: { ready: 'Turn Ready', spent: 'Committed', committed: 'Committed' },
+      }),
+    ).toEqual({
+      moveStateLabel: 'Move Ready',
+      actionStateLabel: 'Acted',
+      turnStateLabel: 'Turn Ready',
+    })
+  })
+
+  it('builds floating command buttons with the expected active and disabled states', () => {
+    expect(
+      buildCommandButtons({
+        interactive: true,
+        mode: 'skill',
+        canMove: true,
+        canAttack: false,
+        canSkill: true,
+        labels: {
+          move: 'Move',
+          attack: 'Attack',
+          skill: 'Skill',
+          wait: 'Wait',
+          cancel: 'Cancel',
+        },
+      }),
+    ).toEqual([
+      { id: 'move', label: 'Move', disabled: false, active: false },
+      { id: 'attack', label: 'Attack', disabled: true, active: false },
+      { id: 'skill', label: 'Skill', disabled: false, active: true },
+      { id: 'wait', label: 'Wait', disabled: false, active: false },
+      { id: 'cancel', label: 'Cancel', disabled: false, active: false },
+    ])
+  })
+
+  it('builds target preview strings for damage forecasts', () => {
+    const preview = buildTargetPreviewStrings(
+      {
+        action: { actorId: 'rowan', kind: 'attack', targetId: 'cutpurse' },
+        actorAfterMove: { x: 4, y: 4 },
+        primary: {
+          sourceId: 'rowan',
+          targetId: 'cutpurse',
+          labelKey: 'attack.strike',
+          amount: 12,
+          kind: 'damage',
+          flavor: 'power',
+          relation: 'side',
+          heightDelta: 1,
+          terrainBonus: 0,
+          appliedStatuses: [{ statusId: 'guardBreak', stacks: 1, duration: 2 }],
+          targetDefeated: false,
+        },
+        counter: {
+          sourceId: 'cutpurse',
+          targetId: 'rowan',
+          labelKey: 'attack.slash',
+          amount: 5,
+          kind: 'damage',
+          flavor: 'power',
+          relation: 'front',
+          heightDelta: 0,
+          terrainBonus: 0,
+          appliedStatuses: [],
+          targetDefeated: false,
+        },
+        startTurnMessages: [],
+        messages: [],
+        state: {} as never,
+      },
+      {
+        t: (key) =>
+          ({
+            'attack.strike': 'Strike',
+            'hud.damage': 'Damage',
+            'hud.heal': 'Heal',
+            'hud.forecast.counterRisk': 'Counter Risk',
+            'hud.forecast.effects': 'Effects',
+            'status.guardBreak': 'Guard Break',
+            'duel.noCounter': 'No counter',
+            'hud.none': 'None',
+            'effect.push': 'Push 1',
+            'effect.pushBlocked': 'Push blocked',
+          })[key] ?? key,
+      },
+    )
+
+    expect(preview).toEqual({
+      title: 'Strike',
+      subtitle: 'SIDE / H+1',
+      amountLabel: 'Damage: -12',
+      counterLabel: 'Counter Risk: 5',
+      effectLabel: 'Effects: Guard Break x1',
+      markerLabel: '-12',
+      markerKind: 'damage',
+    })
+  })
+
+  it('builds Manhattan range tiles for red action overlays', () => {
+    expect(
+      buildRangeTiles(
+        { x: 2, y: 2 },
+        1,
+        2,
+        { width: 5, height: 5 },
+      ),
+    ).toEqual([
+      { x: 2, y: 0 },
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 0, y: 2 },
+      { x: 1, y: 2 },
+      { x: 3, y: 2 },
+      { x: 4, y: 2 },
+      { x: 1, y: 3 },
+      { x: 2, y: 3 },
+      { x: 3, y: 3 },
+      { x: 2, y: 4 },
+    ])
+  })
+
+  it('builds initials for single-word and multi-word unit names', () => {
+    expect(buildUnitInitials('Mire Huntmaster')).toBe('MH')
+    expect(buildUnitInitials('Elira')).toBe('EL')
   })
 })

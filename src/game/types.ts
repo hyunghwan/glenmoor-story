@@ -325,19 +325,6 @@ export interface AiScoredAction {
   breakdown: ScoreBreakdown
 }
 
-export interface UnitCardViewModel {
-  id: string
-  name: string
-  className: string
-  team: Team
-  hp: number
-  maxHp: number
-  position: GridPoint
-  facing: Direction
-  statuses: { id: StatusKey; label: string; stacks: number }[]
-  active: boolean
-}
-
 export interface HudActionButton {
   id: string
   label: string
@@ -345,44 +332,113 @@ export interface HudActionButton {
   active: boolean
 }
 
-export interface InitiativeEntryViewModel {
+export interface HudAnchor {
+  screenX: number
+  screenY: number
+  clientX: number
+  clientY: number
+  placement: 'above' | 'above-right' | 'right' | 'below-right'
+}
+
+export interface HudStatusChipViewModel {
+  id: string
+  label: string
+  stacks?: number
+  tone: 'neutral' | 'accent' | 'ally' | 'enemy'
+}
+
+export interface ActiveUnitPanelViewModel {
   id: string
   name: string
   className: string
   team: Team
-  active: boolean
-  selected: boolean
-  order: string
+  teamLabel: string
+  initials: string
+  hp: number
+  maxHp: number
+  hpRatio: number
+  position: GridPoint
+  positionLabel: string
+  facing: Direction
+  statuses: HudStatusChipViewModel[]
+  moveStateLabel: string
+  actionStateLabel: string
+  turnStateLabel: string
 }
 
-export interface BattleCameraViewModel {
-  rotationDegrees: number
-  zoomPercent: number
-  panModeActive: boolean
-  rotationLabel: string
-  zoomLabel: string
-  panLabel: string
+export interface InitiativeRailEntryViewModel {
+  id: string
+  name: string
+  className: string
+  team: Team
+  initials: string
+  active: boolean
+  selected: boolean
+  emphasis: 'active' | 'selected' | 'normal'
+  orderLabel: string
+}
+
+export interface InitiativeRailViewModel {
+  label: string
+  currentTurnLabel: string
+  entries: InitiativeRailEntryViewModel[]
+}
+
+export interface FloatingCommandMenuViewModel {
+  anchor: HudAnchor
+  buttons: HudActionButton[]
+}
+
+export interface TargetMarkerViewModel {
+  unitId: string
+  team: Team
+  anchor: HudAnchor
+  amountLabel: string
+  amountKind: 'damage' | 'heal' | 'effect'
+  emphasis: boolean
+}
+
+export interface TargetDetailPopupViewModel {
+  unitId: string
+  anchor: HudAnchor
+  title: string
+  subtitle: string
+  amountLabel: string
+  counterLabel: string
+  effectLabel: string
+}
+
+export interface ViewControlButtonViewModel {
+  id: string
+  label: string
+  icon: string
+  disabled: boolean
+  active: boolean
+}
+
+export interface ViewControlsViewModel {
+  label: string
+  buttons: ViewControlButtonViewModel[]
+}
+
+export interface BottomStatusLineViewModel {
+  objectiveLabel: string
+  modeLabel: string
+  logLabel: string
+  phaseLabel: string
 }
 
 export interface HudViewModel {
   locale: Locale
-  title: string
-  objective: string
-  subtitle: string
-  currentTurnLabel: string
-  activeTeamLabel: string
-  activeTeam: Team
   phase: BattleState['phase']
   mode: 'idle' | 'move' | 'attack' | 'skill' | 'busy'
-  activeUnit?: UnitCardViewModel
-  selectedUnit?: UnitCardViewModel
-  forecastLines: string[]
-  viewTitle: string
-  camera: BattleCameraViewModel
-  viewButtons: HudActionButton[]
-  initiative: InitiativeEntryViewModel[]
-  messages: string[]
-  buttons: HudActionButton[]
+  activeUnitPanel?: ActiveUnitPanelViewModel
+  initiativeRail: InitiativeRailViewModel
+  floatingActionMenu?: FloatingCommandMenuViewModel
+  targetMarkers: TargetMarkerViewModel[]
+  targetDetail?: TargetDetailPopupViewModel
+  viewControls: ViewControlsViewModel
+  statusLine: BottomStatusLineViewModel
   modal?: {
     kind: 'briefing' | 'victory' | 'defeat'
     title: string
