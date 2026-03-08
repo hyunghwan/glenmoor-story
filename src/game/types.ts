@@ -133,6 +133,7 @@ export interface UnitBlueprint {
   team: Team
   position: GridPoint
   aiProfileId: string
+  startingHp?: number
 }
 
 export interface UnitState {
@@ -202,7 +203,7 @@ export interface BattleState {
   activeUnitId: string
   turnIndex: number
   phase: 'briefing' | 'active' | 'victory' | 'defeat'
-  messages: string[]
+  messages: BattleFeedEntry[]
 }
 
 export interface BattleAction {
@@ -226,6 +227,41 @@ export interface PushResult {
   destination?: GridPoint
 }
 
+export interface CombatPresentationUnitSnapshot {
+  unitId: string
+  hpBefore: number
+  hpAfter: number
+  statusesBefore: StatusInstance[]
+  statusesAfter: StatusInstance[]
+  positionBefore: GridPoint
+  positionAfter: GridPoint
+}
+
+export interface CombatPresentationStatusChange extends AppliedStatusResult {
+  unitId: string
+}
+
+export interface CombatPresentationStep {
+  kind: 'announce' | 'impact' | 'effects' | 'counter' | 'defeat'
+  actorId: string
+  targetId?: string
+  labelKey: string
+  amount?: number
+  valueKind?: 'damage' | 'heal'
+  statusChanges: CombatPresentationStatusChange[]
+  push?: PushResult
+  defeat?: {
+    unitId: string
+  }
+  durationMs: number
+}
+
+export interface CombatPresentation {
+  actionLabelKey: string
+  units: CombatPresentationUnitSnapshot[]
+  steps: CombatPresentationStep[]
+}
+
 export interface ExchangeOutcome {
   sourceId: string
   targetId: string
@@ -246,10 +282,19 @@ export interface CombatResolution {
   actorAfterMove: GridPoint
   primary?: ExchangeOutcome
   counter?: ExchangeOutcome
-  startTurnMessages: string[]
-  messages: string[]
+  startTurnMessages: BattleFeedEntry[]
+  messages: BattleFeedEntry[]
+  presentation?: CombatPresentation
   state: BattleState
 }
+
+export type BattleFeedEntry =
+  | { kind: 'turn'; unitId: string }
+  | { kind: 'move'; unitId: string }
+  | { kind: 'wait'; unitId: string }
+  | { kind: 'fell'; unitId: string }
+  | { kind: 'burn'; unitId: string; amount: number }
+  | { kind: 'presentation'; presentation: CombatPresentation }
 
 export interface ReachableTile {
   point: GridPoint
@@ -331,7 +376,7 @@ export interface HudViewModel {
   mode: 'idle' | 'move' | 'attack' | 'skill' | 'busy'
   activeUnit?: UnitCardViewModel
   selectedUnit?: UnitCardViewModel
-  forecastText?: string
+  forecastLines: string[]
   viewTitle: string
   camera: BattleCameraViewModel
   viewButtons: HudActionButton[]

@@ -25,11 +25,11 @@ import {
   tileToWorld,
 } from '../iso'
 import { I18n } from '../i18n'
+import { buildCombatForecastLines, formatBattleFeedEntry } from '../combat-text'
 import { BattleRuntime } from '../runtime'
 import type {
   ActionTarget,
   BattleAction,
-  CombatResolution,
   GridPoint,
   HudViewModel,
   Locale,
@@ -76,6 +76,13 @@ export class BattleScene extends Phaser.Scene {
   private debugAdvanceMs = 0
   private lastActiveUnitId?: string
   private currentModal?: HudViewModel['modal']
+  private duelTelemetry = {
+    active: false,
+    stepIndex: 0,
+    stepCount: 0,
+    actionLabel: '',
+    fastMode: false,
+  }
   private mapData?: TiledMapData
   private cameraBounds?: Phaser.Geom.Rectangle
   private pointerState?: BattlefieldPointerState
@@ -116,6 +123,7 @@ export class BattleScene extends Phaser.Scene {
     this.uiBus.on('hud:command', this.handleHudCommand, this)
     this.uiBus.on('hud:locale', this.handleLocaleChange, this)
     this.uiBus.on('duel:complete', this.handleDuelComplete, this)
+    this.uiBus.on('duel:telemetry', this.handleDuelTelemetry, this)
     this.uiBus.on('debug:advance', this.handleDebugAdvance, this)
     this.uiBus.on('debug:tile-click', this.handleDebugTileClick, this)
     this.uiBus.on('debug:stage', this.handleDebugStage, this)
@@ -124,6 +132,7 @@ export class BattleScene extends Phaser.Scene {
       this.uiBus.off('hud:command', this.handleHudCommand, this)
       this.uiBus.off('hud:locale', this.handleLocaleChange, this)
       this.uiBus.off('duel:complete', this.handleDuelComplete, this)
+      this.uiBus.off('duel:telemetry', this.handleDuelTelemetry, this)
       this.uiBus.off('debug:advance', this.handleDebugAdvance, this)
       this.uiBus.off('debug:tile-click', this.handleDebugTileClick, this)
       this.uiBus.off('debug:stage', this.handleDebugStage, this)
@@ -532,16 +541,30 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleDuelComplete(): void {
+    this.duelTelemetry = {
+      active: false,
+      stepIndex: 0,
+      stepCount: 0,
+      actionLabel: '',
+      fastMode: false,
+    }
     this.mode = 'idle'
+    this.emitTelemetry()
     this.finalizeTurnTransition()
   }
 
-  private handleDebugAdvance(ms: number): void {
-    this.debugAdvanceMs += ms
+  private handleDuelTelemetry(telemetry: typeof this.duelTelemetry): void {
+    this.duelTelemetry = telemetry
+    this.emitTelemetry()
+  }
 
+  private handleDebugAdvance(ms: number): void {
     if (this.scene.isActive('duel')) {
-      this.uiBus.emit('duel:fast-forward')
+      this.uiBus.emit('duel:advance', ms)
+      return
     }
+
+    this.debugAdvanceMs += ms
   }
 
   private handleDebugTileClick(point: GridPoint): void {
@@ -997,6 +1020,7 @@ export class BattleScene extends Phaser.Scene {
     const selected = this.selectedUnitId ? this.runtime.getUnit(this.selectedUnitId) : undefined
     const hoverUnit = this.hoveredPoint ? this.findUnitAt(this.hoveredPoint) : undefined
     const hoveredForecast = hoverUnit ? this.targetOptions.find((option) => option.unitId === hoverUnit.id)?.forecast : undefined
+    const combatText = this.createCombatTextContext()
 
     const view: HudViewModel = {
       locale: this.i18n.getLocale(),
@@ -1010,7 +1034,7 @@ export class BattleScene extends Phaser.Scene {
       mode: this.mode,
       activeUnit: this.asUnitCard(active),
       selectedUnit: selected ? this.asUnitCard(selected) : undefined,
-      forecastText: hoveredForecast ? this.describeForecast(hoveredForecast) : this.i18n.t(`hud.mode.${this.mode}`),
+      forecastLines: hoveredForecast ? buildCombatForecastLines(hoveredForecast, combatText) : [this.i18n.t(`hud.mode.${this.mode}`)],
       viewTitle: this.i18n.t('hud.view'),
       camera: {
         rotationDegrees: quarterTurnsToDegrees(this.viewState.rotationQuarterTurns),
@@ -1036,7 +1060,7 @@ export class BattleScene extends Phaser.Scene {
           })),
         this.i18n.t('hud.initiative.now'),
       ),
-      messages: this.runtime.state.messages.map((message) => this.translateMessage(message)),
+      messages: this.runtime.state.messages.map((message) => formatBattleFeedEntry(message, combatText)),
       buttons: this.buildButtons(),
       modal: this.currentModal,
     }
@@ -1085,7 +1109,18 @@ export class BattleScene extends Phaser.Scene {
         scrollX: Math.round(camera.scrollX * 100) / 100,
         scrollY: Math.round(camera.scrollY * 100) / 100,
       },
+      duel: this.duelTelemetry,
     })
+  }
+
+  private createCombatTextContext(): {
+    t: (key: string, params?: Record<string, string | number>) => string
+    getUnitName: (unitId: string) => string
+  } {
+    return {
+      t: this.i18n.t.bind(this.i18n),
+      getUnitName: (unitId: string) => this.i18n.t(this.runtime?.getUnit(unitId)?.nameKey ?? unitId),
+    }
   }
 
   private asUnitCard(unit: UnitState): HudViewModel['activeUnit'] {
@@ -1170,73 +1205,6 @@ export class BattleScene extends Phaser.Scene {
         active: this.viewState.panModeActive,
       },
     ]
-  }
-
-  private describeForecast(forecast: CombatResolution): string {
-    const primary = forecast.primary
-
-    if (!primary) {
-      return this.i18n.t('hud.none')
-    }
-
-    const lines = [
-      `${this.i18n.t(primary.labelKey)} · ${
-        primary.kind === 'heal' ? this.i18n.t('hud.heal') : this.i18n.t('hud.damage')
-      }: ${primary.amount}`,
-      `${primary.relation.toUpperCase()} / H${primary.heightDelta >= 0 ? '+' : ''}${primary.heightDelta}`,
-    ]
-
-    if (primary.appliedStatuses.length > 0) {
-      lines.push(
-        primary.appliedStatuses.map((status) => this.i18n.t(statusDefinitions[status.statusId].labelKey)).join(', '),
-      )
-    }
-
-    if (primary.push?.attempted) {
-      lines.push(primary.push.succeeded ? 'Push 1' : `Push blocked (${primary.push.blockedReason ?? 'edge'})`)
-    }
-
-    if (forecast.counter) {
-      lines.push(`${this.i18n.t('hud.counter')}: ${forecast.counter.amount}`)
-    }
-
-    return lines.join(' · ')
-  }
-
-  private translateMessage(code: string): string {
-    const [kind, first, second, third] = code.split(':')
-    const firstName = first ? this.i18n.t(this.runtime?.getUnit(first)?.nameKey ?? first) : ''
-    const secondName = second ? this.i18n.t(this.runtime?.getUnit(second)?.nameKey ?? second) : ''
-
-    switch (kind) {
-      case 'turn':
-        return this.i18n.t('log.turn', { name: firstName })
-      case 'move':
-        return this.i18n.t('log.move', { name: firstName })
-      case 'wait':
-        return this.i18n.t('log.wait', { name: firstName })
-      case 'damage':
-        return this.i18n.t('log.damage', { source: firstName, target: secondName, amount: third ?? 0 })
-      case 'heal':
-        return this.i18n.t('log.heal', { source: firstName, target: secondName, amount: third ?? 0 })
-      case 'status':
-        return this.i18n.t('log.status', {
-          target: firstName,
-          status: this.i18n.t(statusDefinitions[second].labelKey),
-        })
-      case 'push':
-        return this.i18n.t('log.push', { target: firstName })
-      case 'pushBlocked':
-        return this.i18n.t('log.pushBlocked', { target: firstName })
-      case 'counter':
-        return this.i18n.t('log.counter', { name: firstName })
-      case 'fell':
-        return this.i18n.t('log.fell', { name: firstName })
-      case 'burn':
-        return `${this.i18n.t(statusDefinitions.burning.labelKey)}: ${firstName} -${second}`
-      default:
-        return code
-    }
   }
 
   private buildModal(kind: 'briefing' | 'victory' | 'defeat'): HudViewModel['modal'] {

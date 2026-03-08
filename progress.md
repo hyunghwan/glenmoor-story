@@ -37,3 +37,25 @@ The canonical implementation log lives in `docs/progress.md`.
   - raw pointer choreography now covers rotated tile clicks, wheel zoom, drag pan, and pan toggle suppression
   - the remaining debug assist is only `window.__glenmoorDebug.projectTile(x, y)`, which converts a logical tile into an exact browser click point for automation
   - at `1280x720`, the lower `View` and `Forecast` cards live behind the right-panel's internal scroll area
+
+## 2026-03-08
+
+- Added optional `startingHp` on battle unit blueprints so encounter tuning can happen per deployment without altering shared class stats
+- Softened the current battle by trimming starting HP on `brigandCaptain`, `huntmaster`, `hexbinder`, and `cutpurse`
+- Added a runtime regression test to lock the battle-specific starting HP overrides
+- Rebalanced class stats and signature skills to sharpen roles without rewriting the roster:
+  - `shieldBash` now trades raw damage for control
+  - `snareVolley` extends slow duration
+  - `emberSigil` and `shadowLunge` lose some burst
+  - `aegisField` and `resolveHymn` gain longer support reach
+  - initiative order now opens on `elira` instead of `sable`
+- Added structured `CombatResolution.presentation` data and converted the battle feed / forecast pipeline to consume it
+- Rebuilt the duel scene into an automatic multi-step presentation with per-step HP updates, status display, counter timing, and duel telemetry for QA
+- Updated AI scoring to avoid duplicate zero-heal support loops, prefer meaningful skill upgrades over weak skill spam, and move ranged units into workable firing distance more reliably
+- Updated browser QA scripts to use duel telemetry instead of fixed timeouts and to accept `PLAYWRIGHT_BASE_URL`
+- Verification:
+  - `npm test`
+  - `npx tsc --noEmit`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:5174 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:5174 npm run qa:camera`

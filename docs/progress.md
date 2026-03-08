@@ -51,10 +51,32 @@ This is the canonical implementation log for `Glenmoor Story`.
   - tile zones now stop propagation before the full-battlefield pan catcher can overwrite the clicked tile candidate
   - unit hit areas are disabled during move mode so nearby destination tiles stay clickable
 - Added camera-specific browser QA coverage in `scripts/qa/camera-controls.mjs`
+- Added deployment-specific `startingHp` support on unit blueprints so battle balance can be tuned per encounter without changing shared class stats
+- Softened the Glenmoor Pass encounter by lowering the opening HP of `brigandCaptain`, `huntmaster`, `hexbinder`, and `cutpurse`
+- Added a runtime regression that locks the battle-specific starting HP overrides
+- Rebalanced core combat roles without changing the shared class roster:
+  - `vanguard` control shifted further into `Shield Bash` instead of pure burst
+  - `ranger` slow uptime increased
+  - `arcanist` and `skirmisher` burst windows were trimmed
+  - `warden` and `cleric` support ranges were extended
+  - initiative order now opens on `elira` after the `skirmisher` speed reduction
+- Added structured combat presentation data on `CombatResolution` so duel playback, forecast text, and battle-feed summaries all read from the same source
+- Rebuilt the duel scene into automatic step playback with:
+  - announce / impact / effects / counter / defeat sequencing
+  - per-step HP transitions on both combatant cards
+  - persistent status readouts
+  - duel telemetry exposed to `render_game_to_text`
+- Tightened AI behavior so support units stop repeating zero-heal duplicate warding, ranged units advance toward usable firing lines, and weak signature skills lose to basic attacks when they are not materially better
+- Hardened browser QA scripts by:
+  - switching duel validation from fixed waits to telemetry-driven step checks
+  - making `scripts/qa/playthrough.mjs` and `scripts/qa/camera-controls.mjs` honor `PLAYWRIGHT_BASE_URL`
+- Added combat-text helper coverage to lock forecast/feed consistency on top of the new runtime and AI assertions
 
 ### Verification
 
-- `npm test` passes with 10 tactical and AI assertions
+- `npm test` passes with 20 tactical, AI, UI-model, and camera assertions
+- `npm test` now passes with 27 tactical, AI, camera, combat-text, and runtime assertions
+- `npx tsc --noEmit` passes
 - `npm run build` completes successfully
 - `npm run qa:playthrough` generates English/Korean, duel, push, and victory evidence:
   - `output/web-game/playthrough/02-battle-en.png`
@@ -107,6 +129,23 @@ This is the canonical implementation log for `Glenmoor Story`.
     - `output/web-game/camera-controls/06-rotated-1280x720.png`
     - `output/web-game/camera-controls/06-rotated-1280x720.json`
     - `output/web-game/camera-controls-smoke-final/state-0.json`
+- Difficulty-tuning verification now passes with fresh evidence:
+  - the battle-start telemetry shows `brigandCaptain=27/30`, `huntmaster=20/22`, `hexbinder=18/20`, and `cutpurse=21/24`
+  - the battle scene still renders cleanly with partially depleted enemy HP bars and no new console-error artifact
+  - artifacts:
+    - `output/web-game/difficulty-tuning/shot-0.png`
+    - `output/web-game/difficulty-tuning/state-0.json`
+- `npm run qa:playthrough` completes successfully after the balance change
+- Duel-readability playthrough verification now passes against the telemetry-driven step flow:
+  - engagement, skill, push, and victory demos now capture duel start, mid-step impact, and final-step states before resolution completes
+  - artifacts:
+    - `output/web-game/playthrough/05-engagement-duel-start.png`
+    - `output/web-game/playthrough/05-engagement-duel-mid.png`
+    - `output/web-game/playthrough/05-engagement-duel-end.png`
+    - `output/web-game/playthrough/08-skill-duel-mid.png`
+    - `output/web-game/playthrough/10-push-duel-mid.png`
+    - `output/web-game/playthrough/11-victory-duel-end.png`
+- Camera-control verification still passes after the initiative/balance changes when run against a live dev URL via `PLAYWRIGHT_BASE_URL`
 
 ### Next Steps
 

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { chromium } from 'playwright'
 
 const outputDir = path.resolve('output/web-game/camera-controls')
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173'
 fs.mkdirSync(outputDir, { recursive: true })
 
 function assert(condition, message) {
@@ -23,6 +24,24 @@ async function saveShot(page, name) {
   await page.screenshot({ path: path.join(outputDir, `${name}.png`), fullPage: false })
 }
 
+function samePoint(left, right) {
+  return left?.x === right?.x && left?.y === right?.y
+}
+
+function getUnit(state, unitId) {
+  return state.telemetry.units.find((unit) => unit.id === unitId)
+}
+
+function pickReachableTile(state, unitId, exclusions = []) {
+  const unit = getUnit(state, unitId)
+  assert(unit, `Missing telemetry for unit ${unitId}`)
+  const candidate = state.telemetry.reachableTiles.find(
+    (tile) => !samePoint(tile, unit.position) && !exclusions.some((point) => samePoint(point, tile)),
+  )
+  assert(candidate, `Missing alternate reachable tile for ${unitId}`)
+  return candidate
+}
+
 async function clickTile(page, x, y) {
   const projection = await page.evaluate(
     ([tileX, tileY]) => window.__glenmoorDebug.projectTile(tileX, tileY),
@@ -34,7 +53,7 @@ async function clickTile(page, x, y) {
 }
 
 async function startBattle(page) {
-  await page.goto('http://127.0.0.1:5173', { waitUntil: 'domcontentloaded' })
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded' })
   await page.waitForFunction(() => Boolean(window.__glenmoorDebug?.projectTile))
   await page.getByRole('button', { name: 'Commence Battle' }).click()
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud.phase === 'active')
@@ -45,37 +64,44 @@ async function runDesktop1600(browser) {
   await startBattle(page)
 
   let state = await readState(page)
+  const activeUnitId = state.telemetry.activeUnitId
   assert(state.telemetry.mode === 'move', 'Expected allied turn to auto-open move mode at 1600x900')
   assert(state.telemetry.reachableTiles.length > 0, 'Expected reachable tiles at 1600x900 battle start')
   await saveShot(page, '01-battle-1600x900')
   await saveState(page, '01-battle-1600x900')
 
-  await clickTile(page, 5, 12)
+  let targetTile = pickReachableTile(state, activeUnitId)
+  await clickTile(page, targetTile.x, targetTile.y)
   state = await readState(page)
-  assert(state.telemetry.units.find((unit) => unit.id === 'sable')?.position.x === 5, 'Expected Sable to move to x=5')
-  assert(state.telemetry.units.find((unit) => unit.id === 'sable')?.position.y === 12, 'Expected Sable to stay on y=12')
+  assert(
+    samePoint(getUnit(state, activeUnitId)?.position, targetTile),
+    `Expected ${activeUnitId} to move to the selected reachable tile`,
+  )
 
   await page.getByRole('button', { name: 'Rotate Right' }).click()
   await page.waitForTimeout(150)
   state = await readState(page)
   assert(state.telemetry.camera.rotationQuarterTurns === 1, 'Expected rotation to advance to 90 degrees')
 
-  await clickTile(page, 3, 12)
+  targetTile = pickReachableTile(state, activeUnitId)
+  await clickTile(page, targetTile.x, targetTile.y)
   state = await readState(page)
-  assert(state.telemetry.units.find((unit) => unit.id === 'sable')?.position.x === 3, 'Expected rotated tile click to move Sable to x=3')
-  assert(state.telemetry.units.find((unit) => unit.id === 'sable')?.position.y === 12, 'Expected rotated tile click to keep y=12')
+  assert(
+    samePoint(getUnit(state, activeUnitId)?.position, targetTile),
+    'Expected rotated tile click to move the active unit to the selected tile',
+  )
 
   await page.getByRole('button', { name: 'Rotate Right' }).click()
   await page.waitForTimeout(150)
   state = await readState(page)
   assert(state.telemetry.camera.rotationQuarterTurns === 2, 'Expected rotation to advance to 180 degrees')
 
-  await clickTile(page, 4, 12)
+  targetTile = pickReachableTile(state, activeUnitId)
+  await clickTile(page, targetTile.x, targetTile.y)
   state = await readState(page)
   assert(
-    state.telemetry.units.find((unit) => unit.id === 'sable')?.position.x === 4 &&
-      state.telemetry.units.find((unit) => unit.id === 'sable')?.position.y === 12,
-    'Expected 180-degree tile click to move Sable back to 4,12',
+    samePoint(getUnit(state, activeUnitId)?.position, targetTile),
+    'Expected 180-degree tile click to move the active unit to the selected tile',
   )
 
   await page.getByRole('button', { name: 'Rotate Right' }).click()
@@ -83,12 +109,12 @@ async function runDesktop1600(browser) {
   state = await readState(page)
   assert(state.telemetry.camera.rotationQuarterTurns === 3, 'Expected rotation to advance to 270 degrees')
 
-  await clickTile(page, 5, 12)
+  targetTile = pickReachableTile(state, activeUnitId)
+  await clickTile(page, targetTile.x, targetTile.y)
   state = await readState(page)
   assert(
-    state.telemetry.units.find((unit) => unit.id === 'sable')?.position.x === 5 &&
-      state.telemetry.units.find((unit) => unit.id === 'sable')?.position.y === 12,
-    'Expected 270-degree tile click to move Sable back to 5,12',
+    samePoint(getUnit(state, activeUnitId)?.position, targetTile),
+    'Expected 270-degree tile click to move the active unit to the selected tile',
   )
   await saveShot(page, '02-rotated-1600x900')
   await saveState(page, '02-rotated-1600x900')
@@ -118,11 +144,12 @@ async function runDesktop1600(browser) {
   state = await readState(page)
   assert(state.telemetry.camera.panModeActive, 'Expected Pan toggle to enable pan mode')
 
-  await clickTile(page, 4, 12)
+  const beforePanClickPosition = getUnit(state, activeUnitId)?.position
+  targetTile = pickReachableTile(state, activeUnitId)
+  await clickTile(page, targetTile.x, targetTile.y)
   const afterPanClick = await readState(page)
-  const sablePosition = afterPanClick.telemetry.units.find((unit) => unit.id === 'sable')?.position
   assert(
-    sablePosition?.x === 5 && sablePosition?.y === 12,
+    samePoint(getUnit(afterPanClick, activeUnitId)?.position, beforePanClickPosition),
     'Expected tactical tile click to be suppressed while pan mode is active',
   )
   await saveShot(page, '04-pan-mode-1600x900')
@@ -145,18 +172,24 @@ async function runDesktop1280(browser) {
   await startBattle(page)
 
   let state = await readState(page)
+  const activeUnitId = state.telemetry.activeUnitId
   assert(state.telemetry.mode === 'move', 'Expected allied turn to auto-open move mode at 1280x720')
   assert(state.hud.initiative.slice(0, 4).length === 4, 'Expected initiative queue to expose the current actor plus three upcoming turns')
 
-  await clickTile(page, 5, 12)
+  let targetTile = pickReachableTile(state, activeUnitId)
+  await clickTile(page, targetTile.x, targetTile.y)
   await page.getByRole('button', { name: 'Rotate Right' }).click()
   await page.waitForTimeout(150)
   state = await readState(page)
   assert(state.telemetry.camera.rotationQuarterTurns === 1, 'Expected rotation to work at 1280x720')
 
-  await clickTile(page, 3, 12)
+  targetTile = pickReachableTile(state, activeUnitId)
+  await clickTile(page, targetTile.x, targetTile.y)
   state = await readState(page)
-  assert(state.telemetry.units.find((unit) => unit.id === 'sable')?.position.x === 3, 'Expected rotated tile click to work at 1280x720')
+  assert(
+    samePoint(getUnit(state, activeUnitId)?.position, targetTile),
+    'Expected rotated tile click to work at 1280x720',
+  )
   await saveShot(page, '06-rotated-1280x720')
   await saveState(page, '06-rotated-1280x720')
 

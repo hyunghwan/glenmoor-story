@@ -57,6 +57,21 @@ describe('Battle AI', () => {
     expect(choice.action.targetId).toBe('brigandCaptain')
   })
 
+  it('avoids zero-heal duplicate warded support loops', () => {
+    const runtime = makeRuntime()
+    setActive(runtime, 'fanatic')
+    place(runtime, 'fanatic', 9, 4)
+    place(runtime, 'brigandCaptain', 9, 5)
+    place(runtime, 'rowan', 9, 6)
+    runtime.getUnit('brigandCaptain')!.hp = 30
+    runtime.getUnit('brigandCaptain')!.statuses = [{ id: 'warded', stacks: 2, duration: 2 }]
+
+    const choice = runtime.chooseBestAction('fanatic')
+
+    expect(choice.action.kind).not.toBe('skill')
+    expect(choice.action.targetId).not.toBe('brigandCaptain')
+  })
+
   it('falls back to a stable wait action when no targets are available', () => {
     const runtime = makeRuntime()
     setActive(runtime, 'huntmaster')
@@ -69,5 +84,6 @@ describe('Battle AI', () => {
 
     expect(choice.action.kind).toBe('wait')
     expect(choice.action.destination).toBeDefined()
+    expect(choice.action.destination?.x).toBeLessThan(14)
   })
 })

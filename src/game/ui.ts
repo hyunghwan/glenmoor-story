@@ -166,7 +166,9 @@ export class HudController {
           </section>
           <section class="hud-card">
             <span class="hud-label">Forecast</span>
-            <p class="hud-copy">${view.forecastText ?? 'Hover a target or choose a command.'}</p>
+            <div class="hud-forecast-lines">
+              ${view.forecastLines.map((line) => `<p class="hud-copy">${line}</p>`).join('')}
+            </div>
           </section>
         </aside>
 

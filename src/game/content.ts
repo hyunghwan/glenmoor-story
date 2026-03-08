@@ -124,7 +124,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
     rangeMax: 1,
     counterable: true,
     effects: [
-      { type: 'damage', amount: 4, flavor: 'power' },
+      { type: 'damage', amount: 3, flavor: 'power' },
       { type: 'status', statusId: 'guardBreak', stacks: 1, duration: 2 },
       { type: 'push', distance: 1 },
     ],
@@ -139,7 +139,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
     counterable: false,
     effects: [
       { type: 'damage', amount: 3, flavor: 'power' },
-      { type: 'status', statusId: 'slow', stacks: 1, duration: 2 },
+      { type: 'status', statusId: 'slow', stacks: 1, duration: 3 },
     ],
   },
   emberSigil: {
@@ -151,8 +151,8 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
     rangeMax: 3,
     counterable: false,
     effects: [
-      { type: 'damage', amount: 5, flavor: 'magic' },
-      { type: 'status', statusId: 'burning', stacks: 2, duration: 3 },
+      { type: 'damage', amount: 4, flavor: 'magic' },
+      { type: 'status', statusId: 'burning', stacks: 1, duration: 3 },
     ],
   },
   aegisField: {
@@ -161,7 +161,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
     descriptionKey: 'skill.aegisField.desc',
     targetType: 'ally',
     rangeMin: 0,
-    rangeMax: 1,
+    rangeMax: 2,
     counterable: false,
     effects: [
       { type: 'heal', amount: 5 },
@@ -176,7 +176,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
     rangeMin: 1,
     rangeMax: 1,
     counterable: true,
-    effects: [{ type: 'damage', amount: 6, flavor: 'power' }],
+    effects: [{ type: 'damage', amount: 5, flavor: 'power' }],
   },
   resolveHymn: {
     id: 'resolveHymn',
@@ -184,7 +184,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
     descriptionKey: 'skill.resolveHymn.desc',
     targetType: 'ally',
     rangeMin: 1,
-    rangeMax: 2,
+    rangeMax: 3,
     counterable: false,
     effects: [
       { type: 'heal', amount: 6 },
@@ -249,7 +249,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
     stats: {
       maxHp: 20,
       power: 2,
-      magic: 9,
+      magic: 8,
       defense: 3,
       resistance: 5,
       speed: 7,
@@ -294,7 +294,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
       magic: 1,
       defense: 4,
       resistance: 3,
-      speed: 9,
+      speed: 8,
       move: 6,
       maxClimb: 2,
     },
@@ -390,11 +390,11 @@ export const battleDefinition: BattleDefinition = {
     { id: 'talia', nameKey: 'unit.talia', classId: 'cleric', team: 'allies', position: { x: 4, y: 14 }, aiProfileId: 'cantor' },
   ],
   enemies: [
-    { id: 'brigandCaptain', nameKey: 'unit.brigandCaptain', classId: 'vanguard', team: 'enemies', position: { x: 12, y: 3 }, aiProfileId: 'spearhead' },
-    { id: 'huntmaster', nameKey: 'unit.huntmaster', classId: 'ranger', team: 'enemies', position: { x: 13, y: 2 }, aiProfileId: 'artillery' },
-    { id: 'hexbinder', nameKey: 'unit.hexbinder', classId: 'arcanist', team: 'enemies', position: { x: 10, y: 2 }, aiProfileId: 'tactician' },
+    { id: 'brigandCaptain', nameKey: 'unit.brigandCaptain', classId: 'vanguard', team: 'enemies', position: { x: 12, y: 3 }, aiProfileId: 'spearhead', startingHp: 27 },
+    { id: 'huntmaster', nameKey: 'unit.huntmaster', classId: 'ranger', team: 'enemies', position: { x: 13, y: 2 }, aiProfileId: 'artillery', startingHp: 20 },
+    { id: 'hexbinder', nameKey: 'unit.hexbinder', classId: 'arcanist', team: 'enemies', position: { x: 10, y: 2 }, aiProfileId: 'tactician', startingHp: 18 },
     { id: 'shieldbearer', nameKey: 'unit.shieldbearer', classId: 'warden', team: 'enemies', position: { x: 11, y: 4 }, aiProfileId: 'bulwark' },
-    { id: 'cutpurse', nameKey: 'unit.cutpurse', classId: 'skirmisher', team: 'enemies', position: { x: 14, y: 4 }, aiProfileId: 'opportunist' },
+    { id: 'cutpurse', nameKey: 'unit.cutpurse', classId: 'skirmisher', team: 'enemies', position: { x: 14, y: 4 }, aiProfileId: 'opportunist', startingHp: 21 },
     { id: 'fanatic', nameKey: 'unit.fanatic', classId: 'cleric', team: 'enemies', position: { x: 9, y: 3 }, aiProfileId: 'cantor' },
   ],
 }

@@ -11,11 +11,15 @@ import type {
   AiScoredAction,
   AppliedStatusResult,
   AttackFlavor,
+  BattleFeedEntry,
   BattleAction,
   BattleDefinition,
   BattleMapData,
   BattleState,
   ClassDefinition,
+  CombatPresentation,
+  CombatPresentationStep,
+  CombatPresentationUnitSnapshot,
   CombatResolution,
   Direction,
   ExchangeOutcome,
@@ -37,6 +41,12 @@ interface SimulateOptions {
   mutate: boolean
 }
 
+interface UnitStateSnapshot {
+  hp: number
+  statuses: StatusInstance[]
+  position: GridPoint
+}
+
 const directions: GridPoint[] = [
   { x: 1, y: 0 },
   { x: -1, y: 0 },
@@ -50,6 +60,10 @@ function pointKey(point: GridPoint): string {
 
 function clonePoint(point: GridPoint): GridPoint {
   return { x: point.x, y: point.y }
+}
+
+function cloneStatuses(statuses: StatusInstance[]): StatusInstance[] {
+  return statuses.map((status) => ({ ...status }))
 }
 
 function samePoint(a: GridPoint, b: GridPoint): boolean {
@@ -158,6 +172,7 @@ function relationBonus(relation: FacingRelation): number {
 function createUnitState(blueprint: UnitBlueprint, deploymentIndex: number): UnitState {
   const unitClass = classDefinitions[blueprint.classId]
   const initiative = Math.max(10, 130 - unitClass.stats.speed * 7 + deploymentIndex)
+  const startingHp = clamp(blueprint.startingHp ?? unitClass.stats.maxHp, 0, unitClass.stats.maxHp)
 
   return {
     id: blueprint.id,
@@ -166,16 +181,16 @@ function createUnitState(blueprint: UnitBlueprint, deploymentIndex: number): Uni
     team: blueprint.team,
     position: clonePoint(blueprint.position),
     facing: blueprint.team === 'allies' ? 'north' : 'south',
-    hp: unitClass.stats.maxHp,
+    hp: startingHp,
     statuses: [],
     nextActAt: initiative,
     hasMovedThisTurn: false,
     hasActedThisTurn: false,
-    defeated: false,
+    defeated: startingHp === 0,
   }
 }
 
-function addMessage(state: BattleState, message: string): void {
+function addMessage(state: BattleState, message: BattleFeedEntry): void {
   state.messages = [message, ...state.messages].slice(0, 8)
 }
 
@@ -215,6 +230,41 @@ function applyStatus(unit: UnitState, statusId: StatusInstance['id'], stacks: nu
     statusId,
     stacks: clamp(stacks, 1, definition.maxStacks),
     duration,
+  }
+}
+
+function captureUnitState(unit: UnitState): UnitStateSnapshot {
+  return {
+    hp: unit.hp,
+    statuses: cloneStatuses(unit.statuses),
+    position: clonePoint(unit.position),
+  }
+}
+
+function buildPresentationSnapshot(
+  unitId: string,
+  before: UnitStateSnapshot,
+  after: UnitState,
+): CombatPresentationUnitSnapshot {
+  return {
+    unitId,
+    hpBefore: before.hp,
+    hpAfter: after.hp,
+    statusesBefore: cloneStatuses(before.statuses),
+    statusesAfter: cloneStatuses(after.statuses),
+    positionBefore: clonePoint(before.position),
+    positionAfter: clonePoint(after.position),
+  }
+}
+
+function createStep(
+  step: Omit<CombatPresentationStep, 'statusChanges'> & {
+    statusChanges?: CombatPresentationStep['statusChanges']
+  },
+): CombatPresentationStep {
+  return {
+    ...step,
+    statusChanges: step.statusChanges ?? [],
   }
 }
 
@@ -289,6 +339,110 @@ function buildExchange(
     appliedStatuses,
     push,
     targetDefeated: target.defeated,
+  }
+}
+
+function buildCombatPresentation(
+  resolution: CombatResolution,
+  actorBefore: UnitStateSnapshot,
+  actorAfter: UnitState,
+  targetBefore?: UnitStateSnapshot,
+  targetAfter?: UnitState,
+): CombatPresentation | undefined {
+  const actionLabelKey =
+    resolution.primary?.labelKey ??
+    resolution.counter?.labelKey ??
+    (resolution.action.kind === 'wait' ? 'hud.action.wait' : 'hud.none')
+
+  if (!resolution.primary || !targetBefore || !targetAfter) {
+    return undefined
+  }
+
+  const steps: CombatPresentationStep[] = [
+    createStep({
+      kind: 'announce',
+      actorId: resolution.action.actorId,
+      targetId: resolution.action.targetId,
+      labelKey: actionLabelKey,
+      durationMs: 450,
+    }),
+    createStep({
+      kind: 'impact',
+      actorId: resolution.primary.sourceId,
+      targetId: resolution.primary.targetId,
+      labelKey: resolution.primary.labelKey,
+      amount: resolution.primary.amount,
+      valueKind: resolution.primary.kind,
+      durationMs: 650,
+    }),
+  ]
+
+  const effectStatusChanges = resolution.primary.appliedStatuses.map((status) => ({
+    ...status,
+    unitId: resolution.primary!.targetId,
+  }))
+
+  if (effectStatusChanges.length > 0 || resolution.primary.push?.attempted) {
+    steps.push(
+      createStep({
+        kind: 'effects',
+        actorId: resolution.primary.sourceId,
+        targetId: resolution.primary.targetId,
+        labelKey: resolution.primary.labelKey,
+        statusChanges: effectStatusChanges,
+        push: resolution.primary.push,
+        durationMs: 500,
+      }),
+    )
+  }
+
+  if (resolution.counter) {
+    steps.push(
+      createStep({
+        kind: 'counter',
+        actorId: resolution.counter.sourceId,
+        targetId: resolution.counter.targetId,
+        labelKey: resolution.counter.labelKey,
+        amount: resolution.counter.amount,
+        valueKind: resolution.counter.kind,
+        durationMs: 500,
+      }),
+    )
+  }
+
+  if (resolution.primary.targetDefeated) {
+    steps.push(
+      createStep({
+        kind: 'defeat',
+        actorId: resolution.primary.sourceId,
+        targetId: resolution.primary.targetId,
+        labelKey: resolution.primary.labelKey,
+        defeat: { unitId: resolution.primary.targetId },
+        durationMs: 300,
+      }),
+    )
+  }
+
+  if (resolution.counter?.targetDefeated) {
+    steps.push(
+      createStep({
+        kind: 'defeat',
+        actorId: resolution.counter.sourceId,
+        targetId: resolution.counter.targetId,
+        labelKey: resolution.counter.labelKey,
+        defeat: { unitId: resolution.counter.targetId },
+        durationMs: 300,
+      }),
+    )
+  }
+
+  return {
+    actionLabelKey,
+    units: [
+      buildPresentationSnapshot(actorAfter.id, actorBefore, actorAfter),
+      buildPresentationSnapshot(targetAfter.id, targetBefore, targetAfter),
+    ],
+    steps,
   }
 }
 
@@ -474,8 +628,8 @@ function setNextActiveUnit(state: BattleState): void {
   }
 }
 
-function processTurnStart(state: BattleState): string[] {
-  const messages: string[] = []
+function processTurnStart(state: BattleState): BattleFeedEntry[] {
+  const messages: BattleFeedEntry[] = []
   const actor = state.units[state.activeUnitId]
 
   if (!actor || actor.defeated) {
@@ -487,11 +641,11 @@ function processTurnStart(state: BattleState): string[] {
   if (burningStacks > 0) {
     const burnDamage = burningStacks * 2
     actor.hp = Math.max(0, actor.hp - burnDamage)
-    messages.push(`burn:${actor.id}:${burnDamage}`)
+    messages.push({ kind: 'burn', unitId: actor.id, amount: burnDamage })
 
     if (actor.hp === 0) {
       actor.defeated = true
-      messages.push(`fell:${actor.id}`)
+      messages.push({ kind: 'fell', unitId: actor.id })
       consumeTurn(actor)
       updateBattleOutcome(state)
 
@@ -502,14 +656,14 @@ function processTurnStart(state: BattleState): string[] {
     }
   }
 
-  messages.unshift(`turn:${actor.id}`)
+  messages.unshift({ kind: 'turn', unitId: actor.id })
   return messages
 }
 
 function simulateAction(baseState: BattleState, action: BattleAction, options: SimulateOptions): CombatResolution {
   const state = options.mutate ? baseState : structuredClone(baseState)
   const actor = state.units[action.actorId]
-  const startTurnMessages: string[] = []
+  const startTurnMessages: BattleFeedEntry[] = []
 
   if (!actor || actor.defeated) {
     return { action, actorAfterMove: { x: 0, y: 0 }, startTurnMessages, messages: [], state }
@@ -532,7 +686,7 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
   }
 
   if (action.kind === 'wait') {
-    result.messages.push(`wait:${actor.id}`)
+    result.messages.push({ kind: 'wait', unitId: actor.id })
     consumeTurn(actor)
     updateBattleOutcome(state)
 
@@ -550,6 +704,8 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
     return result
   }
 
+  const actorBefore = captureUnitState(actor)
+  const targetBefore = captureUnitState(target)
   const relation = relationFromFacing(target.facing, actor.position, target.position)
   const skill = getSkillForAction(actor, action)
   const appliedStatuses: AppliedStatusResult[] = []
@@ -580,7 +736,6 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
       damage.heightDelta,
       appliedStatuses,
     )
-    result.messages.push(`damage:${actor.id}:${target.id}:${damage.amount}`)
   } else if (skill) {
     for (const effect of skill.effects) {
       if (effect.type === 'damage') {
@@ -600,7 +755,6 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
           damage.heightDelta,
           appliedStatuses,
         )
-        result.messages.push(`damage:${actor.id}:${target.id}:${damage.amount}`)
       }
 
       if (effect.type === 'heal') {
@@ -618,12 +772,10 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
           0,
           appliedStatuses,
         )
-        result.messages.push(`heal:${actor.id}:${target.id}:${healing}`)
       }
 
       if (effect.type === 'status') {
         appliedStatuses.push(applyStatus(target, effect.statusId, effect.stacks, effect.duration))
-        result.messages.push(`status:${target.id}:${effect.statusId}`)
       }
 
       if (effect.type === 'push' && !target.defeated) {
@@ -633,12 +785,6 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
         if (evaluatedPush.succeeded && evaluatedPush.destination) {
           target.position = clonePoint(evaluatedPush.destination)
         }
-
-        result.messages.push(
-          evaluatedPush.succeeded
-            ? `push:${target.id}`
-            : `pushBlocked:${target.id}:${evaluatedPush.blockedReason ?? 'edge'}`,
-        )
       }
     }
   }
@@ -646,10 +792,6 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
   if (result.primary) {
     result.primary.appliedStatuses = appliedStatuses
     result.primary.push = pushResult
-  }
-
-  if (target.defeated) {
-    result.messages.push(`fell:${target.id}`)
   }
 
   const offensive = action.kind === 'attack' || skill?.targetType === 'enemy'
@@ -679,11 +821,12 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
       counter.heightDelta,
       [],
     )
-    result.messages.push(`counter:${target.id}:${actor.id}:${counter.amount}`)
+  }
 
-    if (actor.defeated) {
-      result.messages.push(`fell:${actor.id}`)
-    }
+  result.presentation = buildCombatPresentation(result, actorBefore, actor, targetBefore, target)
+
+  if (result.presentation) {
+    result.messages.push({ kind: 'presentation', presentation: result.presentation })
   }
 
   actor.hasActedThisTurn = true
@@ -711,7 +854,7 @@ export class BattleRuntime {
     this.state = createBattleState(this.definition, parseTiledMap(this.definition.mapId, mapData))
   }
 
-  startBattle(): string[] {
+  startBattle(): BattleFeedEntry[] {
     this.state.phase = 'active'
     const messages = processTurnStart(this.state)
 
@@ -889,24 +1032,13 @@ export class BattleRuntime {
           })
         : []
 
-    return [...attackTargets, ...skillTargets].map((target) => {
-      const action: BattleAction = {
-        actorId: actor.id,
-        kind: target.forecast.action.kind,
-        skillId: target.forecast.action.skillId,
-        targetId: target.unitId,
-        destination,
-      }
-      const forecast =
-        action.kind === 'attack'
-          ? this.previewAction(action)
-          : this.previewAction({ ...action, kind: 'skill', skillId: skill.id })
-      const primary = forecast.primary
+    const terrainScore = this.scorePosition(actor, destination, profile)
+    const attackCandidates = attackTargets.map((target) => {
+      const primary = target.forecast.primary
       const targetUnit = this.state.units[target.unitId]
-      const terrainScore = this.scorePosition(actor, destination, profile)
       const damageScore = (primary?.kind === 'damage' ? primary.amount : 0) * 6 * profile.aggression
       const lethalScore = primary?.targetDefeated ? 120 : 0
-      const counterRisk = forecast.counter ? forecast.counter.amount * 4 * (1 - profile.riskTolerance) : 0
+      const counterRisk = target.forecast.counter ? target.forecast.counter.amount * 4 * (1 - profile.riskTolerance) : 0
       const controlScore =
         (primary?.appliedStatuses.length ?? 0) * 12 * profile.controlBias +
         (primary?.push?.succeeded ? 16 * profile.controlBias : 0)
@@ -914,8 +1046,8 @@ export class BattleRuntime {
       const total = damageScore + lethalScore + terrainScore + controlScore + facingScore - counterRisk
 
       return {
-        action: forecast.action,
-        forecast,
+        action: target.forecast.action,
+        forecast: target.forecast,
         breakdown: {
           total,
           damage: damageScore,
@@ -928,6 +1060,45 @@ export class BattleRuntime {
         },
       }
     })
+    const baselineByTarget = new Map(attackCandidates.map((candidate) => [candidate.action.targetId ?? '', candidate]))
+    const skillCandidates = skillTargets.map((target) => {
+      const forecast = this.previewAction({
+        actorId: actor.id,
+        kind: 'skill',
+        skillId: skill.id,
+        destination,
+        targetId: target.unitId,
+      })
+      const primary = forecast.primary
+      const damageScore = (primary?.kind === 'damage' ? primary.amount : 0) * 6 * profile.aggression
+      const lethalScore = primary?.targetDefeated ? 120 : 0
+      const counterRisk = forecast.counter ? forecast.counter.amount * 4 * (1 - profile.riskTolerance) : 0
+      const controlScore =
+        (primary?.appliedStatuses.length ?? 0) * 12 * profile.controlBias +
+        (primary?.push?.succeeded ? 16 * profile.controlBias : 0)
+      const facingScore = relationBonus(primary?.relation ?? 'front') * 4
+      const baseline = baselineByTarget.get(target.unitId)
+      const weakSkillPenalty =
+        baseline && controlScore === 0 && lethalScore === 0 && damageScore <= baseline.breakdown.damage + 6 ? 16 : 4
+      const total = damageScore + lethalScore + terrainScore + controlScore + facingScore - counterRisk - weakSkillPenalty
+
+      return {
+        action: forecast.action,
+        forecast,
+        breakdown: {
+          total,
+          damage: damageScore,
+          healing: 0,
+          lethal: lethalScore,
+          counterRisk: -counterRisk,
+          terrain: terrainScore,
+          control: controlScore,
+          facing: facingScore,
+        },
+      }
+    })
+
+    return [...attackCandidates, ...skillCandidates]
   }
 
   private buildSupportCandidates(actor: UnitState, destination: GridPoint, profile: typeof aiProfiles[string]): AiScoredAction[] {
@@ -942,7 +1113,7 @@ export class BattleRuntime {
       kind: 'skill',
       skillId: skill.id,
       destination,
-    }).map((target) => {
+    }).flatMap((target) => {
       const forecast = this.previewAction({
         actorId: actor.id,
         kind: 'skill',
@@ -951,12 +1122,22 @@ export class BattleRuntime {
         targetId: target.unitId,
       })
       const primary = forecast.primary
+      const targetUnit = this.state.units[target.unitId]
+      const existingWardedDuration = targetUnit.statuses.find((status) => status.id === 'warded')?.duration ?? 0
+      const addsWarded = primary?.appliedStatuses.some((status) => status.statusId === 'warded') ?? false
+
+      if ((primary?.kind === 'heal' ? primary.amount : 0) === 0 && addsWarded && existingWardedDuration >= 2) {
+        return []
+      }
+
       const healingScore = (primary?.kind === 'heal' ? primary.amount : 0) * 6 * profile.support
       const controlScore = (primary?.appliedStatuses.length ?? 0) * 10 * profile.support
       const terrainScore = this.scorePosition(actor, destination, profile)
-      const total = healingScore + controlScore + terrainScore
+      const zeroHealPenalty = (primary?.kind === 'heal' ? primary.amount : 0) === 0 ? 16 : 0
+      const redundantWardedPenalty = addsWarded && existingWardedDuration >= 2 ? 22 : 0
+      const total = healingScore + controlScore + terrainScore - zeroHealPenalty - redundantWardedPenalty
 
-      return {
+      return [{
         action: forecast.action,
         forecast,
         breakdown: {
@@ -966,11 +1147,97 @@ export class BattleRuntime {
           lethal: 0,
           counterRisk: 0,
           terrain: terrainScore,
-          control: controlScore,
+          control: controlScore - redundantWardedPenalty,
           facing: 0,
         },
-      }
+      }]
     })
+  }
+
+  private getOffensiveReach(actor: UnitState): { min: number; max: number } {
+    const actorClass = getClassDefinition(actor)
+    const skill = getSkillDefinition(actor)
+
+    if (skill.targetType !== 'enemy') {
+      return {
+        min: actorClass.basicAttackRangeMin,
+        max: actorClass.basicAttackRangeMax,
+      }
+    }
+
+    return {
+      min: Math.min(actorClass.basicAttackRangeMin, skill.rangeMin),
+      max: Math.max(actorClass.basicAttackRangeMax, skill.rangeMax),
+    }
+  }
+
+  private scoreEngagementPosition(actor: UnitState, destination: GridPoint, profile: typeof aiProfiles[string]): number {
+    const nearestEnemy = Object.values(this.state.units)
+      .filter((unit) => unit.team !== actor.team && !unit.defeated)
+      .sort((left, right) => manhattan(destination, left.position) - manhattan(destination, right.position))[0]
+
+    if (!nearestEnemy) {
+      return 0
+    }
+
+    const distance = manhattan(destination, nearestEnemy.position)
+    const reach = this.getOffensiveReach(actor)
+    const enemyReach = this.getOffensiveReach(nearestEnemy)
+
+    if (reach.max === 1) {
+      return Math.max(0, 9 - distance) * 5 * profile.aggression
+    }
+
+    if (distance < reach.min) {
+      return -18
+    }
+
+    if (distance <= reach.max && distance > enemyReach.max) {
+      return 24 * profile.aggression
+    }
+
+    if (distance <= reach.max) {
+      return 14 * profile.aggression
+    }
+
+    return Math.max(0, 8 - Math.abs(distance - reach.max)) * 3 * profile.aggression
+  }
+
+  private scoreSupportPosition(actor: UnitState, destination: GridPoint, profile: typeof aiProfiles[string]): number {
+    const skill = getSkillDefinition(actor)
+
+    if (skill.targetType === 'enemy') {
+      return 0
+    }
+
+    const priorityAlly = Object.values(this.state.units)
+      .filter((unit) => unit.team === actor.team && !unit.defeated)
+      .sort((left, right) => {
+        const leftNeed =
+          (getClassDefinition(left).stats.maxHp - left.hp) * 2 +
+          ((left.statuses.find((status) => status.id === 'warded')?.duration ?? 0) === 0 ? 2 : 0)
+        const rightNeed =
+          (getClassDefinition(right).stats.maxHp - right.hp) * 2 +
+          ((right.statuses.find((status) => status.id === 'warded')?.duration ?? 0) === 0 ? 2 : 0)
+
+        if (rightNeed !== leftNeed) {
+          return rightNeed - leftNeed
+        }
+
+        return manhattan(destination, left.position) - manhattan(destination, right.position)
+      })[0]
+
+    if (!priorityAlly) {
+      return 0
+    }
+
+    const distance = manhattan(destination, priorityAlly.position)
+
+    if (distance >= skill.rangeMin && distance <= skill.rangeMax) {
+      return 14 * profile.support
+    }
+
+    return Math.max(0, 6 - Math.abs(distance - skill.rangeMax)) * 2 * profile.support
   }
 
   private scorePosition(actor: UnitState, destination: GridPoint, profile: typeof aiProfiles[string]): number {
@@ -981,13 +1248,10 @@ export class BattleRuntime {
     }
 
     const terrain = terrainDefinitions[tile.terrainId]
-    const nearestEnemy = Object.values(this.state.units)
-      .filter((unit) => unit.team !== actor.team && !unit.defeated)
-      .sort((left, right) => manhattan(destination, left.position) - manhattan(destination, right.position))[0]
-    const distanceScore = nearestEnemy ? Math.max(0, 8 - manhattan(destination, nearestEnemy.position)) * profile.aggression : 0
+    const terrainScore = (terrain.defenseBonus + terrain.resistanceBonus + tile.height) * 8 * profile.terrainBias
+    const engagementScore = this.scoreEngagementPosition(actor, destination, profile)
+    const supportScore = this.scoreSupportPosition(actor, destination, profile)
 
-    return (
-      (terrain.defenseBonus + terrain.resistanceBonus + tile.height) * 8 * profile.terrainBias + distanceScore
-    )
+    return terrainScore + engagementScore + supportScore
   }
 }
