@@ -70,20 +70,27 @@ export function buildCombatFeedLine(
   context: CombatTextContext,
 ): string {
   const announce = presentation.steps.find((step) => step.kind === 'announce')
-  const impact = presentation.steps.find((step) => step.kind === 'impact')
-  const effects = presentation.steps.find((step) => step.kind === 'effects')
+  const hit = presentation.steps.find((step) => step.kind === 'hit')
+  const status = presentation.steps.find((step) => step.kind === 'status')
+  const push = presentation.steps.find((step) => step.kind === 'push')
   const counter = presentation.steps.find((step) => step.kind === 'counter')
   const defeat = presentation.steps.find((step) => step.kind === 'defeat')
   const actorName = announce ? context.getUnitName(announce.actorId) : ''
   const targetName = announce?.targetId ? context.getUnitName(announce.targetId) : ''
   const parts = [`${context.t(presentation.actionLabelKey)}: ${actorName}${targetName ? ` -> ${targetName}` : ''}`]
 
-  if (impact?.amount !== undefined && impact.valueKind) {
-    parts.push(`${impact.valueKind === 'heal' ? context.t('hud.heal') : context.t('hud.damage')} ${impact.amount}`)
+  if (hit?.amount !== undefined && hit.valueKind) {
+    parts.push(`${hit.valueKind === 'heal' ? context.t('hud.heal') : context.t('hud.damage')} ${hit.amount}`)
   }
 
-  if (effects) {
-    const effectSummary = formatEffectSummary(effects, context)
+  if (status || push) {
+    const effectSummary = formatEffectSummary(
+      {
+        statusChanges: status?.statusChanges ?? [],
+        push: push?.push,
+      },
+      context,
+    )
 
     if (effectSummary !== context.t('hud.none')) {
       parts.push(effectSummary)
@@ -110,13 +117,18 @@ export function buildCombatStepLines(
       return [
         `${context.getUnitName(step.actorId)}${step.targetId ? ` -> ${context.getUnitName(step.targetId)}` : ''}`,
       ]
-    case 'impact':
+    case 'cast':
+      return [context.t(step.labelKey)]
+    case 'projectile':
+      return [context.t(step.labelKey), context.getUnitName(step.targetId ?? step.actorId)]
+    case 'hit':
     case 'counter':
       return [
         `${step.valueKind === 'heal' ? context.t('hud.heal') : context.t('hud.damage')}: ${step.amount ?? 0}`,
         `${context.getUnitName(step.targetId ?? step.actorId)}`,
       ]
-    case 'effects': {
+    case 'status':
+    case 'push': {
       const effectSummary = formatEffectSummary(step, context)
       return [effectSummary === context.t('hud.none') ? context.t('duel.effects.none') : effectSummary]
     }
@@ -124,6 +136,8 @@ export function buildCombatStepLines(
       return step.defeat?.unitId
         ? [context.t('log.fell', { name: context.getUnitName(step.defeat.unitId) })]
         : []
+    case 'recover':
+      return [context.t(step.labelKey)]
   }
 }
 

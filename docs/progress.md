@@ -162,3 +162,39 @@ This is the canonical implementation log for `Glenmoor Story`.
 - Headless Playwright `page.click()` on the briefing button now succeeds after the HUD input-path fix
 - Camera QA now uses real pointer clicks for movement, rotation, zoom, and pan; the only remaining debug assist is the tile-projection helper that converts logical tiles into browser click coordinates
 - At `1280x720`, the lower `View` and `Forecast` cards rely on the right-panel's internal scroll area rather than fitting fully above the fold
+
+## 2026-03-09
+
+### Completed
+
+- Promoted battlefield rendering to `Phaser.AUTO` with a Matter-enabled scene config so WebGL-first FX can run without changing deterministic tactics rules
+- Added presentation metadata across combat content:
+  - skills and statuses now declare `fxCueId`, `telegraphStyle`, `castMs`, `impactMs`, `cameraCue`, `matterProfile`, and `tone`
+  - classes now declare `basicAttackPresentationId`
+  - combat presentation steps now carry `fxCueId`, source/target points, camera cues, and impulse hints
+- Expanded runtime presentation output from coarse duel beats into `announce`, `cast`, `projectile`, `hit`, `status`, `push`, `counter`, `defeat`, and `recover` steps while keeping damage, status, counter, and turn rules unchanged
+- Rebuilt battlefield presentation layers in `BattleScene`:
+  - layered move / range / target telegraphs with lethal, counter, status, and push accents
+  - persistent status-aura rendering for `burning`, `guardBreak`, `warded`, and `slow`
+  - Matter-driven ambient particles for target emphasis and status FX
+  - screen-space danger pulses for lethal and counter previews
+- Extended HUD forecast data with structured telegraph summaries so map markers and detail cards now expose `lethal`, `counterRisk`, `predictedStatusIds`, `pushOutcome`, and `markerTone`
+- Updated the duel scene with readable combat motion:
+  - cast windups, projectile travel, hit flashes, status bursts, push slides, defeat fades, and recover beats
+  - richer duel telemetry now reports `stepKind`, `fxCueId`, and `targetUnitId`
+- Hardened camera and duel interaction reliability:
+  - added a pointer-gesture fallback that safely completes clicks when Phaser misses a `pointerup` during rotated map interaction
+  - held the duel's final `recover` beat long enough for telemetry-driven QA capture
+- Fixed duel-side team accents so enemy-initiated zoomed combat no longer paints the left combatant with ally colors
+- Refreshed browser QA scripts so each run clears stale artifacts before capture and validates the new presentation telemetry fields
+
+### Verification
+
+- `npm test`
+- `npx tsc --noEmit`
+- `npm run build`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+- Fresh QA evidence was regenerated under:
+  - `output/web-game/playthrough/`
+  - `output/web-game/camera-controls/`

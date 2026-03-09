@@ -23,6 +23,56 @@ export type SkillTargetType = 'enemy' | 'ally' | 'self'
 
 export type AttackFlavor = 'power' | 'magic'
 
+export type TelegraphStyle = 'attack' | 'skill' | 'support' | 'status' | 'move' | 'counter'
+
+export type PresentationTone =
+  | 'steel'
+  | 'ember'
+  | 'ward'
+  | 'shadow'
+  | 'wind'
+  | 'radiant'
+  | 'hazard'
+  | 'neutral'
+
+export type CameraCue =
+  | 'none'
+  | 'impact-light'
+  | 'impact-heavy'
+  | 'support-pulse'
+  | 'counter-jolt'
+  | 'defeat-drop'
+
+export type MatterProfile =
+  | 'slash-spark'
+  | 'shock-ring'
+  | 'arrow-streak'
+  | 'ember-plume'
+  | 'light-shards'
+  | 'dash-burst'
+  | 'ward-orbit'
+  | 'slow-haze'
+  | 'guard-fragments'
+  | 'magic-bolt'
+
+export interface PresentationProfile {
+  fxCueId: string
+  telegraphStyle: TelegraphStyle
+  castMs: number
+  impactMs: number
+  cameraCue: CameraCue
+  matterProfile: MatterProfile
+  tone: PresentationTone
+}
+
+export interface CombatImpulseProfile {
+  intensity: number
+  spread: number
+  fragmentCount: number
+  speed: number
+  lifetimeMs: number
+}
+
 export interface GridPoint {
   x: number
   y: number
@@ -56,6 +106,7 @@ export interface StatusDefinition {
   labelKey: string
   descriptionKey: string
   maxStacks: number
+  presentation: PresentationProfile
 }
 
 export interface StatusInstance {
@@ -102,6 +153,7 @@ export interface SkillDefinition {
   rangeMax: number
   effects: SkillEffect[]
   counterable: boolean
+  presentation: PresentationProfile
 }
 
 export interface ClassDefinition {
@@ -109,6 +161,7 @@ export interface ClassDefinition {
   nameKey: string
   roleKey: string
   basicAttackNameKey: string
+  basicAttackPresentationId: string
   basicAttackFlavor: AttackFlavor
   basicAttackPower: number
   basicAttackRangeMin: number
@@ -242,12 +295,17 @@ export interface CombatPresentationStatusChange extends AppliedStatusResult {
 }
 
 export interface CombatPresentationStep {
-  kind: 'announce' | 'impact' | 'effects' | 'counter' | 'defeat'
+  kind: 'announce' | 'cast' | 'projectile' | 'hit' | 'status' | 'push' | 'counter' | 'defeat' | 'recover'
   actorId: string
   targetId?: string
   labelKey: string
+  fxCueId: string
+  sourcePoint: GridPoint
+  targetPoint: GridPoint
   amount?: number
   valueKind?: 'damage' | 'heal'
+  cameraCue?: CameraCue
+  impulseProfile?: CombatImpulseProfile
   statusChanges: CombatPresentationStatusChange[]
   push?: PushResult
   defeat?: {
@@ -260,6 +318,17 @@ export interface CombatPresentation {
   actionLabelKey: string
   units: CombatPresentationUnitSnapshot[]
   steps: CombatPresentationStep[]
+}
+
+export interface DuelTelemetry {
+  active: boolean
+  stepIndex: number
+  stepCount: number
+  actionLabel: string
+  fastMode: boolean
+  stepKind?: CombatPresentationStep['kind']
+  fxCueId?: string
+  targetUnitId?: string
 }
 
 export interface ExchangeOutcome {
@@ -317,6 +386,14 @@ export interface ScoreBreakdown {
   terrain: number
   control: number
   facing: number
+}
+
+export interface CombatTelegraphSummary {
+  lethal: boolean
+  counterRisk: number
+  predictedStatusIds: StatusKey[]
+  pushOutcome: 'none' | 'push' | 'blocked'
+  markerTone: 'damage' | 'heal' | 'effect' | 'lethal' | 'counter' | 'status'
 }
 
 export interface AiScoredAction {
@@ -395,6 +472,7 @@ export interface TargetMarkerViewModel {
   anchor: HudAnchor
   amountLabel: string
   amountKind: 'damage' | 'heal' | 'effect'
+  markerTone: CombatTelegraphSummary['markerTone']
   emphasis: boolean
 }
 
@@ -406,6 +484,18 @@ export interface TargetDetailPopupViewModel {
   amountLabel: string
   counterLabel: string
   effectLabel: string
+  telegraphSummary: CombatTelegraphSummary
+}
+
+export interface DuelTelemetry {
+  active: boolean
+  stepIndex: number
+  stepCount: number
+  actionLabel: string
+  fastMode: boolean
+  stepKind?: CombatPresentationStep['kind']
+  fxCueId?: string
+  targetUnitId?: string
 }
 
 export interface ViewControlButtonViewModel {

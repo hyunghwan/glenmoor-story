@@ -1,4 +1,5 @@
 import {
+  attackPresentationDefinitions,
   aiProfiles,
   battleDefinition,
   classDefinitions,
@@ -17,6 +18,7 @@ import type {
   BattleMapData,
   BattleState,
   ClassDefinition,
+  CombatImpulseProfile,
   CombatPresentation,
   CombatPresentationStep,
   CombatPresentationUnitSnapshot,
@@ -257,6 +259,60 @@ function buildPresentationSnapshot(
   }
 }
 
+function getActionPresentationProfile(actor: UnitState, skill?: SkillDefinition) {
+  return skill?.presentation ?? attackPresentationDefinitions[getClassDefinition(actor).basicAttackPresentationId]
+}
+
+function buildImpulseProfile(
+  matterProfile: string,
+  kind: 'damage' | 'heal' | 'status' | 'push' | 'counter' | 'defeat',
+): CombatImpulseProfile {
+  switch (matterProfile) {
+    case 'ember-plume':
+      return { intensity: 1.2, spread: 0.7, fragmentCount: 14, speed: 1.35, lifetimeMs: 720 }
+    case 'arrow-streak':
+      return { intensity: 0.9, spread: 0.32, fragmentCount: 8, speed: 1.7, lifetimeMs: 480 }
+    case 'dash-burst':
+      return { intensity: 1.1, spread: 0.45, fragmentCount: 12, speed: 1.8, lifetimeMs: 420 }
+    case 'light-shards':
+      return { intensity: 0.8, spread: 0.52, fragmentCount: 10, speed: 1.15, lifetimeMs: 560 }
+    case 'ward-orbit':
+      return { intensity: 0.55, spread: 0.6, fragmentCount: 9, speed: 0.85, lifetimeMs: 880 }
+    case 'slow-haze':
+      return { intensity: 0.5, spread: 0.72, fragmentCount: 7, speed: 0.65, lifetimeMs: 980 }
+    case 'guard-fragments':
+      return { intensity: 0.75, spread: 0.42, fragmentCount: 9, speed: 1.05, lifetimeMs: 620 }
+    case 'magic-bolt':
+      return { intensity: 0.95, spread: 0.36, fragmentCount: 8, speed: 1.35, lifetimeMs: 540 }
+    default:
+      if (kind === 'push') {
+        return { intensity: 0.85, spread: 0.28, fragmentCount: 10, speed: 1.25, lifetimeMs: 440 }
+      }
+
+      if (kind === 'defeat') {
+        return { intensity: 1.15, spread: 0.55, fragmentCount: 16, speed: 1.2, lifetimeMs: 760 }
+      }
+
+      return { intensity: 0.82, spread: 0.35, fragmentCount: 10, speed: 1.05, lifetimeMs: 460 }
+  }
+}
+
+function shouldCreateProjectileStep(
+  source: GridPoint,
+  target: GridPoint,
+  matterProfile: string,
+): boolean {
+  const distance = manhattan(source, target)
+
+  return (
+    distance > 1 ||
+    matterProfile === 'arrow-streak' ||
+    matterProfile === 'ember-plume' ||
+    matterProfile === 'light-shards' ||
+    matterProfile === 'magic-bolt'
+  )
+}
+
 function createStep(
   step: Omit<CombatPresentationStep, 'statusChanges'> & {
     statusChanges?: CombatPresentationStep['statusChanges']
@@ -358,54 +414,137 @@ function buildCombatPresentation(
     return undefined
   }
 
+  const skill = getSkillForAction(actorAfter, resolution.action)
+  const presentation = getActionPresentationProfile(actorAfter, skill)
+  const sourcePoint = clonePoint(actorAfter.position)
+  const targetPoint = clonePoint(targetBefore.position)
+
   const steps: CombatPresentationStep[] = [
     createStep({
       kind: 'announce',
       actorId: resolution.action.actorId,
       targetId: resolution.action.targetId,
       labelKey: actionLabelKey,
-      durationMs: 450,
+      fxCueId: presentation.fxCueId,
+      sourcePoint,
+      targetPoint,
+      cameraCue: 'none',
+      durationMs: 220,
     }),
+  ]
+
+  steps.push(
     createStep({
-      kind: 'impact',
+      kind: 'cast',
       actorId: resolution.primary.sourceId,
       targetId: resolution.primary.targetId,
       labelKey: resolution.primary.labelKey,
+      fxCueId: presentation.fxCueId,
+      sourcePoint,
+      targetPoint,
+      cameraCue: 'none',
+      durationMs: presentation.castMs,
+    }),
+  )
+
+  if (shouldCreateProjectileStep(sourcePoint, targetPoint, presentation.matterProfile)) {
+    steps.push(
+      createStep({
+        kind: 'projectile',
+        actorId: resolution.primary.sourceId,
+        targetId: resolution.primary.targetId,
+        labelKey: resolution.primary.labelKey,
+        fxCueId: presentation.fxCueId,
+        sourcePoint,
+        targetPoint,
+        cameraCue: 'none',
+        impulseProfile: buildImpulseProfile(presentation.matterProfile, 'damage'),
+        durationMs: Math.max(150, Math.round(presentation.impactMs * 0.6)),
+      }),
+    )
+  }
+
+  steps.push(
+    createStep({
+      kind: 'hit',
+      actorId: resolution.primary.sourceId,
+      targetId: resolution.primary.targetId,
+      labelKey: resolution.primary.labelKey,
+      fxCueId: presentation.fxCueId,
+      sourcePoint,
+      targetPoint,
       amount: resolution.primary.amount,
       valueKind: resolution.primary.kind,
-      durationMs: 650,
+      cameraCue: presentation.cameraCue,
+      impulseProfile: buildImpulseProfile(
+        presentation.matterProfile,
+        resolution.primary.kind === 'heal' ? 'heal' : 'damage',
+      ),
+      durationMs: presentation.impactMs,
     }),
-  ]
+  )
 
   const effectStatusChanges = resolution.primary.appliedStatuses.map((status) => ({
     ...status,
     unitId: resolution.primary!.targetId,
   }))
 
-  if (effectStatusChanges.length > 0 || resolution.primary.push?.attempted) {
+  if (effectStatusChanges.length > 0) {
+    const statusPresentation = statusDefinitions[effectStatusChanges[0].statusId].presentation
+
     steps.push(
       createStep({
-        kind: 'effects',
+        kind: 'status',
         actorId: resolution.primary.sourceId,
         targetId: resolution.primary.targetId,
         labelKey: resolution.primary.labelKey,
+        fxCueId: statusPresentation.fxCueId,
+        sourcePoint,
+        targetPoint,
         statusChanges: effectStatusChanges,
+        cameraCue: statusPresentation.cameraCue,
+        impulseProfile: buildImpulseProfile(statusPresentation.matterProfile, 'status'),
+        durationMs: 320,
+      }),
+    )
+  }
+
+  if (resolution.primary.push?.attempted) {
+    steps.push(
+      createStep({
+        kind: 'push',
+        actorId: resolution.primary.sourceId,
+        targetId: resolution.primary.targetId,
+        labelKey: resolution.primary.labelKey,
+        fxCueId: `${presentation.fxCueId}.push`,
+        sourcePoint,
+        targetPoint: clonePoint(resolution.primary.push.destination ?? targetPoint),
         push: resolution.primary.push,
-        durationMs: 500,
+        cameraCue: 'impact-light',
+        impulseProfile: buildImpulseProfile(presentation.matterProfile, 'push'),
+        durationMs: 280,
       }),
     )
   }
 
   if (resolution.counter) {
+    const counterActor = targetAfter
+    const counterPresentation = attackPresentationDefinitions[getClassDefinition(counterActor).basicAttackPresentationId]
+
     steps.push(
       createStep({
         kind: 'counter',
         actorId: resolution.counter.sourceId,
         targetId: resolution.counter.targetId,
         labelKey: resolution.counter.labelKey,
+        fxCueId: counterPresentation.fxCueId,
+        sourcePoint: clonePoint(targetAfter.position),
+        targetPoint: clonePoint(actorAfter.position),
         amount: resolution.counter.amount,
         valueKind: resolution.counter.kind,
-        durationMs: 500,
+        cameraCue: 'counter-jolt',
+        impulseProfile: buildImpulseProfile(counterPresentation.matterProfile, 'counter'),
+        durationMs: counterPresentation.castMs + Math.round(counterPresentation.impactMs * 0.7),
       }),
     )
   }
@@ -417,6 +556,11 @@ function buildCombatPresentation(
         actorId: resolution.primary.sourceId,
         targetId: resolution.primary.targetId,
         labelKey: resolution.primary.labelKey,
+        fxCueId: `${presentation.fxCueId}.defeat`,
+        sourcePoint,
+        targetPoint: clonePoint(targetAfter.position),
+        cameraCue: 'defeat-drop',
+        impulseProfile: buildImpulseProfile(presentation.matterProfile, 'defeat'),
         defeat: { unitId: resolution.primary.targetId },
         durationMs: 300,
       }),
@@ -424,17 +568,39 @@ function buildCombatPresentation(
   }
 
   if (resolution.counter?.targetDefeated) {
+    const counterTarget = actorAfter
+    const counterPresentation = attackPresentationDefinitions[getClassDefinition(targetAfter).basicAttackPresentationId]
+
     steps.push(
       createStep({
         kind: 'defeat',
         actorId: resolution.counter.sourceId,
         targetId: resolution.counter.targetId,
         labelKey: resolution.counter.labelKey,
+        fxCueId: `${counterPresentation.fxCueId}.defeat`,
+        sourcePoint: clonePoint(targetAfter.position),
+        targetPoint: clonePoint(counterTarget.position),
+        cameraCue: 'defeat-drop',
+        impulseProfile: buildImpulseProfile(counterPresentation.matterProfile, 'defeat'),
         defeat: { unitId: resolution.counter.targetId },
         durationMs: 300,
       }),
     )
   }
+
+  steps.push(
+    createStep({
+      kind: 'recover',
+      actorId: resolution.primary.sourceId,
+      targetId: resolution.primary.targetId,
+      labelKey: resolution.primary.labelKey,
+      fxCueId: `${presentation.fxCueId}.recover`,
+      sourcePoint,
+      targetPoint: clonePoint(targetAfter.position),
+      cameraCue: 'none',
+      durationMs: 180,
+    }),
+  )
 
   return {
     actionLabelKey,

@@ -24,7 +24,12 @@ interface CombatantCard {
   classText: Phaser.GameObjects.Text
   hpText: Phaser.GameObjects.Text
   statusText: Phaser.GameObjects.Text
+  accentColor: number
+  tokenBaseX: number
+  tokenBaseY: number
 }
+
+const FINAL_STEP_HOLD_MS = 260
 
 export class DuelScene extends Phaser.Scene {
   private resolution?: CombatResolution
@@ -42,6 +47,13 @@ export class DuelScene extends Phaser.Scene {
   private stepText?: Phaser.GameObjects.Text
   private subtitleText?: Phaser.GameObjects.Text
   private detailText?: Phaser.GameObjects.Text
+  private fxGraphics?: Phaser.GameObjects.Graphics
+  private flashGraphics?: Phaser.GameObjects.Graphics
+
+  private resolveUnitAccent(unitId: string): string {
+    const unit = this.resolution?.state.units[unitId]
+    return unit?.team === 'enemies' ? '#ff8d73' : '#8fc1ff'
+  }
 
   constructor(uiBus: Phaser.Events.EventEmitter, i18n: I18n) {
     super('duel')
@@ -115,16 +127,21 @@ export class DuelScene extends Phaser.Scene {
     const rightX = width - 300
 
     if (leftUnit) {
-      this.cards.set(leftUnit.unitId, this.createCombatantCard(leftUnit, leftX, panelY + 34, '#8fc1ff'))
+      this.cards.set(
+        leftUnit.unitId,
+        this.createCombatantCard(leftUnit, leftX, panelY + 34, this.resolveUnitAccent(leftUnit.unitId)),
+      )
     }
 
     if (rightUnit) {
-      const unit = this.resolution.state.units[rightUnit.unitId]
       this.cards.set(
         rightUnit.unitId,
-        this.createCombatantCard(rightUnit, rightX, panelY + 34, unit?.team === 'allies' ? '#8fc1ff' : '#ff8d73'),
+        this.createCombatantCard(rightUnit, rightX, panelY + 34, this.resolveUnitAccent(rightUnit.unitId)),
       )
     }
+
+    this.fxGraphics = this.add.graphics()
+    this.flashGraphics = this.add.graphics().setBlendMode(Phaser.BlendModes.SCREEN)
 
     const skip = this.add.text(width - 140, height - 68, this.i18n.t('duel.skip'), {
       fontFamily: 'Outfit',
@@ -161,10 +178,12 @@ export class DuelScene extends Phaser.Scene {
     this.uiBus.on('duel:advance', this.advanceHandler)
 
     this.applyStepPresentation()
+    this.drawStepFx()
   }
 
   update(_time: number, delta: number): void {
     this.advanceTimeline(this.fastMode ? delta * 3 : delta)
+    this.drawStepFx()
   }
 
   private advanceTimeline(ms: number): void {
@@ -182,7 +201,15 @@ export class DuelScene extends Phaser.Scene {
         return
       }
 
-      const remainingForStep = currentStep.durationMs - this.stepElapsedMs
+      const isFinalStep = this.stepIndex >= this.presentation.steps.length - 1
+      const stepDurationWithHold = currentStep.durationMs + (isFinalStep ? FINAL_STEP_HOLD_MS : 0)
+
+      if (isFinalStep && this.stepElapsedMs >= stepDurationWithHold) {
+        this.finish()
+        return
+      }
+
+      const remainingForStep = stepDurationWithHold - this.stepElapsedMs
 
       if (remaining < remainingForStep) {
         this.stepElapsedMs += remaining
@@ -191,8 +218,9 @@ export class DuelScene extends Phaser.Scene {
 
       remaining -= remainingForStep
 
-      if (this.stepIndex >= this.presentation.steps.length - 1) {
-        this.finish()
+      if (isFinalStep) {
+        this.stepElapsedMs = stepDurationWithHold
+        this.emitTelemetry()
         return
       }
 
@@ -230,7 +258,7 @@ export class DuelScene extends Phaser.Scene {
     this.subtitleText?.setText(detailLines[0] ?? '')
 
     const hpLine =
-      step.kind === 'impact' || step.kind === 'counter'
+      step.kind === 'hit' || step.kind === 'counter'
         ? this.buildHpLine(step.targetId ?? '')
         : undefined
     this.detailText?.setText(
@@ -253,6 +281,22 @@ export class DuelScene extends Phaser.Scene {
       card.hpText.setText(`${this.i18n.t('duel.hp')} ${snapshot.hpBefore} -> ${display.hp}`)
       card.statusText.setText(this.formatStatuses(display.statuses))
       card.panel.setAlpha(display.defeated ? 0.68 : 1)
+    }
+
+    if (step.cameraCue === 'impact-heavy') {
+      this.cameras.main.shake(110, 0.0035)
+      this.cameras.main.flash(80, 255, 244, 214, false)
+    } else if (step.cameraCue === 'impact-light') {
+      this.cameras.main.shake(70, 0.002)
+      this.cameras.main.flash(55, 210, 230, 255, false)
+    } else if (step.cameraCue === 'support-pulse') {
+      this.cameras.main.flash(75, 196, 255, 236, false)
+    } else if (step.cameraCue === 'counter-jolt') {
+      this.cameras.main.shake(90, 0.0028)
+      this.cameras.main.flash(60, 255, 222, 210, false)
+    } else if (step.cameraCue === 'defeat-drop') {
+      this.cameras.main.shake(130, 0.0038)
+      this.cameras.main.flash(95, 255, 232, 188, false)
     }
 
     this.emitTelemetry()
@@ -282,7 +326,7 @@ export class DuelScene extends Phaser.Scene {
         continue
       }
 
-      if ((step.kind === 'impact' || step.kind === 'counter') && step.targetId) {
+      if ((step.kind === 'hit' || step.kind === 'counter') && step.targetId) {
         const target = this.displayUnits.get(step.targetId)
 
         if (target && step.amount !== undefined) {
@@ -293,7 +337,7 @@ export class DuelScene extends Phaser.Scene {
         }
       }
 
-      if (step.kind === 'effects' && step.targetId) {
+      if (step.kind === 'status' && step.targetId) {
         const target = this.displayUnits.get(step.targetId)
 
         if (target) {
@@ -312,9 +356,14 @@ export class DuelScene extends Phaser.Scene {
             }
           }
 
-          if (step.push?.succeeded && step.push.destination) {
-            target.position = { ...step.push.destination }
-          }
+        }
+      }
+
+      if (step.kind === 'push' && step.targetId) {
+        const target = this.displayUnits.get(step.targetId)
+
+        if (target && step.push?.succeeded && step.push.destination) {
+          target.position = { ...step.push.destination }
         }
       }
 
@@ -386,6 +435,9 @@ export class DuelScene extends Phaser.Scene {
       classText,
       hpText,
       statusText,
+      accentColor: glowColor,
+      tokenBaseX: x,
+      tokenBaseY: y - 40,
     }
   }
 
@@ -414,13 +466,158 @@ export class DuelScene extends Phaser.Scene {
       .join(' · ')
   }
 
+  private resolveCueColor(fxCueId: string): number {
+    if (fxCueId.includes('ember') || fxCueId.includes('burning')) {
+      return 0xf09046
+    }
+
+    if (fxCueId.includes('ward') || fxCueId.includes('hymn') || fxCueId.includes('aegis')) {
+      return 0x8bdcff
+    }
+
+    if (fxCueId.includes('shadow')) {
+      return 0x9a77ff
+    }
+
+    if (fxCueId.includes('snare') || fxCueId.includes('slow') || fxCueId.includes('ranger')) {
+      return 0x9cd3ff
+    }
+
+    if (fxCueId.includes('guard')) {
+      return 0xffa37d
+    }
+
+    return 0xf5d18c
+  }
+
+  private resetCardTransforms(): void {
+    for (const [unitId, card] of this.cards) {
+      const display = this.displayUnits.get(unitId)
+      card.token.setPosition(card.tokenBaseX, card.tokenBaseY)
+      card.token.setScale(1)
+      card.token.setAlpha(display?.defeated ? 0.34 : 0.92)
+    }
+  }
+
+  private drawStepFx(): void {
+    if (!this.presentation || !this.fxGraphics || !this.flashGraphics) {
+      return
+    }
+
+    const step = this.presentation.steps[this.stepIndex]
+
+    if (!step) {
+      return
+    }
+
+    this.resetCardTransforms()
+    this.fxGraphics.clear()
+    this.flashGraphics.clear()
+
+    const progress = Phaser.Math.Clamp(this.stepElapsedMs / Math.max(step.durationMs, 1), 0, 1)
+    const actorCard = this.cards.get(step.actorId)
+    const targetCard = step.targetId ? this.cards.get(step.targetId) : undefined
+    const actorPos = actorCard
+      ? { x: actorCard.tokenBaseX, y: actorCard.tokenBaseY }
+      : { x: this.scale.width * 0.3, y: this.scale.height * 0.5 }
+    const targetPos = targetCard
+      ? { x: targetCard.tokenBaseX, y: targetCard.tokenBaseY }
+      : { x: this.scale.width * 0.7, y: this.scale.height * 0.5 }
+    const color = this.resolveCueColor(step.fxCueId)
+
+    if (step.kind === 'announce') {
+      this.fxGraphics.lineStyle(2, color, 0.26 + (1 - progress) * 0.2)
+      this.fxGraphics.lineBetween(actorPos.x, actorPos.y + 30, targetPos.x, targetPos.y + 30)
+      return
+    }
+
+    if (step.kind === 'cast' && actorCard) {
+      const lift = Math.sin(progress * Math.PI) * 12
+      actorCard.token.setY(actorCard.tokenBaseY - lift)
+      actorCard.token.setScale(1 + Math.sin(progress * Math.PI) * 0.08)
+      this.fxGraphics.lineStyle(2, color, 0.3 + progress * 0.3)
+      this.fxGraphics.strokeCircle(actorPos.x, actorPos.y + 2, 26 + progress * 16)
+      this.fxGraphics.strokeCircle(actorPos.x, actorPos.y + 2, 40 + progress * 22)
+      return
+    }
+
+    if (step.kind === 'projectile') {
+      const projectileX = Phaser.Math.Linear(actorPos.x, targetPos.x, progress)
+      const projectileY = Phaser.Math.Linear(actorPos.y, targetPos.y, progress)
+      this.fxGraphics.lineStyle(6, color, 0.18)
+      this.fxGraphics.lineBetween(actorPos.x, actorPos.y, projectileX, projectileY)
+      this.fxGraphics.fillStyle(color, 0.9)
+      this.fxGraphics.fillCircle(projectileX, projectileY, 10)
+      this.fxGraphics.lineStyle(2, 0xffffff, 0.55)
+      this.fxGraphics.strokeCircle(projectileX, projectileY, 15)
+      return
+    }
+
+    if ((step.kind === 'hit' || step.kind === 'counter') && targetCard) {
+      const direction = step.kind === 'counter' ? -1 : 1
+      const thrust = Math.sin(progress * Math.PI) * 12 * direction
+      targetCard.token.setX(targetCard.tokenBaseX + thrust)
+      targetCard.token.setScale(1.08 + (1 - progress) * 0.16)
+      this.fxGraphics.fillStyle(color, 0.2)
+      this.fxGraphics.fillCircle(targetPos.x, targetPos.y, 22 + Math.sin(progress * Math.PI) * 18)
+      this.fxGraphics.lineStyle(3, color, 0.88)
+      this.fxGraphics.lineBetween(targetPos.x - 20, targetPos.y, targetPos.x + 20, targetPos.y)
+      this.fxGraphics.lineBetween(targetPos.x, targetPos.y - 20, targetPos.x, targetPos.y + 20)
+      this.flashGraphics.fillStyle(color, 0.045 + Math.sin(progress * Math.PI) * 0.08)
+      this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
+      return
+    }
+
+    if (step.kind === 'status' && targetCard) {
+      this.fxGraphics.lineStyle(2, color, 0.7)
+      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 28 + progress * 14)
+      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 42 + progress * 18)
+      for (let index = 0; index < Math.max(3, step.statusChanges.length * 2); index += 1) {
+        const angle = progress * Math.PI * 2 + index * ((Math.PI * 2) / Math.max(3, step.statusChanges.length * 2))
+        this.fxGraphics.fillStyle(color, 0.6)
+        this.fxGraphics.fillCircle(targetPos.x + Math.cos(angle) * 28, targetPos.y + Math.sin(angle) * 18, 4)
+      }
+      return
+    }
+
+    if (step.kind === 'push' && targetCard) {
+      const distance = step.push?.succeeded ? 28 : 14
+      targetCard.token.setX(targetCard.tokenBaseX + Math.sin(progress * Math.PI) * distance)
+      this.fxGraphics.lineStyle(3, color, 0.82)
+      this.fxGraphics.lineBetween(targetPos.x - 24, targetPos.y + 22, targetPos.x + 18, targetPos.y + 22)
+      this.fxGraphics.lineBetween(targetPos.x + 12, targetPos.y + 16, targetPos.x + 18, targetPos.y + 22)
+      this.fxGraphics.lineBetween(targetPos.x + 12, targetPos.y + 28, targetPos.x + 18, targetPos.y + 22)
+      return
+    }
+
+    if (step.kind === 'defeat' && targetCard) {
+      targetCard.token.setY(targetCard.tokenBaseY + progress * 26)
+      targetCard.token.setAlpha(0.92 * (1 - progress))
+      this.fxGraphics.fillStyle(0xf3d89a, 0.08 + (1 - progress) * 0.12)
+      this.fxGraphics.fillCircle(targetPos.x, targetPos.y, 26 + progress * 36)
+      this.fxGraphics.lineStyle(2, 0xf3d89a, 0.7 * (1 - progress))
+      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 40 + progress * 36)
+      return
+    }
+
+    if (step.kind === 'recover' && actorCard) {
+      this.fxGraphics.lineStyle(2, color, 0.5 * (1 - progress))
+      this.fxGraphics.strokeCircle(actorPos.x, actorPos.y, 38 + progress * 24)
+    }
+  }
+
   private emitTelemetry(): void {
+    const step = this.presentation?.steps[this.stepIndex]
+
     this.uiBus.emit('duel:telemetry', {
       active: true,
       stepIndex: this.stepIndex + 1,
       stepCount: this.presentation?.steps.length ?? 0,
       actionLabel: this.presentation ? this.i18n.t(this.presentation.actionLabelKey) : '',
       fastMode: this.fastMode,
+      stepKind: step?.kind,
+      fxCueId: step?.fxCueId,
+      targetUnitId: step?.targetId,
     })
   }
 
@@ -445,6 +642,9 @@ export class DuelScene extends Phaser.Scene {
       stepCount: this.presentation?.steps.length ?? 0,
       actionLabel: this.presentation ? this.i18n.t(this.presentation.actionLabelKey) : '',
       fastMode: this.fastMode,
+      stepKind: undefined,
+      fxCueId: undefined,
+      targetUnitId: undefined,
     })
     this.uiBus.emit('duel:complete')
     this.scene.stop()

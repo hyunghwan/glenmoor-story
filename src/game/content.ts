@@ -2,10 +2,31 @@ import type {
   AIProfile,
   BattleDefinition,
   ClassDefinition,
+  PresentationProfile,
   SkillDefinition,
   StatusDefinition,
   TerrainDefinition,
 } from './types'
+
+function presentation(
+  fxCueId: string,
+  telegraphStyle: PresentationProfile['telegraphStyle'],
+  castMs: number,
+  impactMs: number,
+  cameraCue: PresentationProfile['cameraCue'],
+  matterProfile: PresentationProfile['matterProfile'],
+  tone: PresentationProfile['tone'],
+): PresentationProfile {
+  return {
+    fxCueId,
+    telegraphStyle,
+    castMs,
+    impactMs,
+    cameraCue,
+    matterProfile,
+    tone,
+  }
+}
 
 export const terrainDefinitions: Record<string, TerrainDefinition> = {
   grass: {
@@ -87,30 +108,43 @@ export const terrainDefinitions: Record<string, TerrainDefinition> = {
   },
 }
 
+export const attackPresentationDefinitions: Record<string, PresentationProfile> = {
+  vanguardStrike: presentation('attack.vanguardStrike', 'attack', 170, 210, 'impact-heavy', 'shock-ring', 'steel'),
+  rangerShot: presentation('attack.rangerShot', 'attack', 220, 180, 'impact-light', 'arrow-streak', 'wind'),
+  arcanistBolt: presentation('attack.arcanistBolt', 'attack', 250, 200, 'impact-light', 'magic-bolt', 'radiant'),
+  wardenGuard: presentation('attack.wardenGuard', 'attack', 180, 200, 'impact-heavy', 'shock-ring', 'steel'),
+  skirmisherSlash: presentation('attack.skirmisherSlash', 'attack', 150, 200, 'impact-heavy', 'dash-burst', 'shadow'),
+  clericChant: presentation('attack.clericChant', 'support', 240, 170, 'support-pulse', 'light-shards', 'radiant'),
+}
+
 export const statusDefinitions: Record<string, StatusDefinition> = {
   burning: {
     id: 'burning',
     labelKey: 'status.burning',
     descriptionKey: 'status.burning.desc',
     maxStacks: 3,
+    presentation: presentation('status.burning', 'status', 120, 180, 'impact-light', 'ember-plume', 'ember'),
   },
   guardBreak: {
     id: 'guardBreak',
     labelKey: 'status.guardBreak',
     descriptionKey: 'status.guardBreak.desc',
     maxStacks: 2,
+    presentation: presentation('status.guardBreak', 'status', 100, 170, 'impact-light', 'guard-fragments', 'hazard'),
   },
   warded: {
     id: 'warded',
     labelKey: 'status.warded',
     descriptionKey: 'status.warded.desc',
     maxStacks: 3,
+    presentation: presentation('status.warded', 'status', 140, 180, 'support-pulse', 'ward-orbit', 'ward'),
   },
   slow: {
     id: 'slow',
     labelKey: 'status.slow',
     descriptionKey: 'status.slow.desc',
     maxStacks: 2,
+    presentation: presentation('status.slow', 'status', 120, 170, 'impact-light', 'slow-haze', 'wind'),
   },
 }
 
@@ -128,6 +162,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
       { type: 'status', statusId: 'guardBreak', stacks: 1, duration: 2 },
       { type: 'push', distance: 1 },
     ],
+    presentation: presentation('skill.shieldBash', 'skill', 220, 240, 'impact-heavy', 'shock-ring', 'steel'),
   },
   snareVolley: {
     id: 'snareVolley',
@@ -141,6 +176,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
       { type: 'damage', amount: 3, flavor: 'power' },
       { type: 'status', statusId: 'slow', stacks: 1, duration: 3 },
     ],
+    presentation: presentation('skill.snareVolley', 'skill', 260, 200, 'impact-light', 'arrow-streak', 'wind'),
   },
   emberSigil: {
     id: 'emberSigil',
@@ -154,6 +190,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
       { type: 'damage', amount: 4, flavor: 'magic' },
       { type: 'status', statusId: 'burning', stacks: 1, duration: 3 },
     ],
+    presentation: presentation('skill.emberSigil', 'skill', 320, 240, 'impact-heavy', 'ember-plume', 'ember'),
   },
   aegisField: {
     id: 'aegisField',
@@ -167,6 +204,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
       { type: 'heal', amount: 5 },
       { type: 'status', statusId: 'warded', stacks: 2, duration: 2 },
     ],
+    presentation: presentation('skill.aegisField', 'support', 260, 220, 'support-pulse', 'light-shards', 'ward'),
   },
   shadowLunge: {
     id: 'shadowLunge',
@@ -177,6 +215,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
     rangeMax: 1,
     counterable: true,
     effects: [{ type: 'damage', amount: 5, flavor: 'power' }],
+    presentation: presentation('skill.shadowLunge', 'skill', 160, 200, 'impact-heavy', 'dash-burst', 'shadow'),
   },
   resolveHymn: {
     id: 'resolveHymn',
@@ -190,6 +229,7 @@ export const skillDefinitions: Record<string, SkillDefinition> = {
       { type: 'heal', amount: 6 },
       { type: 'status', statusId: 'warded', stacks: 1, duration: 2 },
     ],
+    presentation: presentation('skill.resolveHymn', 'support', 290, 220, 'support-pulse', 'light-shards', 'radiant'),
   },
 }
 
@@ -199,6 +239,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
     nameKey: 'class.vanguard',
     roleKey: 'role.vanguard',
     basicAttackNameKey: 'attack.strike',
+    basicAttackPresentationId: 'vanguardStrike',
     basicAttackFlavor: 'power',
     basicAttackPower: 4,
     basicAttackRangeMin: 1,
@@ -220,6 +261,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
     nameKey: 'class.ranger',
     roleKey: 'role.ranger',
     basicAttackNameKey: 'attack.shot',
+    basicAttackPresentationId: 'rangerShot',
     basicAttackFlavor: 'power',
     basicAttackPower: 4,
     basicAttackRangeMin: 2,
@@ -241,6 +283,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
     nameKey: 'class.arcanist',
     roleKey: 'role.arcanist',
     basicAttackNameKey: 'attack.bolt',
+    basicAttackPresentationId: 'arcanistBolt',
     basicAttackFlavor: 'magic',
     basicAttackPower: 3,
     basicAttackRangeMin: 1,
@@ -262,6 +305,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
     nameKey: 'class.warden',
     roleKey: 'role.warden',
     basicAttackNameKey: 'attack.guard',
+    basicAttackPresentationId: 'wardenGuard',
     basicAttackFlavor: 'power',
     basicAttackPower: 3,
     basicAttackRangeMin: 1,
@@ -283,6 +327,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
     nameKey: 'class.skirmisher',
     roleKey: 'role.skirmisher',
     basicAttackNameKey: 'attack.slash',
+    basicAttackPresentationId: 'skirmisherSlash',
     basicAttackFlavor: 'power',
     basicAttackPower: 4,
     basicAttackRangeMin: 1,
@@ -304,6 +349,7 @@ export const classDefinitions: Record<string, ClassDefinition> = {
     nameKey: 'class.cleric',
     roleKey: 'role.cleric',
     basicAttackNameKey: 'attack.chant',
+    basicAttackPresentationId: 'clericChant',
     basicAttackFlavor: 'magic',
     basicAttackPower: 2,
     basicAttackRangeMin: 1,

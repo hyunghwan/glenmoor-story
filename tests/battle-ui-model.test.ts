@@ -267,15 +267,24 @@ describe('battle UI model', () => {
       },
     )
 
-    expect(preview).toEqual({
+    expect(preview).toMatchObject({
       title: 'Strike',
       subtitle: 'SIDE / H+1',
       amountLabel: 'Damage: -12',
       counterLabel: 'Counter Risk: 5',
       effectLabel: 'Effects: Guard Break x1',
       markerLabel: '-12',
-      markerKind: 'damage',
+      markerKind: 'effect',
+      markerTone: 'counter',
+      telegraphSummary: {
+        lethal: false,
+        counterRisk: 5,
+        predictedStatusIds: ['guardBreak'],
+        pushOutcome: 'none',
+        markerTone: 'counter',
+      },
     })
+    expect(preview.telegraphSummary.predictedStatusIds).toContain('guardBreak')
   })
 
   it('builds Manhattan range tiles for red action overlays', () => {

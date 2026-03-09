@@ -59,3 +59,18 @@ The canonical implementation log lives in `docs/progress.md`.
   - `npm run build`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:5174 npm run qa:playthrough`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:5174 npm run qa:camera`
+
+## 2026-03-09
+
+- Switched the Phaser renderer to `AUTO` and enabled Matter as a visual-only FX layer so battlefield particles and shards can run on the WebGL path without touching tactics logic
+- Added presentation metadata to attacks, signature skills, and statuses, then expanded runtime duel steps into `announce`, `cast`, `projectile`, `hit`, `status`, `push`, `counter`, `defeat`, and `recover`
+- Reworked battlefield overlays into layered telegraphs with lethal/counter/status/push accents, persistent status auras, Matter-driven ambient particles, and screen-space danger pulses
+- Extended HUD target previews and duel telemetry so `render_game_to_text()` now exposes structured telegraph summaries plus `stepKind`, `fxCueId`, `targetUnitId`, `activeStatusAuraIds`, and `activeTelegraphKinds`
+- Added a safe pointer-gesture fallback for rotated map clicks and extended the duel final-step hold so both camera QA and telemetry-driven duel capture remain reliable
+- Fixed duel card accents so enemy attackers now render with enemy colors even when they appear on the left side of the zoomed combat view
+- Verification:
+  - `npm test`
+  - `npx tsc --noEmit`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`

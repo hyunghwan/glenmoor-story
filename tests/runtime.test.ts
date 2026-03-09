@@ -34,6 +34,14 @@ function pointKey(x: number, y: number): string {
   return `${x},${y}`
 }
 
+function expectStepMetadata(step: NonNullable<ReturnType<BattleRuntime['commitAction']>['presentation']>['steps'][number]): void {
+  expect(step.fxCueId).toEqual(expect.any(String))
+  expect(step.fxCueId.length).toBeGreaterThan(0)
+  expect(step.sourcePoint).toEqual(expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }))
+  expect(step.targetPoint).toEqual(expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }))
+  expect(step.durationMs).toBeGreaterThan(0)
+}
+
 describe('Battle runtime', () => {
   it('orders turns by initiative speed', () => {
     const runtime = makeRuntime()
@@ -219,14 +227,35 @@ describe('Battle runtime', () => {
       targetId: 'brigandCaptain',
     })
 
-    expect(resolution.presentation?.steps.map((step) => step.kind)).toEqual([
+    const steps = resolution.presentation?.steps ?? []
+
+    expect(steps.map((step) => step.kind)).toEqual([
       'announce',
-      'impact',
-      'effects',
+      'cast',
+      'hit',
+      'status',
+      'push',
       'counter',
+      'recover',
     ])
-    expect(resolution.presentation?.steps[2]?.statusChanges[0]?.statusId).toBe('guardBreak')
-    expect(resolution.presentation?.steps[2]?.push?.succeeded).toBe(false)
+    for (const step of steps) {
+      expectStepMetadata(step)
+    }
+    expect(steps.find((step) => step.kind === 'status')?.statusChanges[0]?.statusId).toBe('guardBreak')
+    expect(steps.find((step) => step.kind === 'push')?.push).toMatchObject({
+      attempted: true,
+      succeeded: false,
+      blockedReason: 'edge',
+    })
+    expect(steps.find((step) => step.kind === 'hit')).toMatchObject({
+      fxCueId: 'skill.shieldBash',
+      sourcePoint: { x: 0, y: 1 },
+      targetPoint: { x: 0, y: 0 },
+    })
+    expect(steps.find((step) => step.kind === 'counter')).toMatchObject({
+      valueKind: 'damage',
+      targetId: 'rowan',
+    })
   })
 
   it('builds ordered presentation steps for healing skills', () => {
@@ -243,13 +272,27 @@ describe('Battle runtime', () => {
       targetId: 'rowan',
     })
 
-    expect(resolution.presentation?.steps.map((step) => step.kind)).toEqual([
+    const steps = resolution.presentation?.steps ?? []
+
+    expect(steps.map((step) => step.kind)).toEqual([
       'announce',
-      'impact',
-      'effects',
+      'cast',
+      'projectile',
+      'hit',
+      'status',
+      'recover',
     ])
-    expect(resolution.presentation?.steps[1]?.valueKind).toBe('heal')
-    expect(resolution.presentation?.steps[2]?.statusChanges[0]?.statusId).toBe('warded')
+    for (const step of steps) {
+      expectStepMetadata(step)
+    }
+    expect(steps.find((step) => step.kind === 'projectile')).toMatchObject({
+      targetId: 'rowan',
+    })
+    expect(steps.find((step) => step.kind === 'hit')).toMatchObject({
+      valueKind: 'heal',
+      amount: resolution.primary?.amount,
+    })
+    expect(steps.find((step) => step.kind === 'status')?.statusChanges[0]?.statusId).toBe('warded')
   })
 
   it('can lose the attacker to a counterattack', () => {

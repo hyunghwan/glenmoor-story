@@ -1,5 +1,6 @@
 import type {
   BattleState,
+  CombatTelegraphSummary,
   CombatResolution,
   GridPoint,
   HudActionButton,
@@ -79,6 +80,8 @@ export interface TargetPreviewStrings {
   effectLabel: string
   markerLabel: string
   markerKind: 'damage' | 'heal' | 'effect'
+  markerTone: CombatTelegraphSummary['markerTone']
+  telegraphSummary: CombatTelegraphSummary
 }
 
 export function buildUnitInitials(name: string): string {
@@ -214,11 +217,52 @@ function formatEffectSummary(resolution: CombatResolution, context: PreviewTextC
   return effects.length > 0 ? effects.join(', ') : context.t('hud.none')
 }
 
+export function buildTargetPreviewSummary(resolution: CombatResolution): CombatTelegraphSummary {
+  const primary = resolution.primary
+
+  if (!primary) {
+    return {
+      lethal: false,
+      counterRisk: 0,
+      predictedStatusIds: [],
+      pushOutcome: 'none',
+      markerTone: 'effect',
+    }
+  }
+
+  const predictedStatusIds = primary.appliedStatuses.map((status) => status.statusId)
+  const counterRisk = resolution.counter?.amount ?? 0
+  const pushOutcome = !primary.push?.attempted ? 'none' : primary.push.succeeded ? 'push' : 'blocked'
+  const lethal = primary.kind === 'damage' && primary.targetDefeated
+
+  let markerTone: CombatTelegraphSummary['markerTone'] =
+    primary.kind === 'heal' ? 'heal' : 'damage'
+
+  if (lethal) {
+    markerTone = 'lethal'
+  } else if (counterRisk > 0) {
+    markerTone = 'counter'
+  } else if (predictedStatusIds.length > 0) {
+    markerTone = 'status'
+  } else if (primary.kind !== 'heal' && pushOutcome !== 'none') {
+    markerTone = 'effect'
+  }
+
+  return {
+    lethal,
+    counterRisk,
+    predictedStatusIds,
+    pushOutcome,
+    markerTone,
+  }
+}
+
 export function buildTargetPreviewStrings(
   resolution: CombatResolution,
   context: PreviewTextContext,
 ): TargetPreviewStrings {
   const primary = resolution.primary
+  const telegraphSummary = buildTargetPreviewSummary(resolution)
 
   if (!primary) {
     return {
@@ -229,6 +273,8 @@ export function buildTargetPreviewStrings(
       effectLabel: `${context.t('hud.forecast.effects')}: ${context.t('hud.none')}`,
       markerLabel: 'FX',
       markerKind: 'effect',
+      markerTone: telegraphSummary.markerTone,
+      telegraphSummary,
     }
   }
 
@@ -247,7 +293,14 @@ export function buildTargetPreviewStrings(
     }`,
     effectLabel: `${context.t('hud.forecast.effects')}: ${formatEffectSummary(resolution, context)}`,
     markerLabel: amountLabel,
-    markerKind: primary.kind === 'heal' ? 'heal' : 'damage',
+    markerKind:
+      telegraphSummary.markerTone === 'damage' || telegraphSummary.markerTone === 'lethal'
+        ? 'damage'
+        : telegraphSummary.markerTone === 'heal'
+          ? 'heal'
+          : 'effect',
+    markerTone: telegraphSummary.markerTone,
+    telegraphSummary,
   }
 }
 

@@ -33,12 +33,20 @@ const uiBus = new Phaser.Events.EventEmitter()
 const hud = new HudController(hudRoot, uiBus)
 
 const config: Phaser.Types.Core.GameConfig = {
-  type: Phaser.CANVAS,
+  type: Phaser.AUTO,
   parent: 'game-root',
   width: 1280,
   height: 720,
   backgroundColor: '#11181f',
   scene: [new BootScene(), new BattleScene(uiBus, i18n), new DuelScene(uiBus, i18n)],
+  physics: {
+    default: 'matter',
+    matter: {
+      gravity: { x: 0, y: 0 },
+      enableSleeping: false,
+      debug: false,
+    },
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -89,6 +97,14 @@ window.__glenmoorDebug = {
     const battle = game.scene.getScene('battle') as BattleScene
     return battle.debugProjectTile({ x, y })
   },
+  inspectClient(x: number, y: number) {
+    const battle = game.scene.getScene('battle') as BattleScene
+    return battle.debugInspectClientPoint(x, y)
+  },
+  lastInput() {
+    const battle = game.scene.getScene('battle') as BattleScene
+    return battle.debugGetLastInput()
+  },
 }
 
 declare global {
@@ -111,6 +127,17 @@ declare global {
             client: { x: number; y: number }
           }
         | null
+      inspectClient: (
+        x: number,
+        y: number,
+      ) => Array<{
+        name: string
+        type: string
+        x: number
+        y: number
+        depth: number
+      }>
+      lastInput: () => Record<string, unknown>
     }
   }
 }

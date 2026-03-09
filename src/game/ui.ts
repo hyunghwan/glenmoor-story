@@ -280,7 +280,7 @@ export class HudController {
       .map(
         (marker) => `
           <div
-            class="hud-target-marker is-${marker.amountKind} ${marker.emphasis ? 'is-emphasis' : ''}"
+            class="hud-target-marker is-${marker.amountKind} is-tone-${marker.markerTone} ${marker.emphasis ? 'is-emphasis' : ''}"
             style="${this.anchorStyle(marker.anchor.clientX, marker.anchor.clientY)}"
           >
             ${marker.amountLabel}
@@ -305,6 +305,19 @@ export class HudController {
         <p>${view.targetDetail.amountLabel}</p>
         <p>${view.targetDetail.counterLabel}</p>
         <p>${view.targetDetail.effectLabel}</p>
+        <p class="hud-target-verdict">
+          ${view.targetDetail.telegraphSummary.lethal ? '<span class="is-lethal">Lethal</span>' : ''}
+          ${
+            view.targetDetail.telegraphSummary.counterRisk > 0
+              ? `<span class="is-counter">Counter ${view.targetDetail.telegraphSummary.counterRisk}</span>`
+              : ''
+          }
+          ${
+            view.targetDetail.telegraphSummary.predictedStatusIds.length > 0
+              ? `<span class="is-status">${view.targetDetail.telegraphSummary.predictedStatusIds.length} status</span>`
+              : ''
+          }
+        </p>
       </section>
     `
   }

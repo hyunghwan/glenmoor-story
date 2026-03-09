@@ -670,6 +670,21 @@ button {
   color: var(--accent-strong);
 }
 
+.hud-target-marker.is-tone-lethal {
+  border-color: rgba(246, 216, 141, 0.9);
+  box-shadow: 0 0 18px rgba(246, 216, 141, 0.2);
+}
+
+.hud-target-marker.is-tone-counter {
+  border-color: rgba(215, 82, 95, 0.82);
+  color: #ffd8de;
+}
+
+.hud-target-marker.is-tone-status {
+  border-color: rgba(127, 217, 255, 0.72);
+  color: #d9f7ff;
+}
+
 .hud-target-marker.is-emphasis {
   box-shadow: 0 0 0 1px rgba(240, 200, 119, 0.16);
 }
@@ -701,6 +716,35 @@ button {
   margin: 5px 0 0;
   color: var(--ink);
   font-size: 13px;
+}
+
+.hud-target-verdict {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hud-target-verdict span {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hud-target-verdict .is-lethal {
+  background: rgba(246, 216, 141, 0.16);
+  color: #f6df9d;
+}
+
+.hud-target-verdict .is-counter {
+  background: rgba(163, 31, 47, 0.22);
+  color: #ffc2ca;
+}
+
+.hud-target-verdict .is-status {
+  background: rgba(80, 151, 189, 0.22);
+  color: #d3f2ff;
 }
 
 .hud-modal {

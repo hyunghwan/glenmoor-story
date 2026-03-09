@@ -12,6 +12,7 @@ import {
   buildCommandButtons,
   buildInitiativeEntries,
   buildRangeTiles,
+  buildTargetPreviewSummary,
   buildTargetPreviewStrings,
   buildTurnStateSummary,
   buildUnitInitials,
@@ -34,6 +35,7 @@ import { BattleRuntime } from '../runtime'
 import type {
   ActionTarget,
   BattleAction,
+  DuelTelemetry,
   GridPoint,
   HudAnchor,
   HudViewModel,
@@ -63,6 +65,19 @@ interface BattlefieldPointerState {
   isDragging: boolean
 }
 
+interface MatterFxParticle {
+  body: MatterJS.BodyType
+  color: number
+  radius: number
+  width: number
+  height: number
+  alpha: number
+  ageMs: number
+  lifetimeMs: number
+  shape: 'circle' | 'shard'
+  cueId: string
+}
+
 export class BattleScene extends Phaser.Scene {
   private readonly uiBus: Phaser.Events.EventEmitter
   private readonly i18n: I18n
@@ -70,24 +85,35 @@ export class BattleScene extends Phaser.Scene {
   private battlefieldZone?: Phaser.GameObjects.Zone
   private mapGraphics?: Phaser.GameObjects.Graphics
   private overlayGraphics?: Phaser.GameObjects.Graphics
+  private statusAuraGraphics?: Phaser.GameObjects.Graphics
+  private matterFxGraphics?: Phaser.GameObjects.Graphics
+  private screenFxGraphics?: Phaser.GameObjects.Graphics
   private tileZones = new Map<string, Phaser.GameObjects.Zone>()
   private unitContainers = new Map<string, Phaser.GameObjects.Container>()
+  private matterParticles: MatterFxParticle[] = []
   private hoveredPoint?: GridPoint
   private selectedUnitId?: string
   private mode: HudViewModel['mode'] = 'idle'
   private moveRangeTiles: ReachableTile[] = []
   private reachableTiles: ReachableTile[] = []
   private targetOptions: ActionTarget[] = []
+  private activeTelegraphKinds: string[] = []
+  private pulseElapsedMs = 0
+  private matterSpawnElapsedMs = 0
   private pendingAiDelayMs = 0
   private debugAdvanceMs = 0
+  private lastDebugInput: Record<string, unknown> = {}
   private lastActiveUnitId?: string
   private currentModal?: HudViewModel['modal']
-  private duelTelemetry = {
+  private duelTelemetry: DuelTelemetry = {
     active: false,
     stepIndex: 0,
     stepCount: 0,
     actionLabel: '',
     fastMode: false,
+    stepKind: undefined,
+    fxCueId: undefined,
+    targetUnitId: undefined,
   }
   private mapData?: TiledMapData
   private cameraBounds?: Phaser.Geom.Rectangle
@@ -116,6 +142,13 @@ export class BattleScene extends Phaser.Scene {
     this.createBattlefieldZone()
     this.mapGraphics = this.add.graphics()
     this.overlayGraphics = this.add.graphics()
+    this.statusAuraGraphics = this.add.graphics()
+    this.matterFxGraphics = this.add.graphics()
+    this.screenFxGraphics = this.add.graphics().setScrollFactor(0).setDepth(4000)
+    this.statusAuraGraphics.setDepth(20)
+    this.matterFxGraphics.setDepth(42)
+    this.overlayGraphics.setDepth(48)
+    this.matter.world.setGravity(0, 0)
     this.scale.on(Phaser.Scale.Events.RESIZE, this.handleScaleResize, this)
 
     this.createTileInputs()
@@ -148,12 +181,23 @@ export class BattleScene extends Phaser.Scene {
       this.input.off('pointerup', this.handlePointerUp, this)
       this.input.off('gameout', this.handlePointerCancel, this)
       this.input.off('wheel', this.handleWheel, this)
+      this.clearMatterFx()
+      this.screenFxGraphics?.clear()
     })
 
     this.refreshPresentation()
   }
 
   update(_time: number, delta: number): void {
+    if (this.runtime) {
+      this.flushPointerGestureFallback()
+      this.pulseElapsedMs += delta
+      this.updateMatterFx(delta)
+      this.drawOverlays()
+      this.drawStatusAuras()
+      this.drawScreenFx()
+    }
+
     if (!this.runtime || this.currentModal || this.mode === 'busy' || this.runtime.state.phase !== 'active') {
       return
     }
@@ -180,6 +224,20 @@ export class BattleScene extends Phaser.Scene {
       this.resolveAction(choice.action)
       this.pendingAiDelayMs = 0
     }
+  }
+
+  private flushPointerGestureFallback(): void {
+    if (!this.pointerState) {
+      return
+    }
+
+    const pointer = this.input.activePointer
+
+    if (pointer.id !== this.pointerState.pointerId || pointer.isDown) {
+      return
+    }
+
+    this.finishPointerGesture(pointer, false)
   }
 
   private resetViewState(): void {
@@ -220,11 +278,331 @@ export class BattleScene extends Phaser.Scene {
     return tileDiamond(point, height, this.getProjectionOptions())
   }
 
+  private getPulse(periodMs = 860, phaseMs = 0): number {
+    return (Math.sin(((this.pulseElapsedMs + phaseMs) / periodMs) * Math.PI * 2) + 1) / 2
+  }
+
+  private resolveToneColor(tone: string): number {
+    switch (tone) {
+      case 'ember':
+        return 0xf08a4b
+      case 'ward':
+        return 0x7fd9ff
+      case 'shadow':
+        return 0x8b6bff
+      case 'wind':
+        return 0x90cfff
+      case 'radiant':
+        return 0xe7d88a
+      case 'hazard':
+        return 0xff9078
+      case 'steel':
+        return 0xf5d18c
+      default:
+        return 0xbec8d8
+    }
+  }
+
+  private resolveMarkerToneColor(tone: HudViewModel['targetMarkers'][number]['markerTone']): number {
+    switch (tone) {
+      case 'heal':
+        return 0x7ed6ac
+      case 'lethal':
+        return 0xf6d88d
+      case 'counter':
+        return 0xd7525f
+      case 'status':
+        return 0x7fd9ff
+      case 'effect':
+        return 0xd8bf84
+      default:
+        return 0xff8870
+    }
+  }
+
+  private getTileHeight(point: GridPoint): number {
+    return this.runtime?.state.map.tiles[point.y]?.[point.x]?.height ?? 0
+  }
+
+  private findReachableTile(point: GridPoint): ReachableTile | undefined {
+    return this.moveRangeTiles.find((tile) => samePoint(tile.point, point))
+  }
+
+  private spawnMatterParticle(config: {
+    x: number
+    y: number
+    cueId: string
+    color: number
+    radius?: number
+    width?: number
+    height?: number
+    velocityX: number
+    velocityY: number
+    angularVelocity?: number
+    lifetimeMs: number
+    shape: MatterFxParticle['shape']
+  }): void {
+    if (this.matterParticles.length >= 180) {
+      const oldest = this.matterParticles.shift()
+
+      if (oldest) {
+        this.matter.world.remove(oldest.body)
+      }
+    }
+
+    const body =
+      config.shape === 'circle'
+        ? this.matter.add.circle(config.x, config.y, config.radius ?? 4, {
+            frictionAir: 0.035,
+            collisionFilter: { group: -1, mask: 0 },
+            isSensor: true,
+          })
+        : this.matter.add.rectangle(config.x, config.y, config.width ?? 8, config.height ?? 3, {
+            frictionAir: 0.04,
+            collisionFilter: { group: -1, mask: 0 },
+            isSensor: true,
+          })
+
+    this.matter.setVelocity(body, config.velocityX, config.velocityY)
+
+    if (config.angularVelocity) {
+      this.matter.setAngularVelocity(body, config.angularVelocity)
+    }
+
+    this.matterParticles.push({
+      body,
+      color: config.color,
+      radius: config.radius ?? 4,
+      width: config.width ?? 8,
+      height: config.height ?? 3,
+      alpha: 1,
+      ageMs: 0,
+      lifetimeMs: config.lifetimeMs,
+      shape: config.shape,
+      cueId: config.cueId,
+    })
+  }
+
+  private clearMatterFx(): void {
+    for (const particle of this.matterParticles) {
+      this.matter.world.remove(particle.body)
+    }
+
+    this.matterParticles = []
+    this.matterFxGraphics?.clear()
+  }
+
+  private emitAmbientMatterFx(): void {
+    if (!this.runtime) {
+      return
+    }
+
+    for (const unit of Object.values(this.runtime.state.units)) {
+      if (unit.defeated || unit.statuses.length === 0) {
+        continue
+      }
+
+      const world = this.projectTilePoint(unit.position, this.getTileHeight(unit.position))
+
+      for (const [index, status] of unit.statuses.entries()) {
+        const color = this.resolveToneColor(statusDefinitions[status.id].presentation.tone)
+        const orbit = this.pulseElapsedMs * 0.005 + unit.position.x * 0.8 + unit.position.y * 0.6 + index * 1.7
+        const offsetX = Math.cos(orbit) * (16 + index * 5)
+        const offsetY = Math.sin(orbit) * (6 + index * 3)
+        this.spawnMatterParticle({
+          x: world.x + offsetX,
+          y: world.y - 18 + offsetY,
+          cueId: statusDefinitions[status.id].presentation.fxCueId,
+          color,
+          radius: 2.8 + Math.min(status.stacks, 3),
+          velocityX: offsetX * 0.012,
+          velocityY: -0.18 - Math.abs(offsetY) * 0.01,
+          angularVelocity: 0.06,
+          lifetimeMs: 560 + index * 90,
+          shape: statusDefinitions[status.id].presentation.matterProfile === 'guard-fragments' ? 'shard' : 'circle',
+        })
+      }
+    }
+
+    for (const option of this.targetOptions) {
+      const unit = this.runtime.state.units[option.unitId]
+
+      if (!unit || unit.defeated) {
+        continue
+      }
+
+      const preview = buildTargetPreviewStrings(option.forecast, this.createCombatTextContext())
+      const world = this.projectTilePoint(unit.position, this.getTileHeight(unit.position))
+      const color = this.resolveMarkerToneColor(preview.markerTone)
+      const count = this.hoveredPoint && samePoint(this.hoveredPoint, unit.position) ? 2 : 1
+
+      for (let index = 0; index < count; index += 1) {
+        const angle = this.pulseElapsedMs * 0.006 + option.point.x * 0.4 + option.point.y * 0.33 + index * Math.PI
+        this.spawnMatterParticle({
+          x: world.x + Math.cos(angle) * 18,
+          y: world.y - 10 + Math.sin(angle) * 10,
+          cueId: preview.telegraphSummary.markerTone,
+          color,
+          radius: preview.telegraphSummary.markerTone === 'lethal' ? 4.4 : 3.2,
+          width: 10,
+          height: 3,
+          velocityX: Math.cos(angle) * 0.3,
+          velocityY: Math.sin(angle) * 0.1 - 0.14,
+          angularVelocity: 0.08,
+          lifetimeMs: 420,
+          shape: preview.telegraphSummary.markerTone === 'status' ? 'circle' : 'shard',
+        })
+      }
+    }
+  }
+
+  private updateMatterFx(delta: number): void {
+    if (!this.runtime || !this.matterFxGraphics) {
+      return
+    }
+
+    this.matterSpawnElapsedMs += delta
+
+    while (this.matterSpawnElapsedMs >= 140) {
+      this.emitAmbientMatterFx()
+      this.matterSpawnElapsedMs -= 140
+    }
+
+    this.matterParticles = this.matterParticles.filter((particle) => {
+      particle.ageMs += delta
+      particle.alpha = Math.max(0, 1 - particle.ageMs / particle.lifetimeMs)
+
+      if (particle.ageMs >= particle.lifetimeMs) {
+        this.matter.world.remove(particle.body)
+        return false
+      }
+
+      return true
+    })
+
+    this.drawMatterFx()
+  }
+
+  private drawMatterFx(): void {
+    if (!this.matterFxGraphics) {
+      return
+    }
+
+    this.matterFxGraphics.clear()
+
+    for (const particle of this.matterParticles) {
+      const { x, y } = particle.body.position
+
+      this.matterFxGraphics.fillStyle(particle.color, 0.15 * particle.alpha)
+      this.matterFxGraphics.lineStyle(1, particle.color, 0.9 * particle.alpha)
+
+      if (particle.shape === 'circle') {
+        this.matterFxGraphics.fillCircle(x, y, particle.radius * 1.8)
+        this.matterFxGraphics.fillStyle(particle.color, 0.78 * particle.alpha)
+        this.matterFxGraphics.fillCircle(x, y, particle.radius)
+        continue
+      }
+
+      const halfWidth = particle.width / 2
+      const halfHeight = particle.height / 2
+      const angle = particle.body.angle
+      const points = [
+        { x: -halfWidth, y: -halfHeight },
+        { x: halfWidth, y: -halfHeight },
+        { x: halfWidth, y: halfHeight },
+        { x: -halfWidth, y: halfHeight },
+      ].map((point) => ({
+        x: x + point.x * Math.cos(angle) - point.y * Math.sin(angle),
+        y: y + point.x * Math.sin(angle) + point.y * Math.cos(angle),
+      }))
+
+      this.matterFxGraphics.fillPoints(points, true)
+      this.matterFxGraphics.strokePoints([...points, points[0]], true)
+    }
+  }
+
+  private drawStatusAuras(): void {
+    if (!this.runtime || !this.statusAuraGraphics) {
+      return
+    }
+
+    this.statusAuraGraphics.clear()
+    const pulse = this.getPulse(980)
+
+    for (const unit of Object.values(this.runtime.state.units)) {
+      if (unit.defeated || unit.statuses.length === 0) {
+        continue
+      }
+
+      const world = this.projectTilePoint(unit.position, this.getTileHeight(unit.position))
+
+      for (const [index, status] of unit.statuses.entries()) {
+        const presentation = statusDefinitions[status.id].presentation
+        const color = this.resolveToneColor(presentation.tone)
+        const width = 40 + index * 10 + pulse * 8
+        const height = 14 + index * 4 + pulse * 3
+        this.statusAuraGraphics.fillStyle(color, 0.05 + status.stacks * 0.015)
+        this.statusAuraGraphics.fillEllipse(world.x, world.y + 8 - index * 3, width, height)
+        this.statusAuraGraphics.lineStyle(2, color, 0.24 + pulse * 0.18)
+        this.statusAuraGraphics.strokeEllipse(world.x, world.y + 8 - index * 3, width + 6, height + 3)
+        this.statusAuraGraphics.lineStyle(1, color, 0.18 + pulse * 0.12)
+        this.statusAuraGraphics.strokeEllipse(world.x, world.y - 6 - index * 6, 24 + index * 7, 10 + pulse * 2)
+      }
+    }
+  }
+
+  private drawScreenFx(): void {
+    if (!this.screenFxGraphics || !this.runtime) {
+      return
+    }
+
+    this.screenFxGraphics.clear()
+
+    const hoveredPoint = this.hoveredPoint
+    const hoveredTarget =
+      hoveredPoint ? this.targetOptions.find((option) => samePoint(option.point, hoveredPoint)) : undefined
+    const hoveredSummary = hoveredTarget ? buildTargetPreviewSummary(hoveredTarget.forecast) : undefined
+
+    if (!hoveredSummary) {
+      return
+    }
+
+    const width = this.scale.width
+    const height = this.scale.height
+    const pulse = this.getPulse(720)
+    let color = 0
+    let alpha = 0
+
+    if (hoveredSummary.lethal) {
+      color = 0xf6d88d
+      alpha = 0.022 + pulse * 0.032
+    } else if (hoveredSummary.counterRisk > 0) {
+      color = 0xa32633
+      alpha = 0.016 + pulse * 0.024
+    }
+
+    if (alpha <= 0) {
+      return
+    }
+
+    this.screenFxGraphics.fillStyle(color, alpha)
+    this.screenFxGraphics.fillRect(0, 0, width, height)
+    this.screenFxGraphics.lineStyle(2, color, alpha * 3.2)
+    this.screenFxGraphics.strokeRect(10, 10, width - 20, height - 20)
+  }
+
   private createBattlefieldZone(): void {
     this.battlefieldZone = this.add.zone(this.scale.width / 2, this.scale.height / 2, 4096, 4096)
+    this.battlefieldZone.name = 'battlefield-zone'
     this.battlefieldZone.setInteractive({ cursor: 'grab' })
     this.battlefieldZone.setDepth(-1000)
     this.battlefieldZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.lastDebugInput = {
+        source: 'battlefield-zone:pointerdown',
+        pointerId: pointer.id,
+        x: pointer.x,
+        y: pointer.y,
+      }
       this.beginPointerGesture(pointer)
     })
   }
@@ -238,6 +616,15 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const camera = this.cameras.main
+    this.lastDebugInput = {
+      source: 'begin-pointer-gesture',
+      pointerId: pointer.id,
+      x: pointer.x,
+      y: pointer.y,
+      tilePoint: candidate?.tilePoint,
+      unitId: candidate?.unitId,
+      panModeActive: this.viewState.panModeActive,
+    }
     this.pointerState = {
       pointerId: pointer.id,
       startX: pointer.x,
@@ -295,6 +682,17 @@ export class BattleScene extends Phaser.Scene {
     const state = this.pointerState
     this.pointerState = undefined
     this.updateBattlefieldCursor(false)
+    this.lastDebugInput = {
+      source: 'finish-pointer-gesture',
+      pointerId: pointer.id,
+      cancelled,
+      x: pointer.x,
+      y: pointer.y,
+      tilePoint: state.tilePoint,
+      unitId: state.unitId,
+      isDragging: state.isDragging,
+      panModeActive: this.viewState.panModeActive,
+    }
 
     if (state.isDragging || cancelled) {
       this.emitTelemetry()
@@ -561,6 +959,9 @@ export class BattleScene extends Phaser.Scene {
       stepCount: 0,
       actionLabel: '',
       fastMode: false,
+      stepKind: undefined,
+      fxCueId: undefined,
+      targetUnitId: undefined,
     }
     this.mode = 'idle'
     this.emitTelemetry()
@@ -590,6 +991,7 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
+    this.clearMatterFx()
     for (const unit of Object.values(this.runtime.state.units)) {
       unit.statuses = []
       unit.hasMovedThisTurn = false
@@ -640,6 +1042,7 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
+    this.clearMatterFx()
     this.runtime.reset(this.mapData)
     this.resetViewState()
     this.currentModal = this.buildModal('briefing')
@@ -656,6 +1059,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.mode = 'busy'
+    this.clearMatterFx()
     this.reachableTiles = []
     this.targetOptions = []
     const resolution = this.runtime.commitAction(action)
@@ -699,12 +1103,12 @@ export class BattleScene extends Phaser.Scene {
     for (const row of this.runtime.state.map.tiles) {
       for (const tile of row) {
         const zone = this.add.zone(0, 0, TILE_WIDTH * 0.72, TILE_HEIGHT * 0.78)
+        zone.name = `tile:${tile.point.x},${tile.point.y}`
         zone.setInteractive({ cursor: 'pointer' })
         zone.on('pointerover', () => {
           if (
             this.currentModal ||
             this.mode === 'busy' ||
-            this.mode === 'move' ||
             this.viewState.panModeActive ||
             this.pointerState?.isDragging
           ) {
@@ -719,7 +1123,6 @@ export class BattleScene extends Phaser.Scene {
           if (
             this.currentModal ||
             this.mode === 'busy' ||
-            this.mode === 'move' ||
             this.viewState.panModeActive ||
             this.pointerState?.isDragging
           ) {
@@ -739,6 +1142,13 @@ export class BattleScene extends Phaser.Scene {
             event: Phaser.Types.Input.EventData,
           ) => {
             event.stopPropagation()
+            this.lastDebugInput = {
+              source: 'tile-zone:pointerdown',
+              tilePoint: tile.point,
+              pointerId: pointer.id,
+              x: pointer.x,
+              y: pointer.y,
+            }
             this.beginPointerGesture(pointer, { tilePoint: tile.point })
           },
         )
@@ -875,6 +1285,7 @@ export class BattleScene extends Phaser.Scene {
 
   private syncUnits(): void {
     for (const container of this.unitContainers.values()) {
+      container.removeAll(true)
       container.destroy()
     }
 
@@ -904,6 +1315,7 @@ export class BattleScene extends Phaser.Scene {
     const isActive = unit.id === this.runtime?.state.activeUnitId
     const outline = isActive ? 0xf5d18c : unit.id === this.selectedUnitId ? 0xffffff : 0x233341
     const graphic = this.add.graphics()
+    graphic.name = `unit:${unit.id}`
 
     graphic.fillStyle(0x061015, 0.55)
     graphic.fillEllipse(0, 24, 38, 14)
@@ -998,6 +1410,13 @@ export class BattleScene extends Phaser.Scene {
           event: Phaser.Types.Input.EventData,
         ) => {
           event.stopPropagation()
+          this.lastDebugInput = {
+            source: 'unit:pointerdown',
+            unitId: unit.id,
+            pointerId: pointer.id,
+            x: pointer.x,
+            y: pointer.y,
+          }
           this.beginPointerGesture(pointer, { unitId: unit.id })
         },
       )
@@ -1021,50 +1440,150 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.overlayGraphics.clear()
+    const telegraphKinds = new Set<string>()
     const active = this.runtime.getActiveUnit()
     const actionRangeTiles = this.getActionRangeTiles()
+    const movePulse = this.getPulse(1080)
+    const rangePulse = this.getPulse(880, 140)
+    const targetPulse = this.getPulse(720, 280)
 
     for (const tile of this.reachableTiles) {
+      telegraphKinds.add('move-range')
       const height = this.runtime.state.map.tiles[tile.point.y][tile.point.x].height
       const diamond = this.projectTileDiamond(tile.point, height)
-      this.overlayGraphics.fillStyle(0x67b9ff, tile.cost === 0 ? 0.1 : 0.28)
+      this.overlayGraphics.fillStyle(0x67b9ff, tile.cost === 0 ? 0.12 + movePulse * 0.06 : 0.2 + movePulse * 0.12)
       this.overlayGraphics.fillPoints(diamond, true)
-      this.overlayGraphics.lineStyle(tile.cost === 0 ? 2 : 1, tile.cost === 0 ? 0xf5d18c : 0x99d5ff, 0.74)
+      this.overlayGraphics.lineStyle(
+        tile.cost === 0 ? 2 : 1,
+        tile.cost === 0 ? 0xf5d18c : 0x99d5ff,
+        0.7 + movePulse * 0.2,
+      )
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
+
+      if (tile.cost > 0) {
+        const world = this.projectTilePoint(tile.point, height)
+        this.overlayGraphics.fillStyle(0xdff2ff, 0.08 + movePulse * 0.08)
+        this.overlayGraphics.fillCircle(world.x, world.y, 2.4)
+      }
+    }
+
+    const hoveredReachable = this.hoveredPoint ? this.findReachableTile(this.hoveredPoint) : undefined
+
+    if (this.mode === 'move' && hoveredReachable?.path.length) {
+      telegraphKinds.add('move-path')
+      this.overlayGraphics.lineStyle(4, 0xccecff, 0.4 + movePulse * 0.32)
+
+      const pathPoints = hoveredReachable.path.map((point) =>
+        this.projectTilePoint(point, this.runtime!.state.map.tiles[point.y][point.x].height),
+      )
+
+      for (let index = 1; index < pathPoints.length; index += 1) {
+        this.overlayGraphics.lineBetween(
+          pathPoints[index - 1].x,
+          pathPoints[index - 1].y - 2,
+          pathPoints[index].x,
+          pathPoints[index].y - 2,
+        )
+      }
+
+      for (const point of pathPoints) {
+        this.overlayGraphics.fillStyle(0xf5f6f8, 0.4 + movePulse * 0.28)
+        this.overlayGraphics.fillCircle(point.x, point.y - 2, 3.2)
+      }
     }
 
     for (const point of actionRangeTiles) {
+      telegraphKinds.add(this.mode === 'skill' ? 'skill-range' : 'attack-range')
       const height = this.runtime.state.map.tiles[point.y][point.x].height
       const diamond = this.projectTileDiamond(point, height)
-      this.overlayGraphics.fillStyle(0xa31f2f, 0.28)
+      const fillColor = this.mode === 'skill' ? 0x864bb7 : 0xa31f2f
+      const lineColor = this.mode === 'skill' ? 0xd9b7ff : 0xff7f6b
+      this.overlayGraphics.fillStyle(fillColor, 0.1 + rangePulse * 0.16)
       this.overlayGraphics.fillPoints(diamond, true)
-      this.overlayGraphics.lineStyle(1, 0xff7f6b, 0.62)
+      this.overlayGraphics.lineStyle(1.5, lineColor, 0.4 + rangePulse * 0.32)
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
+      this.overlayGraphics.lineBetween(diamond[0].x, diamond[0].y, diamond[2].x, diamond[2].y)
+      this.overlayGraphics.lineBetween(diamond[1].x, diamond[1].y, diamond[3].x, diamond[3].y)
     }
 
     for (const option of this.targetOptions) {
       const unit = this.runtime.state.units[option.unitId]
       const height = this.runtime.state.map.tiles[unit.position.y][unit.position.x].height
       const diamond = this.projectTileDiamond(unit.position, height)
-      this.overlayGraphics.fillStyle(0xfde1b5, 0.08)
+      const preview = buildTargetPreviewStrings(option.forecast, this.createCombatTextContext())
+      const color = this.resolveMarkerToneColor(preview.markerTone)
+      telegraphKinds.add('target-lock')
+      this.overlayGraphics.fillStyle(color, 0.06 + targetPulse * 0.08)
       this.overlayGraphics.fillPoints(diamond, true)
-      this.overlayGraphics.lineStyle(3, 0xf6d18b, 0.98)
+      this.overlayGraphics.lineStyle(2 + targetPulse, color, 0.66 + targetPulse * 0.22)
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
+
+      if (preview.telegraphSummary.lethal) {
+        telegraphKinds.add('lethal')
+        this.overlayGraphics.lineStyle(2, 0xf8efc1, 0.94)
+        this.overlayGraphics.lineBetween(diamond[0].x, diamond[0].y - 10, diamond[0].x, diamond[0].y - 2)
+        this.overlayGraphics.lineBetween(diamond[1].x + 10, diamond[1].y, diamond[1].x + 2, diamond[1].y)
+        this.overlayGraphics.lineBetween(diamond[2].x, diamond[2].y + 10, diamond[2].x, diamond[2].y + 2)
+        this.overlayGraphics.lineBetween(diamond[3].x - 10, diamond[3].y, diamond[3].x - 2, diamond[3].y)
+      }
+
+      if (preview.telegraphSummary.counterRisk > 0) {
+        telegraphKinds.add('counter-risk')
+        this.overlayGraphics.lineStyle(2, 0xd7525f, 0.74)
+        this.overlayGraphics.lineBetween(diamond[3].x, diamond[3].y, diamond[0].x, diamond[0].y)
+        this.overlayGraphics.lineBetween(diamond[0].x, diamond[0].y, diamond[1].x, diamond[1].y)
+      }
+
+      if (preview.telegraphSummary.pushOutcome !== 'none') {
+        telegraphKinds.add('push')
+        const world = this.projectTilePoint(unit.position, height)
+        this.overlayGraphics.lineStyle(2, 0xf0c877, 0.68)
+        this.overlayGraphics.lineBetween(world.x - 10, world.y - 16, world.x + 12, world.y - 16)
+        this.overlayGraphics.lineBetween(world.x + 8, world.y - 20, world.x + 12, world.y - 16)
+        this.overlayGraphics.lineBetween(world.x + 8, world.y - 12, world.x + 12, world.y - 16)
+      }
+
+      if (preview.telegraphSummary.predictedStatusIds.length > 0) {
+        const world = this.projectTilePoint(unit.position, height)
+        const statusColor = this.resolveToneColor(
+          statusDefinitions[preview.telegraphSummary.predictedStatusIds[0]].presentation.tone,
+        )
+        this.overlayGraphics.lineStyle(2, statusColor, 0.76)
+        this.overlayGraphics.strokeEllipse(world.x, world.y - 8, 42 + targetPulse * 6, 20 + targetPulse * 3)
+        for (const statusId of preview.telegraphSummary.predictedStatusIds) {
+          telegraphKinds.add(`status-${statusId}`)
+        }
+      }
     }
 
     if (this.hoveredPoint) {
       const height = this.runtime.state.map.tiles[this.hoveredPoint.y][this.hoveredPoint.x].height
       const diamond = this.projectTileDiamond(this.hoveredPoint, height)
-      this.overlayGraphics.lineStyle(2, 0xf6dc9f, 1)
+      const hoveredTargetOption = this.targetOptions.find((option) => samePoint(option.point, this.hoveredPoint!))
+      const hoveredColor = hoveredTargetOption
+        ? this.resolveMarkerToneColor(
+            buildTargetPreviewStrings(hoveredTargetOption.forecast, this.createCombatTextContext()).markerTone,
+          )
+        : 0xf6dc9f
+      this.overlayGraphics.lineStyle(2.5, hoveredColor, 0.96)
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
     }
 
     const activeHeight = this.runtime.state.map.tiles[active.position.y][active.position.x].height
     const activeDiamond = this.projectTileDiamond(active.position, activeHeight)
-    this.overlayGraphics.fillStyle(active.team === 'allies' ? 0xf0b35f : 0xff9b7b, this.mode === 'move' ? 0.12 : 0.18)
+    telegraphKinds.add('active-unit')
+    this.overlayGraphics.fillStyle(
+      active.team === 'allies' ? 0xf0b35f : 0xff9b7b,
+      this.mode === 'move' ? 0.12 + movePulse * 0.06 : 0.16 + movePulse * 0.08,
+    )
     this.overlayGraphics.fillPoints(activeDiamond, true)
-    this.overlayGraphics.lineStyle(3, 0xf5d18c, 0.96)
+    this.overlayGraphics.lineStyle(3, 0xf5d18c, 0.82 + movePulse * 0.18)
     this.overlayGraphics.strokePoints([...activeDiamond, activeDiamond[0]], true)
+    const activeWorld = this.projectTilePoint(active.position, activeHeight)
+    this.overlayGraphics.lineStyle(2, 0xf9f0c7, 0.3 + movePulse * 0.24)
+    this.overlayGraphics.strokeEllipse(activeWorld.x, activeWorld.y + 12, 56 + movePulse * 10, 20 + movePulse * 4)
+
+    this.activeTelegraphKinds = Array.from(telegraphKinds)
   }
 
   private publishHud(): void {
@@ -1137,6 +1656,12 @@ export class BattleScene extends Phaser.Scene {
       reachableTiles: this.reachableTiles.map((tile) => tile.point),
       actionRangeTiles: this.getActionRangeTiles(),
       targetableUnitIds: this.targetOptions.map((option) => option.unitId),
+      activeStatusAuraIds: Array.from(
+        new Set(
+          Object.values(this.runtime.state.units).flatMap((unit) => unit.statuses.map((status) => status.id)),
+        ),
+      ),
+      activeTelegraphKinds: this.activeTelegraphKinds,
       units: Object.values(this.runtime.state.units).map((unit) => ({
         id: unit.id,
         name: this.i18n.t(unit.nameKey),
@@ -1274,6 +1799,7 @@ export class BattleScene extends Phaser.Scene {
         anchor,
         amountLabel: preview.markerLabel,
         amountKind: preview.markerKind,
+        markerTone: preview.markerTone,
         emphasis: unit.id === hoveredUnitId,
       }]
     })
@@ -1312,6 +1838,7 @@ export class BattleScene extends Phaser.Scene {
       amountLabel: preview.amountLabel,
       counterLabel: preview.counterLabel,
       effectLabel: preview.effectLabel,
+      telegraphSummary: preview.telegraphSummary,
     }
   }
 
@@ -1610,10 +2137,27 @@ export class BattleScene extends Phaser.Scene {
     const allowed = this.moveRangeTiles.map((tile) => tile.point)
 
     if (occupant || samePoint(point, active.position)) {
+      this.lastDebugInput = {
+        source: 'move-mode-tile-click',
+        point,
+        occupant: occupant?.id,
+        activePosition: active.position,
+        moved: false,
+        reason: occupant ? 'occupied' : 'same-point',
+      }
       return
     }
 
-    if (this.runtime.repositionActiveUnit(point, allowed)) {
+    const moved = this.runtime.repositionActiveUnit(point, allowed)
+    this.lastDebugInput = {
+      source: 'move-mode-tile-click',
+      point,
+      activePosition: active.position,
+      allowed,
+      moved,
+    }
+
+    if (moved) {
       this.mode = 'move'
       this.reachableTiles = this.moveRangeTiles
       this.targetOptions = []
@@ -1680,5 +2224,54 @@ export class BattleScene extends Phaser.Scene {
         y: canvasBounds.top + screen.y * (canvasBounds.height / camera.height),
       },
     }
+  }
+
+  public debugInspectClientPoint(clientX: number, clientY: number): Array<{
+    name: string
+    type: string
+    x: number
+    y: number
+    depth: number
+  }> {
+    const camera = this.cameras.main
+    const pointer = this.input.activePointer
+    const canvasBounds = this.game.canvas.getBoundingClientRect()
+    const scaledX = (clientX - canvasBounds.left) * (camera.width / canvasBounds.width)
+    const scaledY = (clientY - canvasBounds.top) * (camera.height / canvasBounds.height)
+    const previous = { x: pointer.x, y: pointer.y, worldX: pointer.worldX, worldY: pointer.worldY }
+
+    pointer.x = scaledX
+    pointer.y = scaledY
+    pointer.worldX = scaledX / camera.zoom + camera.scrollX
+    pointer.worldY = scaledY / camera.zoom + camera.scrollY
+    pointer.camera = camera
+
+    const hits = this.input.hitTestPointer(pointer)
+      .map((gameObject) => {
+        const positioned = gameObject as Phaser.GameObjects.GameObject & {
+          x?: number
+          y?: number
+          depth?: number
+        }
+
+        return {
+          name: gameObject.name || gameObject.type,
+          type: gameObject.type,
+          x: Math.round((positioned.x ?? 0) * 100) / 100,
+          y: Math.round((positioned.y ?? 0) * 100) / 100,
+          depth: positioned.depth ?? 0,
+        }
+      })
+
+    pointer.x = previous.x
+    pointer.y = previous.y
+    pointer.worldX = previous.worldX
+    pointer.worldY = previous.worldY
+
+    return hits
+  }
+
+  public debugGetLastInput(): Record<string, unknown> {
+    return this.lastDebugInput
   }
 }
