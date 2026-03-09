@@ -74,3 +74,18 @@ The canonical implementation log lives in `docs/progress.md`.
   - `npm run build`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+- Reverted the battle command UI from a docked HUD tray to a unit-tethered floating action menu while keeping DOM-measured safe placement and click-through passive HUD surfaces
+- Added action-menu placement avoidance for current interactive tile centers so move/attack/skill prompts stay near the active unit without blocking actionable tiles
+- Tightened target overlay anchoring and removed the old tray column from the footer layout so the bottom HUD regains map space at `1280x720`
+- Updated `scripts/qa/hud-polish.mjs` to validate unit-tethered menu bounds, anchor proximity, passive HUD hit-testing, and action-menu tile occlusion across `1600x900 EN`, `1280x720 EN/KO`, `engagement`, `skill-demo`, and `push-demo`
+- Verification:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:hud`
+- Expanded anchored HUD placement to eight directions and changed the renderer to reserve occupied popup rects in order (`action menu -> target detail -> target markers`)
+- Target detail now prefers the side opposite the active unit and hard-avoids the action-menu rect, so forecast popups no longer overlap the command menu at desktop `1280x720+`
+- `scripts/qa/hud-polish.mjs` now hovers every targetable unit in the `engagement`, `skill-demo`, and `push-demo` scenarios and asserts action-menu/target-detail separation with zero intersection area
+- Verification:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:hud`

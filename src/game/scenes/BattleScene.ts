@@ -1602,6 +1602,7 @@ export class BattleScene extends Phaser.Scene {
       phase: this.runtime.state.phase,
       mode: this.mode,
       activeUnitPanel: this.buildActiveUnitPanel(active),
+      actionMenu: this.buildActionMenu(active),
       initiativeRail: {
         label: this.i18n.t('hud.initiative'),
         currentTurnLabel: this.i18n.t('hud.initiative.now'),
@@ -1619,7 +1620,6 @@ export class BattleScene extends Phaser.Scene {
           this.i18n.t('hud.initiative.now'),
         ),
       },
-      floatingActionMenu: this.buildFloatingActionMenu(active),
       targetMarkers: this.buildTargetMarkers(),
       targetDetail: this.buildTargetDetail(),
       viewControls: this.buildViewControls(),
@@ -1753,21 +1753,60 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private buildFloatingActionMenu(unit: UnitState): HudViewModel['floatingActionMenu'] {
+  private buildActionMenu(unit: UnitState): HudViewModel['actionMenu'] {
     if (!this.isPlayerTurnInteractive()) {
       return undefined
     }
 
-    const anchor = this.buildUnitAnchor(unit, 'above-right', { x: 42, y: -62 })
+    const anchor = this.buildUnitAnchor(unit, 'above-right', { x: 0, y: -46 })
 
     if (!anchor) {
       return undefined
     }
 
     return {
+      label: this.i18n.t('hud.commands'),
       anchor,
       buttons: this.buildCommandButtons(),
+      avoidClientPoints: this.buildActionMenuAvoidPoints(),
     }
+  }
+
+  private buildActionMenuAvoidPoints(): Array<{ clientX: number; clientY: number }> {
+    if (!this.runtime) {
+      return []
+    }
+
+    const points =
+      this.mode === 'move'
+        ? this.reachableTiles.map((tile) => tile.point)
+        : this.mode === 'attack' || this.mode === 'skill'
+          ? this.targetOptions
+              .map((option) => this.runtime?.state.units[option.unitId]?.position)
+              .filter((point): point is GridPoint => Boolean(point))
+          : []
+
+    const seen = new Set<string>()
+
+    return points.flatMap((point) => {
+      const key = `${point.x},${point.y}`
+
+      if (seen.has(key)) {
+        return []
+      }
+
+      seen.add(key)
+      const clientPoint = this.projectGridPointToClient(point)
+
+      return clientPoint
+        ? [
+            {
+              clientX: clientPoint.clientX,
+              clientY: clientPoint.clientY,
+            },
+          ]
+        : []
+    })
   }
 
   private buildTargetMarkers(): HudViewModel['targetMarkers'] {
@@ -1785,7 +1824,7 @@ export class BattleScene extends Phaser.Scene {
         return []
       }
 
-      const anchor = this.buildUnitAnchor(unit, 'above', { x: 0, y: -76 })
+      const anchor = this.buildUnitAnchor(unit, 'above', { x: 0, y: -34 })
 
       if (!anchor) {
         return []
@@ -1810,6 +1849,7 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
+    const active = this.runtime.getActiveUnit()
     const hoveredUnit = this.findUnitAt(this.hoveredPoint)
 
     if (!hoveredUnit) {
@@ -1822,7 +1862,11 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const anchor = this.buildUnitAnchor(hoveredUnit, 'above-right', { x: 124, y: -96 })
+    const anchor = this.buildUnitAnchor(
+      hoveredUnit,
+      this.resolveTargetDetailPlacement(active.position, hoveredUnit.position),
+      { x: 0, y: -42 },
+    )
 
     if (!anchor) {
       return undefined
@@ -1842,7 +1886,22 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private buildCommandButtons(): NonNullable<HudViewModel['floatingActionMenu']>['buttons'] {
+  private resolveTargetDetailPlacement(
+    activePoint: GridPoint,
+    targetPoint: GridPoint,
+  ): HudAnchor['preferredPlacement'] {
+    if (targetPoint.x > activePoint.x) {
+      return 'above-right'
+    }
+
+    if (targetPoint.x < activePoint.x) {
+      return 'above-left'
+    }
+
+    return 'above-left'
+  }
+
+  private buildCommandButtons(): NonNullable<HudViewModel['actionMenu']>['buttons'] {
     if (!this.runtime) {
       return []
     }
@@ -1921,7 +1980,7 @@ export class BattleScene extends Phaser.Scene {
 
   private buildUnitAnchor(
     unit: UnitState,
-    placement: HudAnchor['placement'],
+    preferredPlacement: HudAnchor['preferredPlacement'],
     offset: { x: number; y: number },
   ): HudAnchor | undefined {
     if (!this.runtime) {
@@ -1935,34 +1994,74 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const world = this.projectTilePoint(unit.position, tile.height)
-    const camera = this.cameras.main
-    const canvasBounds = this.game.canvas.getBoundingClientRect()
-    const unclampedScreenX = (world.x - camera.scrollX) * camera.zoom + offset.x
-    const unclampedScreenY = (world.y - camera.scrollY) * camera.zoom + offset.y
-    const unclampedClientX =
-      canvasBounds.left + unclampedScreenX * (canvasBounds.width / camera.width)
-    const unclampedClientY =
-      canvasBounds.top + unclampedScreenY * (canvasBounds.height / camera.height)
+    const clientPoint = this.projectWorldPointToClient({
+      x: world.x + offset.x,
+      y: world.y + offset.y,
+    })
+
+    if (!clientPoint) {
+      return undefined
+    }
+
     const margin = 18
-    const clientX = Phaser.Math.Clamp(
-      unclampedClientX,
-      canvasBounds.left + margin,
-      canvasBounds.right - margin,
-    )
-    const clientY = Phaser.Math.Clamp(
-      unclampedClientY,
-      canvasBounds.top + margin,
-      canvasBounds.bottom - margin,
-    )
-    const screenX = ((clientX - canvasBounds.left) / canvasBounds.width) * camera.width
-    const screenY = ((clientY - canvasBounds.top) / canvasBounds.height) * camera.height
 
     return {
-      screenX,
-      screenY,
-      clientX,
-      clientY,
-      placement,
+      clientX: Phaser.Math.Clamp(
+        clientPoint.clientX,
+        clientPoint.bounds.left + margin,
+        clientPoint.bounds.right - margin,
+      ),
+      clientY: Phaser.Math.Clamp(
+        clientPoint.clientY,
+        clientPoint.bounds.top + margin,
+        clientPoint.bounds.bottom - margin,
+      ),
+      preferredPlacement,
+    }
+  }
+
+  private projectGridPointToClient(point: GridPoint): { clientX: number; clientY: number } | undefined {
+    if (!this.runtime) {
+      return undefined
+    }
+
+    const tile = this.runtime.state.map.tiles[point.y]?.[point.x]
+
+    if (!tile) {
+      return undefined
+    }
+
+    const world = this.projectTilePoint(point, tile.height)
+    const clientPoint = this.projectWorldPointToClient(world)
+
+    if (!clientPoint) {
+      return undefined
+    }
+
+    return {
+      clientX: clientPoint.clientX,
+      clientY: clientPoint.clientY,
+    }
+  }
+
+  private projectWorldPointToClient(world: { x: number; y: number }): {
+    clientX: number
+    clientY: number
+    bounds: DOMRect
+  } | undefined {
+    const camera = this.cameras.main
+    const canvasBounds = this.game.canvas.getBoundingClientRect()
+
+    if (!canvasBounds.width || !canvasBounds.height) {
+      return undefined
+    }
+
+    return {
+      clientX:
+        canvasBounds.left + (world.x - camera.scrollX) * camera.zoom * (canvasBounds.width / camera.width),
+      clientY:
+        canvasBounds.top + (world.y - camera.scrollY) * camera.zoom * (canvasBounds.height / camera.height),
+      bounds: canvasBounds,
     }
   }
 

@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "qa:hud": "node scripts/qa/hud-polish.mjs",
     "qa:playthrough": "node scripts/qa/playthrough.mjs",
     "qa:camera": "node scripts/qa/camera-controls.mjs"
   },

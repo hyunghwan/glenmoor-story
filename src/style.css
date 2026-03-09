@@ -100,15 +100,6 @@ button {
   height: 100%;
 }
 
-.hud-topbar,
-.hud-bottom-shell,
-.hud-floating-menu,
-.hud-target-marker,
-.hud-target-detail,
-.hud-modal-card {
-  pointer-events: auto;
-}
-
 .hud-topbar {
   position: fixed;
   top: 16px;
@@ -117,13 +108,16 @@ button {
   z-index: 40;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
   gap: 12px;
+  pointer-events: none;
 }
 
 .hud-locales {
   display: flex;
   gap: 10px;
+  justify-self: end;
+  pointer-events: auto;
 }
 
 .hud-locale,
@@ -203,24 +197,24 @@ button {
   right: 16px;
   bottom: 16px;
   z-index: 20;
-  display: grid;
-  gap: 6px;
+  pointer-events: none;
 }
 
 .hud-status-line {
-  padding: 7px 12px;
+  padding: 8px 12px;
   border-radius: 999px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-height: 44px;
   width: fit-content;
-  max-width: min(980px, calc(100% - 180px));
+  max-width: min(940px, calc(100% - 180px));
   justify-self: center;
   background:
     linear-gradient(180deg, rgba(15, 22, 31, 0.88), rgba(7, 11, 17, 0.9)),
     linear-gradient(135deg, rgba(216, 191, 132, 0.04), transparent 50%);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  pointer-events: none;
 }
 
 .hud-status-tag {
@@ -258,6 +252,7 @@ button {
 
 .hud-status-columns.is-inline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0;
   min-width: 0;
@@ -286,18 +281,25 @@ button {
 
 .hud-bottom-band {
   display: grid;
-  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(324px, 380px) minmax(0, 1fr);
   gap: 12px;
   align-items: end;
 }
 
-.hud-active-card {
-  border-radius: 24px;
-  padding: 16px;
+.hud-left-stack {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr);
-  gap: 14px;
-  min-height: 150px;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.hud-active-card {
+  border-radius: 22px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 238px;
+  min-width: 0;
 }
 
 .hud-active-card.is-allies {
@@ -315,7 +317,7 @@ button {
 .hud-active-crest {
   display: grid;
   place-items: center;
-  border-radius: 22px;
+  border-radius: 18px;
   border: 1px solid rgba(216, 191, 132, 0.42);
   background:
     radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.18), transparent 34%),
@@ -325,29 +327,34 @@ button {
 
 .hud-active-crest span {
   font-family: 'Cinzel', serif;
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--ink);
 }
 
 .hud-active-body {
   display: grid;
-  gap: 10px;
+  gap: 9px;
   min-width: 0;
 }
 
 .hud-active-head {
   display: flex;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
   align-items: start;
+}
+
+.hud-active-title {
+  min-width: 0;
 }
 
 .hud-active-head h2 {
   margin: 4px 0 0;
   font-family: 'Cinzel', serif;
-  font-size: 28px;
-  line-height: 1;
+  font-size: 24px;
+  line-height: 1.05;
+  word-break: keep-all;
 }
 
 .hud-active-role {
@@ -355,18 +362,23 @@ button {
   justify-items: end;
   color: var(--muted);
   text-align: right;
+  min-width: 0;
 }
 
 .hud-active-role strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud-hp-row {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   color: var(--ink);
+  font-size: 14px;
 }
 
 .hud-hp-row strong {
@@ -402,21 +414,33 @@ button {
 .hud-active-metrics strong {
   font-size: 13px;
   color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud-statuses {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .hud-status-chip {
   border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 5px 9px;
+  font-size: 11px;
   border: 1px solid rgba(155, 173, 194, 0.2);
   background: rgba(26, 36, 47, 0.88);
   color: var(--ink);
+}
+
+.hud-action-buttons {
+  display: grid;
+  gap: 8px;
+}
+
+.hud-action-buttons.is-floating {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .hud-status-chip.is-neutral {
@@ -439,8 +463,8 @@ button {
 }
 
 .hud-initiative-rail {
-  border-radius: 24px;
-  padding: 14px 14px 12px;
+  border-radius: 22px;
+  padding: 12px 12px 10px;
   min-width: 0;
 }
 
@@ -460,8 +484,8 @@ button {
 
 .hud-initiative-strip {
   display: flex;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 10px;
   overflow-x: auto;
   padding-bottom: 2px;
 }
@@ -476,20 +500,20 @@ button {
 }
 
 .hud-initiative-chip {
-  min-width: 126px;
+  min-width: 116px;
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
-  gap: 9px;
+  gap: 8px;
   align-items: center;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid rgba(144, 164, 185, 0.18);
   background: rgba(14, 21, 29, 0.94);
-  padding: 10px;
+  padding: 9px;
   flex: 0 0 auto;
 }
 
 .hud-initiative-chip.is-active {
-  min-width: 158px;
+  min-width: 138px;
   border-color: rgba(240, 200, 119, 0.74);
   background:
     linear-gradient(135deg, rgba(86, 58, 26, 0.9), rgba(18, 25, 33, 0.96)),
@@ -502,13 +526,13 @@ button {
 }
 
 .hud-initiative-order {
-  min-width: 34px;
-  padding: 5px 7px;
+  min-width: 30px;
+  padding: 4px 6px;
   border-radius: 999px;
   border: 1px solid rgba(216, 191, 132, 0.2);
   background: rgba(7, 13, 19, 0.9);
   color: var(--accent);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-align: center;
@@ -516,13 +540,13 @@ button {
 }
 
 .hud-initiative-token {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 12px;
   font-family: 'Cinzel', serif;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--ink);
   background: linear-gradient(180deg, rgba(42, 53, 71, 0.96), rgba(18, 24, 33, 0.98));
@@ -538,11 +562,11 @@ button {
 }
 
 .hud-initiative-meta strong {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .hud-initiative-meta span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -558,6 +582,7 @@ button {
     linear-gradient(180deg, rgba(15, 22, 31, 0.88), rgba(7, 11, 17, 0.9)),
     linear-gradient(135deg, rgba(216, 191, 132, 0.04), transparent 50%);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  pointer-events: auto;
 }
 
 .hud-view-actions {
@@ -594,45 +619,19 @@ button {
   opacity: 0.42;
 }
 
-.hud-floating-menu {
-  position: fixed;
-  z-index: 35;
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  width: 148px;
-  border-radius: 18px;
-  border: 1px solid rgba(216, 191, 132, 0.46);
-  background:
-    linear-gradient(180deg, rgba(18, 25, 34, 0.98), rgba(8, 12, 18, 0.98)),
-    linear-gradient(135deg, rgba(216, 191, 132, 0.08), transparent 45%);
-  box-shadow: var(--shadow);
-}
-
-.hud-floating-menu.is-above-right {
-  transform: translate(0, -100%);
-}
-
-.hud-floating-menu.is-above {
-  transform: translate(-50%, -100%);
-}
-
-.hud-floating-menu.is-right {
-  transform: translate(0, -50%);
-}
-
-.hud-floating-menu.is-below-right {
-  transform: translate(0, 0);
-}
-
 .hud-command-button {
-  min-height: 40px;
+  min-height: 34px;
   border-radius: 12px;
   border: 1px solid rgba(216, 191, 132, 0.22);
   background: rgba(14, 22, 31, 0.96);
   color: var(--ink);
   text-align: left;
-  padding: 10px 12px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.hud-command-button.is-wide {
+  grid-column: 1 / -1;
 }
 
 .hud-command-button.is-active {
@@ -640,10 +639,19 @@ button {
   background: linear-gradient(90deg, rgba(94, 67, 30, 0.96), rgba(20, 27, 34, 0.98));
 }
 
-.hud-target-marker {
+.hud-anchored {
   position: fixed;
+  opacity: 1;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.hud-anchored.is-positioned {
+  visibility: visible;
+}
+
+.hud-target-marker {
   z-index: 30;
-  transform: translate(-50%, -100%);
   min-width: 46px;
   padding: 7px 10px;
   border-radius: 999px;
@@ -690,7 +698,6 @@ button {
 }
 
 .hud-target-detail {
-  position: fixed;
   z-index: 32;
   width: min(240px, calc(100vw - 40px));
   border-radius: 18px;
@@ -702,8 +709,15 @@ button {
   padding: 12px 14px;
 }
 
-.hud-target-detail.is-above-right {
-  transform: translate(0, -100%);
+.hud-action-menu {
+  z-index: 34;
+  width: min(196px, calc(100vw - 32px));
+  border-radius: 18px;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 34, 0.97), rgba(8, 13, 19, 0.98)),
+    linear-gradient(135deg, rgba(216, 191, 132, 0.08), transparent 48%);
+  pointer-events: auto;
 }
 
 .hud-target-detail h3 {
@@ -762,6 +776,7 @@ button {
   border: 1px solid rgba(216, 191, 132, 0.5);
   background: linear-gradient(180deg, rgba(18, 29, 39, 0.98), rgba(10, 16, 23, 0.98));
   padding: 28px;
+  pointer-events: auto;
 }
 
 .hud-modal-card h2 {
@@ -789,9 +804,9 @@ button {
   background: linear-gradient(90deg, rgba(178, 103, 45, 0.88), rgba(219, 149, 72, 0.88));
 }
 
-.hud-overlay.is-busy .hud-floating-menu,
 .hud-overlay.is-busy .hud-target-marker,
-.hud-overlay.is-busy .hud-target-detail {
+.hud-overlay.is-busy .hud-target-detail,
+.hud-overlay.is-busy .hud-action-menu {
   opacity: 0;
   pointer-events: none;
 }
@@ -800,27 +815,28 @@ canvas {
   display: block;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1366px) {
   .hud-bottom-band {
-    grid-template-columns: minmax(240px, 280px) minmax(0, 1fr) 116px;
+    grid-template-columns: minmax(308px, 356px) minmax(0, 1fr);
     gap: 10px;
   }
 
   .hud-active-card {
-    grid-template-columns: 72px minmax(0, 1fr);
-    padding: 14px;
+    min-height: 220px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    padding: 12px;
   }
 
   .hud-active-head h2 {
-    font-size: 24px;
+    font-size: 21px;
   }
 
   .hud-initiative-chip {
-    min-width: 112px;
+    min-width: 102px;
   }
 
   .hud-initiative-chip.is-active {
-    min-width: 138px;
+    min-width: 126px;
   }
 
   .hud-topbar {
@@ -828,7 +844,28 @@ canvas {
   }
 
   .hud-status-line {
-    max-width: 100%;
+    max-width: min(820px, calc(100% - 176px));
+  }
+
+  .hud-command-button {
+    min-height: 32px;
+    font-size: 12px;
+  }
+
+  .hud-active-metrics strong,
+  .hud-active-role strong,
+  .hud-hp-row {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .hud-bottom-band {
+    grid-template-columns: 1fr;
+  }
+
+  .hud-initiative-rail {
+    order: 2;
   }
 }
 
@@ -868,6 +905,11 @@ canvas {
 
   .hud-target-detail {
     width: min(220px, calc(100vw - 32px));
+  }
+
+  .hud-action-menu {
+    width: min(188px, calc(100vw - 32px));
+    padding: 9px;
   }
 }
 

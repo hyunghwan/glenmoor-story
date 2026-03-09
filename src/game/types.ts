@@ -409,12 +409,25 @@ export interface HudActionButton {
   active: boolean
 }
 
+export type HudPlacement =
+  | 'above'
+  | 'above-right'
+  | 'right'
+  | 'below-right'
+  | 'below'
+  | 'below-left'
+  | 'left'
+  | 'above-left'
+
 export interface HudAnchor {
-  screenX: number
-  screenY: number
   clientX: number
   clientY: number
-  placement: 'above' | 'above-right' | 'right' | 'below-right'
+  preferredPlacement: HudPlacement
+}
+
+export interface HudClientPoint {
+  clientX: number
+  clientY: number
 }
 
 export interface HudStatusChipViewModel {
@@ -461,9 +474,11 @@ export interface InitiativeRailViewModel {
   entries: InitiativeRailEntryViewModel[]
 }
 
-export interface FloatingCommandMenuViewModel {
+export interface ActionMenuViewModel {
+  label: string
   anchor: HudAnchor
   buttons: HudActionButton[]
+  avoidClientPoints: HudClientPoint[]
 }
 
 export interface TargetMarkerViewModel {
@@ -523,8 +538,8 @@ export interface HudViewModel {
   phase: BattleState['phase']
   mode: 'idle' | 'move' | 'attack' | 'skill' | 'busy'
   activeUnitPanel?: ActiveUnitPanelViewModel
+  actionMenu?: ActionMenuViewModel
   initiativeRail: InitiativeRailViewModel
-  floatingActionMenu?: FloatingCommandMenuViewModel
   targetMarkers: TargetMarkerViewModel[]
   targetDetail?: TargetDetailPopupViewModel
   viewControls: ViewControlsViewModel
