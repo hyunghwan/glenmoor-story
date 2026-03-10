@@ -247,6 +247,71 @@ export interface BattleDefinition {
   mapId: string
   allies: UnitBlueprint[]
   enemies: UnitBlueprint[]
+  objectivePhases?: BattleObjectivePhaseDefinition[]
+  events?: BattleScriptedEvent[]
+}
+
+export type BattleObjectiveCondition =
+  | {
+      type: 'eliminate-team'
+      team: Team
+    }
+  | {
+      type: 'defeat-unit'
+      unitId: string
+    }
+  | {
+      type: 'turn-at-least'
+      turnIndex: number
+    }
+
+export interface BattleObjectivePhaseDefinition {
+  id: string
+  objectiveKey: string
+  briefingKey?: string
+  victoryKey?: string
+  defeatKey?: string
+  announcementKey?: string
+  victoryConditions: BattleObjectiveCondition[]
+  defeatConditions?: BattleObjectiveCondition[]
+}
+
+export type BattleEventTrigger =
+  | {
+      type: 'battle-start'
+      objectivePhaseId?: string
+    }
+  | {
+      type: 'turn-start'
+      turnIndex?: number
+      team?: Team
+      unitId?: string
+      objectivePhaseId?: string
+    }
+  | {
+      type: 'unit-defeated'
+      team?: Team
+      unitId?: string
+      objectivePhaseId?: string
+    }
+
+export type BattleEventEffect =
+  | {
+      type: 'set-objective-phase'
+      objectivePhaseId: string
+    }
+  | {
+      type: 'deploy-unit'
+      unit: UnitBlueprint
+      facing?: Direction
+      nextActAt?: number
+    }
+
+export interface BattleScriptedEvent {
+  id: string
+  once?: boolean
+  trigger: BattleEventTrigger
+  effects: BattleEventEffect[]
 }
 
 export interface BattleState {
@@ -256,6 +321,12 @@ export interface BattleState {
   activeUnitId: string
   turnIndex: number
   phase: 'briefing' | 'active' | 'victory' | 'defeat'
+  objectivePhaseId: string
+  objectiveKey: string
+  briefingKey: string
+  victoryKey: string
+  defeatKey: string
+  resolvedEventIds: string[]
   messages: BattleFeedEntry[]
 }
 
@@ -527,6 +598,7 @@ export interface ViewControlsViewModel {
 }
 
 export interface BottomStatusLineViewModel {
+  objectivePhaseLabel: string
   objectiveLabel: string
   modeLabel: string
   logLabel: string
@@ -544,10 +616,18 @@ export interface HudViewModel {
   targetDetail?: TargetDetailPopupViewModel
   viewControls: ViewControlsViewModel
   statusLine: BottomStatusLineViewModel
+  phaseAnnouncement?: {
+    label: string
+    body: string
+  }
   modal?: {
     kind: 'briefing' | 'victory' | 'defeat'
+    eyebrow: string
     title: string
     body: string
+    phaseLabel: string
+    objectiveHeading: string
+    objectiveLabel: string
     buttonLabel: string
   }
 }

@@ -223,7 +223,46 @@ This is the canonical implementation log for `Glenmoor Story`.
   - extended `render_game_to_text()` telemetry with `mapId` and `boardProjection` metadata so external QA can project tile coordinates without internal scene helpers
   - exposed an in-battle `restart-battle` HUD control so camera reset coverage no longer depends on a debug command path
 - Left `window.__glenmoorDebug.stage()` in place as the only staged setup shortcut for the scripted QA scenarios
-- Left `window.__glenmoorDebug.projectTile()` in place only for `qa:hud`, which remains deferred to backlog item `#5`
+- Completed backlog item `#5` by compacting the short-height desktop HUD and finishing the last browser-QA debug cleanup:
+  - added `max-height` responsive HUD rules so the topbar, active-unit card, initiative rail, action menu, and target-detail popup shrink cleanly at `1280x720`
+  - changed `scripts/qa/hud-polish.mjs` to use the shared external projection helper plus real DOM locale and command clicks instead of debug command or `projectTile()` shortcuts
+  - extended HUD QA coverage with `1280x720 EN/KO` start-state checks and `1280x720` target-detail checks for forecast readability
+  - removed `window.__glenmoorDebug.projectTile()` from the app after `qa:hud` no longer depended on it
+- Completed backlog item `#6` by adding deterministic phase-objective and scripted-event support to the tactics runtime:
+  - extended battle definitions and runtime state with authored objective phases, phase-scoped objective / briefing / result copy keys, and resolved event tracking
+  - added deterministic objective evaluation for `eliminate-team`, `defeat-unit`, and `turn-at-least` conditions instead of hardwiring battle resolution to only team wipe checks
+  - added scripted runtime hooks for `battle-start`, `turn-start`, and `unit-defeated` plus `set-objective-phase` and `deploy-unit` effects so future authored encounter beats can switch goals or spawn reinforcements without scene-specific code
+  - updated the scene HUD / telemetry layer to surface the active objective phase and to read wrapper copy from runtime state rather than static battle-definition keys
+  - added runtime tests covering reinforcement deployment on phase shift, turn-count victory, and phase-specific defeat conditions
+- Completed backlog item `#7` by authoring the first live mid-battle beat in Glenmoor Pass:
+  - changed the opening live objective from generic full rout into a `break-the-line` phase centered on defeating the ridge `shieldbearer`
+  - scripted the authored phase shift so `shieldbearer`'s defeat flips the objective to `hunt-the-captain` and deploys two reserve enemies from the ford road
+  - rewrote Glenmoor Pass briefing and result copy in both locales to foreshadow and resolve the reserve-horn beat
+  - reset debug stage setup to the initial objective phase and cleared resolved scripted events so browser QA stages remain deterministic after live-battle authoring changes
+  - extended `scripts/qa/playthrough.mjs` with a staged `phase-demo` flow that captures the shield-line collapse, objective-copy swap, and reserve deployment through real action targeting
+  - added runtime coverage asserting the real Glenmoor Pass content now shifts phases, deploys reserves, and awards victory on the captain kill even while reserves remain alive
+- Completed backlog item `#8` by making the authored objective state visible from briefing through result:
+  - added explicit objective-phase progress tags to the HUD topbar so the live battle now surfaces `Battle Phase 1/2` and `2/2` alongside the current objective text
+  - added briefing and result-wrapper objective callouts so the current or final goal remains visible inside the modal copy instead of only in the battle HUD
+  - added a localized objective-update announcement card for mid-battle phase shifts, using the phase definition's announcement key when the reserve beat triggers
+  - extended `qa:playthrough` to assert briefing objective callouts, phase-progress tags, phase-update announcements, and result-wrapper objective copy
+  - extended `qa:hud` with a live `phase-demo` scenario that validates the authored phase-shift HUD state and keeps the new announcement card inside the viewport
+- Completed backlog item `#1` by integrating curated open-source placeholder art and audio:
+  - added Kenney `UI pack: RPG extension` textures to the HUD card, modal frame, objective inset, and primary CTA button treatments
+  - added the OpenGameArt `Parchment background` texture to the app shell and duel scene as a temporary fantasy backdrop
+  - added Kenney `Interface Sounds` for UI confirm / cancel / select, movement confirm, hit / skill cues, and victory / defeat stings
+  - added the OpenGameArt `Cynic Battle Loop` as the live battle music bed
+  - recorded exact source URLs, licenses, and local file paths in `docs/asset-replacement-manifest.md` while keeping terrain, unit, and VFX art swaps explicitly disposable for future replacement
+- Completed backlog item `#9` by moving authored scenario content behind a validated data boundary:
+  - extracted the full Glenmoor Pass encounter definition into `src/game/data/glenmoor-pass.scenario.json`
+  - added `src/game/scenario-loader.ts` to parse external scenario JSON into typed runtime data and to reject malformed structure, duplicate ids, and unknown phase references
+  - changed `src/game/content.ts` to load and validate the external scenario against the live class and AI registries before exporting `battleDefinition`
+  - added `tests/scenario-loader.test.ts` coverage for successful load, content-registry validation, and broken phase / class reference failures
+- Completed backlog item `#10` by extracting the rest of the gameplay content registry:
+  - moved status, skill, class, and AI profile authoring data into `src/game/data/status-definitions.json`, `src/game/data/skill-definitions.json`, `src/game/data/class-definitions.json`, and `src/game/data/ai-profiles.json`
+  - added `src/game/content-loader.ts` to parse those JSON files into typed runtime records and to reject malformed definitions, duplicate ids, unknown status links inside skills, and broken signature-skill / attack-presentation references inside classes
+  - reduced `src/game/content.ts` to the code-owned terrain and attack-presentation registry plus validated loading of the external content and scenario data
+  - added `tests/content-loader.test.ts` coverage for the happy path plus broken status-link and basic-attack-presentation failures
 
 ### Verification
 
@@ -231,6 +270,7 @@ This is the canonical implementation log for `Glenmoor Story`.
 - `npm run build`
 - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
 - `QA_CAMERA_INCLUDE_1280=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
 - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
 
 ### Notes
@@ -238,4 +278,10 @@ This is the canonical implementation log for `Glenmoor Story`.
 - The execution order remains sequential: `#4 -> #5 -> #6 -> #7 -> #8 -> #1 -> #9 -> #10`
 - Keep the prototype scoped to one battle even as the authored encounter flow becomes deeper
 - Keep docs and project-board status aligned when individual backlog items move
-- Pointer-only QA is now complete for `qa:playthrough` and `qa:camera`; the remaining debug projection helper use lives only in `qa:hud` and should be removed as part of `#5`
+- All current browser QA flows now use telemetry-driven external tile projection; app-side `window.__glenmoorDebug.projectTile()` has been removed
+- `1280x720` HUD compaction now keeps the active-unit card, initiative rail, and target-detail forecast readable without relying on an initial scroll pass
+- The runtime now supports phase-based objectives and scripted event hooks, and Glenmoor Pass now uses that model for a live reserve-beat phase shift
+- The authored objective flow is now surfaced in briefing, active-battle HUD, mid-battle update messaging, and result wrappers, and the prototype now layers curated open-source HUD/audio placeholders on top of the deterministic battle slice
+- Terrain, unit, and effect sprites remain the main disposable visual placeholder layer even after this open-source polish pass
+- Glenmoor Pass scenario authoring now lives in `src/game/data/glenmoor-pass.scenario.json`, while `content.ts` only exports the validated loaded definition
+- Class, skill, status, and AI authoring now also live in validated JSON data files, so `content.ts` is down to terrain, attack presentation, and loader wiring

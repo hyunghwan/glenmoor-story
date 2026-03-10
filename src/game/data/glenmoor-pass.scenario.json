@@ -1,0 +1,223 @@
+{
+  "id": "glenmoorPass",
+  "titleKey": "battle.glenmoorPass.title",
+  "objectiveKey": "battle.glenmoorPass.phaseBreakLine.objective",
+  "briefingKey": "battle.glenmoorPass.briefing",
+  "victoryKey": "battle.glenmoorPass.victory",
+  "defeatKey": "battle.glenmoorPass.defeat",
+  "mapId": "glenmoor-pass",
+  "objectivePhases": [
+    {
+      "id": "break-the-line",
+      "objectiveKey": "battle.glenmoorPass.phaseBreakLine.objective",
+      "victoryConditions": [
+        {
+          "type": "defeat-unit",
+          "unitId": "shieldbearer"
+        }
+      ]
+    },
+    {
+      "id": "hunt-the-captain",
+      "objectiveKey": "battle.glenmoorPass.phaseHuntCaptain.objective",
+      "victoryKey": "battle.glenmoorPass.phaseHuntCaptain.victory",
+      "defeatKey": "battle.glenmoorPass.phaseHuntCaptain.defeat",
+      "announcementKey": "battle.glenmoorPass.phaseHuntCaptain.announcement",
+      "victoryConditions": [
+        {
+          "type": "defeat-unit",
+          "unitId": "brigandCaptain"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "shieldbearer-falls",
+      "trigger": {
+        "type": "unit-defeated",
+        "unitId": "shieldbearer",
+        "objectivePhaseId": "break-the-line"
+      },
+      "effects": [
+        {
+          "type": "set-objective-phase",
+          "objectivePhaseId": "hunt-the-captain"
+        },
+        {
+          "type": "deploy-unit",
+          "unit": {
+            "id": "fordStalker",
+            "nameKey": "unit.fordStalker",
+            "classId": "ranger",
+            "team": "enemies",
+            "position": {
+              "x": 13,
+              "y": 9
+            },
+            "aiProfileId": "artillery",
+            "startingHp": 18
+          },
+          "facing": "west"
+        },
+        {
+          "type": "deploy-unit",
+          "unit": {
+            "id": "roadReaver",
+            "nameKey": "unit.roadReaver",
+            "classId": "skirmisher",
+            "team": "enemies",
+            "position": {
+              "x": 12,
+              "y": 10
+            },
+            "aiProfileId": "opportunist",
+            "startingHp": 19
+          },
+          "facing": "west"
+        }
+      ]
+    }
+  ],
+  "allies": [
+    {
+      "id": "rowan",
+      "nameKey": "unit.rowan",
+      "classId": "vanguard",
+      "team": "allies",
+      "position": {
+        "x": 2,
+        "y": 11
+      },
+      "aiProfileId": "spearhead"
+    },
+    {
+      "id": "elira",
+      "nameKey": "unit.elira",
+      "classId": "ranger",
+      "team": "allies",
+      "position": {
+        "x": 1,
+        "y": 12
+      },
+      "aiProfileId": "artillery"
+    },
+    {
+      "id": "sable",
+      "nameKey": "unit.sable",
+      "classId": "skirmisher",
+      "team": "allies",
+      "position": {
+        "x": 4,
+        "y": 12
+      },
+      "aiProfileId": "opportunist"
+    },
+    {
+      "id": "maelin",
+      "nameKey": "unit.maelin",
+      "classId": "arcanist",
+      "team": "allies",
+      "position": {
+        "x": 3,
+        "y": 13
+      },
+      "aiProfileId": "tactician"
+    },
+    {
+      "id": "osric",
+      "nameKey": "unit.osric",
+      "classId": "warden",
+      "team": "allies",
+      "position": {
+        "x": 2,
+        "y": 14
+      },
+      "aiProfileId": "bulwark"
+    },
+    {
+      "id": "talia",
+      "nameKey": "unit.talia",
+      "classId": "cleric",
+      "team": "allies",
+      "position": {
+        "x": 4,
+        "y": 14
+      },
+      "aiProfileId": "cantor"
+    }
+  ],
+  "enemies": [
+    {
+      "id": "brigandCaptain",
+      "nameKey": "unit.brigandCaptain",
+      "classId": "vanguard",
+      "team": "enemies",
+      "position": {
+        "x": 12,
+        "y": 3
+      },
+      "aiProfileId": "spearhead",
+      "startingHp": 27
+    },
+    {
+      "id": "huntmaster",
+      "nameKey": "unit.huntmaster",
+      "classId": "ranger",
+      "team": "enemies",
+      "position": {
+        "x": 13,
+        "y": 2
+      },
+      "aiProfileId": "artillery",
+      "startingHp": 20
+    },
+    {
+      "id": "hexbinder",
+      "nameKey": "unit.hexbinder",
+      "classId": "arcanist",
+      "team": "enemies",
+      "position": {
+        "x": 10,
+        "y": 2
+      },
+      "aiProfileId": "tactician",
+      "startingHp": 18
+    },
+    {
+      "id": "shieldbearer",
+      "nameKey": "unit.shieldbearer",
+      "classId": "warden",
+      "team": "enemies",
+      "position": {
+        "x": 11,
+        "y": 4
+      },
+      "aiProfileId": "bulwark",
+      "startingHp": 24
+    },
+    {
+      "id": "cutpurse",
+      "nameKey": "unit.cutpurse",
+      "classId": "skirmisher",
+      "team": "enemies",
+      "position": {
+        "x": 14,
+        "y": 4
+      },
+      "aiProfileId": "opportunist",
+      "startingHp": 21
+    },
+    {
+      "id": "fanatic",
+      "nameKey": "unit.fanatic",
+      "classId": "cleric",
+      "team": "enemies",
+      "position": {
+        "x": 9,
+        "y": 3
+      },
+      "aiProfileId": "cantor"
+    }
+  ]
+}

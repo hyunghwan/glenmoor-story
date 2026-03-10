@@ -166,12 +166,30 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - `output/web-game/camera-controls/05-restart-reset-1600x900.json`
 - `output/web-game/camera-controls/06-rotated-1280x720.png`
 - `output/web-game/camera-controls/06-rotated-1280x720.json`
+- `output/web-game/hud-polish/02-battle-start-1280-en.png`
+- `output/web-game/hud-polish/03-battle-start-1280-ko.png`
+- `output/web-game/hud-polish/04-engagement-target-detail-1280-en.png`
+- `output/web-game/hud-polish/05-skill-demo-target-detail-1280-ko.png`
+- `output/web-game/hud-polish/06-engagement-target-detail-1600-en.png`
+- `output/web-game/hud-polish/07-push-demo-edge-1600-en.png`
+- `output/web-game/hud-polish/08-phase-shift-1600-en.png`
+- `output/web-game/hud-polish/08-phase-shift-1600-en.json`
+- `output/web-game/playthrough/12-phase-before.png`
+- `output/web-game/playthrough/12-phase-before.json`
+- `output/web-game/playthrough/12-phase-duel-end.png`
+- `output/web-game/playthrough/12-phase-duel-end.json`
+- `output/web-game/playthrough/13-phase-after.png`
+- `output/web-game/playthrough/13-phase-after.json`
 
 ## Current Gap
 
 - Tactical flows, locale rendering, duel presentation, blocked push handling, and victory wrapping are covered by artifacts plus automated tests.
 - Auto-active turn presentation, briefing start, and provisional movement retargeting are now covered by screenshots plus state snapshots.
-- `qa:playthrough` and `qa:camera` now drive briefing start, locale swap, combat commands, tile targeting, camera rotation, zoom, pan, and restart through real DOM or pointer inputs.
-- The remaining debug tile-projection dependency is now isolated to `qa:hud`; `qa:playthrough` and `qa:camera` no longer call `window.__glenmoorDebug.projectTile()`.
+- All current browser QA flows now drive briefing start, locale swap, combat commands, tile targeting, camera rotation, zoom, pan, and restart through real DOM or pointer inputs with external tile projection derived from telemetry plus map data.
+- `1280x720` HUD compaction is now covered by dedicated `qa:hud` artifacts for `EN`, `KO`, and target-detail forecast states.
+- The authored Glenmoor Pass phase flow is now covered from briefing through result, including modal objective callouts, HUD phase-progress tags, the reserve-beat objective-update announcement, and staged reserve deployment artifacts.
+- Glenmoor Pass scenario content now loads from validated external JSON, so scenario-only edits should rerun `npm test`, `npm run build`, `npm run qa:playthrough`, and the browser smoke script before signoff.
+- Class, skill, status, and AI content now also load from validated external JSON, so content-only balance or ruleset edits should rerun the same regression path before signoff.
+- Open-source HUD textures, backdrop art, and audio assets are now integrated without console/runtime errors, but final perceptual volume / mixing judgment still needs a manual listen pass outside headless QA.
 - The viewport-fit regression for the fullscreen shell must be rechecked at `1600x900` and `1280x720` after any future HUD layout changes.
-- At `1280x720`, the lower `View` and `Forecast` cards are reachable through the right-panel's internal scroll area rather than fitting fully in the first visible panel frame.
+- Short-height desktop fit should be rechecked after future objective-copy or layout changes so the compact topbar, objective tags, and announcement card do not regress.

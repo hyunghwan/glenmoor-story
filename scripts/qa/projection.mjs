@@ -83,7 +83,7 @@ export function getUnitPosition(state, unitId) {
   return unit.position
 }
 
-export async function projectTileToClient(page, state, point) {
+function projectPointWithCanvas(state, point, canvas) {
   const telemetry = state?.telemetry
   const mapId = telemetry?.mapId
   const boardProjection = telemetry?.boardProjection
@@ -92,8 +92,6 @@ export async function projectTileToClient(page, state, point) {
   assert(mapId, 'Missing telemetry.mapId')
   assert(boardProjection, 'Missing telemetry.boardProjection')
   assert(camera, 'Missing telemetry.camera')
-
-  const canvas = await readCanvasMetrics(page)
   assert(canvas.width > 0 && canvas.height > 0, 'Canvas bounds are not ready')
   assert(canvas.internalWidth > 0 && canvas.internalHeight > 0, 'Canvas resolution is not ready')
 
@@ -126,6 +124,16 @@ export async function projectTileToClient(page, state, point) {
       y: canvas.top + screen.y * (canvas.height / canvas.internalHeight),
     },
   }
+}
+
+export async function projectTileToClient(page, state, point) {
+  const canvas = await readCanvasMetrics(page)
+  return projectPointWithCanvas(state, point, canvas)
+}
+
+export async function projectTilesToClient(page, state, points) {
+  const canvas = await readCanvasMetrics(page)
+  return points.map((point) => projectPointWithCanvas(state, point, canvas))
 }
 
 export async function hoverProjectedTile(page, state, point, pauseMs = 150) {

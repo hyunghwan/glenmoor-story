@@ -63,8 +63,13 @@ describe('Battle AI', () => {
     place(runtime, 'fanatic', 9, 4)
     place(runtime, 'brigandCaptain', 9, 5)
     place(runtime, 'rowan', 9, 6)
+    runtime.getUnit('fanatic')!.statuses = [{ id: 'warded', stacks: 1, duration: 2 }]
     runtime.getUnit('brigandCaptain')!.hp = 30
     runtime.getUnit('brigandCaptain')!.statuses = [{ id: 'warded', stacks: 2, duration: 2 }]
+
+    for (const unitId of ['huntmaster', 'hexbinder', 'shieldbearer', 'cutpurse']) {
+      runtime.getUnit(unitId)!.defeated = true
+    }
 
     const choice = runtime.chooseBestAction('fanatic')
 

@@ -33,10 +33,10 @@ The canonical implementation log lives in `docs/progress.md`.
 - Keep the prototype scope to one battle only
 - Keep docs English-first to match code and localization keys
 - Treat `docs/qa-inventory.md` as the shared checklist for future browser validation
-- Current Playwright limitation in this session:
-  - raw pointer choreography now covers rotated tile clicks, wheel zoom, drag pan, and pan toggle suppression
-  - the remaining debug assist is only `window.__glenmoorDebug.projectTile(x, y)`, which converts a logical tile into an exact browser click point for automation
-  - at `1280x720`, the lower `View` and `Forecast` cards live behind the right-panel's internal scroll area
+- Current browser QA status:
+  - `qa:playthrough`, `qa:camera`, and `qa:hud` all use telemetry-driven external tile projection instead of app-side `window.__glenmoorDebug.projectTile()`
+  - short-height desktop HUD now keeps critical active-unit, initiative, and forecast information visible at `1280x720` without relying on an initial panel scroll
+  - recheck short-height fit again after future objective-copy or HUD-density changes
 
 ## 2026-03-08
 
@@ -115,5 +115,80 @@ The canonical implementation log lives in `docs/progress.md`.
   - `npm run build`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
   - `QA_CAMERA_INCLUDE_1280=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
-- Remaining note:
-  - `qa:hud` still uses `window.__glenmoorDebug.projectTile()` and should be cleaned up during backlog item `#5`
+- Backlog item `#5` is now implemented:
+  - added short-height `max-height` HUD compaction rules so the topbar, active card, initiative rail, action menu, and target detail occupy less vertical space at `1280x720`
+  - updated `scripts/qa/hud-polish.mjs` to use the shared external projection helper plus real DOM locale/command clicks instead of debug command or `projectTile()` shortcuts
+  - removed `window.__glenmoorDebug.projectTile()` from the app once all browser QA flows no longer depended on it
+  - refreshed `qa:hud` coverage with `1280x720 EN/KO` battle-start checks and `1280x720` target-detail checks
+- Verification completed:
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `QA_CAMERA_INCLUDE_1280=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+- Backlog item `#6` is now implemented:
+  - added objective-phase and scripted-event support to the deterministic battle definition / runtime state model
+  - runtime outcome evaluation now supports `eliminate-team`, `defeat-unit`, and `turn-at-least` conditions instead of only default wipe checks
+  - scripted hooks can now react to `battle-start`, `turn-start`, and `unit-defeated` triggers and apply `set-objective-phase` or `deploy-unit` effects
+  - scene HUD text and wrapper copy now follow the runtime's active phase keys so future authored beats can switch objectives without scene-only branching
+  - runtime tests now cover phase shifts with reinforcements, turn-count victory, and phase-specific defeat
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+- Backlog item `#7` is now implemented:
+  - Glenmoor Pass now opens on a `break-the-line` objective focused on collapsing the ridge `shieldbearer`
+  - defeating `shieldbearer` shifts the live encounter into `hunt-the-captain` and deploys two reserve enemies from the ford road
+  - the English and Korean briefing / result copy now foreshadow and resolve the reserve-horn beat
+  - debug stage setup now restores the initial objective phase and clears resolved events so browser QA stages stay deterministic after authored encounter changes
+  - `scripts/qa/playthrough.mjs` now includes a staged `phase-demo` that captures the objective swap and reserve deployment through live pointer input
+  - runtime tests now assert the real scenario phase shift, reserve deployment, and captain-kill win condition
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+- Backlog item `#8` is now implemented:
+  - the HUD topbar now shows authored objective-phase progress tags alongside the current objective sentence
+  - briefing and result wrappers now include an explicit objective callout so the current or final encounter goal is visible in the modal itself
+  - mid-battle phase shifts now surface a localized objective-update announcement card when the reserve beat fires
+  - `qa:playthrough` now asserts briefing objective callouts, phase-progress tags, phase-update announcements, and result-wrapper objective copy
+  - `qa:hud` now includes a live `phase-demo` scenario to keep the authored phase-shift HUD state inside regression coverage
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+- Backlog item `#1` is now implemented:
+  - integrated Kenney `UI pack: RPG extension` textures into the HUD card, modal frame, objective inset, and primary CTA button styling
+  - integrated the OpenGameArt `Parchment background` texture into the app shell and duel backdrop
+  - integrated Kenney `Interface Sounds` for confirm / cancel / select, movement confirm, hit / skill cues, and victory / defeat stings
+  - integrated the OpenGameArt `Cynic Battle Loop` as the live battle music bed
+  - recorded source URLs, licenses, and local asset paths in `docs/asset-replacement-manifest.md`
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+- Backlog item `#9` is now implemented:
+  - moved the full Glenmoor Pass encounter into `src/game/data/glenmoor-pass.scenario.json`
+  - added `src/game/scenario-loader.ts` to parse external scenario data, reject malformed structure, and validate phase / unit / registry references
+  - changed `src/game/content.ts` so `battleDefinition` now comes from the validated loader boundary instead of a large inline object
+  - added `tests/scenario-loader.test.ts` to lock the happy path plus broken phase and class reference failures
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+- Backlog item `#10` is now implemented:
+  - moved class, skill, status, and AI profile authoring into `src/game/data/*.json`
+  - added `src/game/content-loader.ts` to parse the external definitions and validate status links, signature-skill links, and attack-presentation ids
+  - reduced `src/game/content.ts` to terrain / attack-presentation code plus external content and scenario loader wiring
+  - added `tests/content-loader.test.ts` to lock the happy path plus broken status-link and presentation-link failures
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`

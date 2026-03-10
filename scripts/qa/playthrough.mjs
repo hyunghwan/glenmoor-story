@@ -188,13 +188,17 @@ await page.goto(baseUrl, { waitUntil: 'domcontentloaded' })
 await page.waitForFunction(() => Boolean(window.__glenmoorDebug))
 await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud?.modal?.kind === 'briefing')
 
+let state = await readState()
+assert(state.hud.modal?.phaseLabel === 'Battle Phase 1/2', 'Expected briefing modal phase progress label')
+assert(state.hud.modal?.objectiveLabel === 'Break the shield wall at the ridge.', 'Expected briefing modal objective callout')
 await saveShot('01-briefing-en')
 await saveState('01-briefing-en')
 
 await clickHudCommand('start-battle')
 await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud.phase === 'active')
-let state = await readState()
+state = await readState()
 assertPresentationTelemetry(state, ['active-unit', 'move-range'])
+assert(state.hud.statusLine.objectivePhaseLabel === 'Battle Phase 1/2', 'Expected opening HUD phase progress label')
 await saveShot('02-battle-en')
 await saveState('02-battle-en')
 
@@ -252,7 +256,41 @@ assertPresentationTelemetry(state)
 await selectAction('attack')
 await clickTargetUnit('brigandCaptain')
 await captureDuelSequence('11-victory')
+state = await readState()
+assert(state.hud.modal?.phaseLabel === 'Battle Phase 2/2', 'Expected victory wrapper phase progress label')
+assert(
+  state.hud.modal?.objectiveLabel === 'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+  'Expected victory wrapper objective callout',
+)
 await saveShot('11-victory')
 await saveState('11-victory')
+
+await page.evaluate(() => window.__glenmoorDebug.stage('phase-demo'))
+await page.waitForTimeout(120)
+state = await readState()
+assertPresentationTelemetry(state)
+assert(state.telemetry.objectivePhaseId === 'break-the-line', 'Expected opening objective phase for phase demo')
+await saveShot('12-phase-before')
+await saveState('12-phase-before')
+
+await selectAction('attack')
+await clickTargetUnit('shieldbearer')
+await captureDuelSequence('12-phase')
+state = await readState()
+assertPresentationTelemetry(state)
+assert(state.telemetry.objectivePhaseId === 'hunt-the-captain', 'Expected reserve beat to shift objective phase')
+assert(state.hud.statusLine.objectivePhaseLabel === 'Battle Phase 2/2', 'Expected reserve HUD phase progress label')
+assert(
+  state.hud?.statusLine?.objectiveLabel === 'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+  'Expected reserve-phase objective label after shieldbearer collapse',
+)
+assert(
+  state.hud?.phaseAnnouncement?.body === 'Reserve horns are sounding at the ford. Captain Veyr is exposed.',
+  'Expected objective update announcement after shieldbearer collapse',
+)
+assert(getUnitPosition(state, 'fordStalker').x === 13 && getUnitPosition(state, 'fordStalker').y === 9, 'Expected fordStalker reinforcement deployment')
+assert(getUnitPosition(state, 'roadReaver').x === 12 && getUnitPosition(state, 'roadReaver').y === 10, 'Expected roadReaver reinforcement deployment')
+await saveShot('13-phase-after')
+await saveState('13-phase-after')
 
 await browser.close()

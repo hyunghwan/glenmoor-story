@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { clickProjectedTile, getUnitPosition, projectTilesToClient } from './projection.mjs'
 
 const outputDir = path.resolve('output/web-game/hud-polish')
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173'
@@ -28,20 +29,36 @@ function saveJson(name, payload) {
   fs.writeFileSync(path.join(outputDir, `${name}.json`), JSON.stringify(payload, null, 2))
 }
 
+async function clickHudCommand(page, commandId) {
+  await page.locator(`[data-command="${commandId}"]`).click()
+  await page.waitForTimeout(120)
+}
+
+async function clickLocaleButton(page, localeId) {
+  await page.locator(`[data-locale="${localeId}"]`).click()
+  await page.waitForFunction((locale) => JSON.parse(window.render_game_to_text()).hud?.locale === locale, localeId)
+  await page.waitForTimeout(120)
+}
+
+async function clickTargetUnit(page, unitId) {
+  const state = await readState(page)
+  const point = getUnitPosition(state, unitId)
+  await clickProjectedTile(page, state, point)
+}
+
 async function startBattle(page, locale = 'en') {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => Boolean(window.__glenmoorDebug?.projectTile))
+  await page.waitForFunction(() => Boolean(window.__glenmoorDebug?.stage))
   await page.waitForFunction(() => {
     const state = JSON.parse(window.render_game_to_text())
     return state.hud?.phase === 'briefing' && state.hud?.modal?.kind === 'briefing'
   })
 
   if (locale !== 'en') {
-    await page.evaluate((nextLocale) => window.__glenmoorDebug.locale(nextLocale), locale)
-    await page.waitForTimeout(120)
+    await clickLocaleButton(page, locale)
   }
 
-  await page.evaluate(() => window.__glenmoorDebug.command('start-battle'))
+  await clickHudCommand(page, 'start-battle')
   await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud?.phase === 'active')
   await page.waitForFunction(() => {
     const state = JSON.parse(window.render_game_to_text())
@@ -50,44 +67,105 @@ async function startBattle(page, locale = 'en') {
   await page.waitForTimeout(120)
 }
 
-async function hoverFirstTarget(page) {
-  const point = await page.evaluate(() => {
-    const state = JSON.parse(window.render_game_to_text())
-    const unitId = state.telemetry.targetableUnitIds?.[0]
-    const unit = state.telemetry.units.find((entry) => entry.id === unitId)
+function buildMapPoints(state) {
+  const boardProjection = state.telemetry?.boardProjection
+  const points = []
 
-    return unit ? window.__glenmoorDebug.projectTile(unit.position.x, unit.position.y)?.client ?? null : null
-  })
+  for (let y = 0; y < boardProjection.mapHeight; y += 1) {
+    for (let x = 0; x < boardProjection.mapWidth; x += 1) {
+      points.push({ x, y })
+    }
+  }
 
-  assert(point, 'Expected at least one targetable unit to hover')
-  await page.mouse.move(point.x, point.y)
-  await page.waitForTimeout(140)
+  return points
 }
 
-async function listTargetHoverPoints(page) {
-  return page.evaluate(() => {
-    const state = JSON.parse(window.render_game_to_text())
+function buildInteractiveEntries(state) {
+  if (state.hud.mode === 'move') {
+    return (state.telemetry.reachableTiles ?? []).map((tile) => ({
+      type: 'reachable',
+      tile,
+    }))
+  }
 
-    return (state.telemetry.targetableUnitIds ?? []).flatMap((unitId) => {
-      const unit = state.telemetry.units.find((entry) => entry.id === unitId)
-      const projection = unit
-        ? window.__glenmoorDebug.projectTile(unit.position.x, unit.position.y)?.client ?? null
-        : null
+  if (state.hud.mode === 'attack' || state.hud.mode === 'skill') {
+    return (state.telemetry.targetableUnitIds ?? []).map((unitId) => ({
+      type: 'targetable',
+      tile: getUnitPosition(state, unitId),
+      unitId,
+    }))
+  }
 
-      return projection
-        ? [
-            {
-              unitId,
-              point: projection,
-            },
-          ]
-        : []
-    })
+  return []
+}
+
+function isVisiblePoint(viewport, point) {
+  return point.x >= 0 && point.x <= viewport.width && point.y >= 0 && point.y <= viewport.height
+}
+
+async function listTargetHoverPoints(page, state) {
+  const unitIds = state.telemetry.targetableUnitIds ?? []
+  const tiles = unitIds.map((unitId) => getUnitPosition(state, unitId))
+  const projections = await projectTilesToClient(page, state, tiles)
+  const viewport = page.viewportSize() ?? {
+    width: Number.MAX_SAFE_INTEGER,
+    height: Number.MAX_SAFE_INTEGER,
+  }
+
+  return unitIds.flatMap((unitId, index) => {
+    const projection = projections[index]
+
+    if (!projection || !isVisiblePoint(viewport, projection.client)) {
+      return []
+    }
+
+    return [{
+      unitId,
+      tile: tiles[index],
+      point: projection.client,
+    }]
   })
 }
 
 async function collectHudMetrics(page) {
-  return page.evaluate(() => {
+  const state = await readState(page)
+  const viewport = page.viewportSize() ?? { width: 0, height: 0 }
+  const allTileProjections = await projectTilesToClient(page, state, buildMapPoints(state))
+  const projectedTileCenters = allTileProjections
+    .filter((projection) => isVisiblePoint(viewport, projection.client))
+    .map((projection) => ({
+      tile: projection.point,
+      client: {
+        x: projection.client.x,
+        y: projection.client.y,
+      },
+    }))
+  const interactiveEntries = buildInteractiveEntries(state)
+  const interactiveProjections =
+    interactiveEntries.length > 0
+      ? await projectTilesToClient(
+          page,
+          state,
+          interactiveEntries.map((entry) => entry.tile),
+        )
+      : []
+  const interactivePoints = interactiveEntries.flatMap((entry, index) => {
+    const projection = interactiveProjections[index]
+
+    if (!projection || !isVisiblePoint(viewport, projection.client)) {
+      return []
+    }
+
+    return [{
+      ...entry,
+      client: {
+        x: projection.client.x,
+        y: projection.client.y,
+      },
+    }]
+  })
+
+  return page.evaluate(({ projectedTileCenters: tileCenters, interactivePoints: interactive }) => {
     const state = JSON.parse(window.render_game_to_text())
     const rectOf = (selector) => {
       const node = document.querySelector(selector)
@@ -190,58 +268,20 @@ async function collectHudMetrics(page) {
       'hud-button',
     ]
     const actionMenuTokens = ['hud-action-menu', 'hud-command-button']
-    const visibleTileCenters = []
 
-    for (let y = 0; y < 16; y += 1) {
-      for (let x = 0; x < 16; x += 1) {
-        const projection = window.__glenmoorDebug.projectTile(x, y)
-
-        if (!projection) {
-          continue
-        }
-
-        const { x: clientX, y: clientY } = projection.client
-
-        if (clientX < 0 || clientX > window.innerWidth || clientY < 0 || clientY > window.innerHeight) {
-          continue
-        }
-
-        visibleTileCenters.push({
-          tile: { x, y },
-          client: { x: clientX, y: clientY },
-          path: pathAt(clientX, clientY),
-        })
-      }
-    }
-
-    const passiveHits = visibleTileCenters.filter((entry) => {
-      const hasInteractiveHit = interactiveTokens.some((token) => entry.path.some((item) => item.includes(token)))
+    const passiveHits = tileCenters.filter((entry) => {
+      const path = pathAt(entry.client.x, entry.client.y)
+      const hasInteractiveHit = interactiveTokens.some((token) => path.some((item) => item.includes(token)))
 
       if (hasInteractiveHit) {
         return false
       }
 
-      return passiveTokens.some((token) => entry.path.some((item) => item.includes(token)))
+      return passiveTokens.some((token) => path.some((item) => item.includes(token)))
     })
 
-    const interactivePoints =
-      state.hud.mode === 'move'
-        ? (state.telemetry.reachableTiles ?? []).map((tile) => ({ type: 'reachable', tile }))
-        : state.hud.mode === 'attack' || state.hud.mode === 'skill'
-          ? (state.telemetry.targetableUnitIds ?? []).flatMap((unitId) => {
-              const unit = state.telemetry.units.find((entry) => entry.id === unitId)
-              return unit ? [{ type: 'targetable', tile: unit.position, unitId }] : []
-            })
-          : []
-
-    const actionMenuHits = interactivePoints.flatMap((entry) => {
-      const projection = window.__glenmoorDebug.projectTile(entry.tile.x, entry.tile.y)
-
-      if (!projection) {
-        return []
-      }
-
-      const path = pathAt(projection.client.x, projection.client.y)
+    const actionMenuHits = interactive.flatMap((entry) => {
+      const path = pathAt(entry.client.x, entry.client.y)
       const hitToken = actionMenuTokens.find((token) => path.some((item) => item.includes(token)))
 
       if (!hitToken) {
@@ -254,9 +294,25 @@ async function collectHudMetrics(page) {
         path,
       }]
     })
+
+    const viewClusterRect = rectOf('.hud-view-cluster')
+    const statusLineRect = rectOf('.hud-status-line')
+    const localesRect = rectOf('.hud-locales')
     const actionMenuRect = rectOf('.hud-action-menu')
     const actionMenuAnchor = getAnchor('.hud-action-menu')
     const targetDetailRect = rectOf('.hud-target-detail')
+    const phaseAnnouncementRect = rectOf('.hud-phase-announcement')
+    const activeCardRect = rectOf('.hud-active-card')
+    const initiativeRailRect = rectOf('.hud-initiative-rail')
+    const topbarBottom = Math.max(
+      viewClusterRect?.bottom ?? 0,
+      statusLineRect?.bottom ?? 0,
+      localesRect?.bottom ?? 0,
+    )
+    const bottomBandTop = Math.min(
+      activeCardRect?.top ?? Number.MAX_SAFE_INTEGER,
+      initiativeRailRect?.top ?? Number.MAX_SAFE_INTEGER,
+    )
 
     return {
       locale: state.hud.locale,
@@ -264,23 +320,32 @@ async function collectHudMetrics(page) {
       mode: state.hud.mode,
       viewport: { width: window.innerWidth, height: window.innerHeight },
       rects: {
+        viewCluster: viewClusterRect,
+        locales: localesRect,
         actionMenu: actionMenuRect,
-        activeCard: rectOf('.hud-active-card'),
-        initiativeRail: rectOf('.hud-initiative-rail'),
-        statusLine: rectOf('.hud-status-line'),
+        activeCard: activeCardRect,
+        initiativeRail: initiativeRailRect,
+        statusLine: statusLineRect,
         targetDetail: targetDetailRect,
+        phaseAnnouncement: phaseAnnouncementRect,
       },
       overflows: {
         activeCard: overflowOf('.hud-active-card'),
         initiativeRail: overflowOf('.hud-initiative-rail'),
         statusLine: overflowOf('.hud-status-line'),
       },
-      actionMenu: actionMenuRect && actionMenuAnchor
-        ? {
-            anchor: actionMenuAnchor,
-            anchorDistance: distanceFromPointToRect(actionMenuAnchor, actionMenuRect),
-          }
-        : null,
+      compact: {
+        topbarOccupiedHeight: Math.round(topbarBottom),
+        bottomBandOccupiedHeight:
+          Number.isFinite(bottomBandTop) ? Math.round(window.innerHeight - bottomBandTop) : null,
+      },
+      actionMenu:
+        actionMenuRect && actionMenuAnchor
+          ? {
+              anchor: actionMenuAnchor,
+              anchorDistance: distanceFromPointToRect(actionMenuAnchor, actionMenuRect),
+            }
+          : null,
       popupSeparation:
         actionMenuRect && targetDetailRect && state.hud.targetDetail
           ? {
@@ -291,7 +356,7 @@ async function collectHudMetrics(page) {
       passiveHits,
       actionMenuHits,
     }
-  })
+  }, { projectedTileCenters, interactivePoints })
 }
 
 function assertRectInsideViewport(metrics, key) {
@@ -338,6 +403,33 @@ function assertPopupSeparation(metrics, label) {
   )
 }
 
+function assertShortHeightCompaction(metrics, label) {
+  if (metrics.viewport.height > 720) {
+    return
+  }
+
+  assert(
+    metrics.compact.topbarOccupiedHeight <= 60,
+    `Expected compact topbar occupancy for ${label} (${metrics.compact.topbarOccupiedHeight} > 60)`,
+  )
+  assert(
+    metrics.compact.bottomBandOccupiedHeight !== null && metrics.compact.bottomBandOccupiedHeight <= 238,
+    `Expected compact bottom HUD occupancy for ${label} (${metrics.compact.bottomBandOccupiedHeight} > 238)`,
+  )
+  assert(
+    metrics.rects.activeCard.height <= 228,
+    `Expected compact active card height for ${label} (${metrics.rects.activeCard.height} > 228)`,
+  )
+  assert(
+    metrics.rects.initiativeRail.height <= 96,
+    `Expected compact initiative rail height for ${label} (${metrics.rects.initiativeRail.height} > 96)`,
+  )
+  assert(
+    metrics.rects.statusLine.height <= 46,
+    `Expected compact status line height for ${label} (${metrics.rects.statusLine.height} > 46)`,
+  )
+}
+
 const scenarios = [
   {
     id: '01-battle-start-1600-en',
@@ -358,7 +450,27 @@ const scenarios = [
     expectedMode: 'move',
   },
   {
-    id: '04-engagement-target-detail',
+    id: '04-engagement-target-detail-1280-en',
+    viewport: { width: 1280, height: 720 },
+    locale: 'en',
+    stage: 'engagement',
+    command: 'attack',
+    hoverFirstTarget: true,
+    expectedMode: 'attack',
+    expectTargetDetail: true,
+  },
+  {
+    id: '05-skill-demo-target-detail-1280-ko',
+    viewport: { width: 1280, height: 720 },
+    locale: 'ko',
+    stage: 'skill-demo',
+    command: 'skill',
+    hoverFirstTarget: true,
+    expectedMode: 'skill',
+    expectTargetDetail: true,
+  },
+  {
+    id: '06-engagement-target-detail-1600-en',
     viewport: { width: 1600, height: 900 },
     locale: 'en',
     stage: 'engagement',
@@ -368,17 +480,7 @@ const scenarios = [
     expectTargetDetail: true,
   },
   {
-    id: '05-skill-demo-target-detail',
-    viewport: { width: 1600, height: 900 },
-    locale: 'en',
-    stage: 'skill-demo',
-    command: 'skill',
-    hoverFirstTarget: true,
-    expectedMode: 'skill',
-    expectTargetDetail: true,
-  },
-  {
-    id: '06-push-demo-edge',
+    id: '07-push-demo-edge-1600-en',
     viewport: { width: 1600, height: 900 },
     locale: 'en',
     stage: 'push-demo',
@@ -386,6 +488,17 @@ const scenarios = [
     hoverFirstTarget: true,
     expectedMode: 'attack',
     expectTargetDetail: true,
+  },
+  {
+    id: '08-phase-shift-1600-en',
+    viewport: { width: 1600, height: 900 },
+    locale: 'en',
+    stage: 'phase-demo',
+    command: 'attack',
+    resolveTargetUnitId: 'shieldbearer',
+    expectedMode: 'move',
+    expectedObjectivePhaseLabel: 'Battle Phase 2/2',
+    expectedAnnouncement: 'Reserve horns are sounding at the ford. Captain Veyr is exposed.',
   },
 ]
 
@@ -410,14 +523,24 @@ for (const scenario of scenarios) {
   }
 
   if (scenario.command) {
-    await page.evaluate((command) => window.__glenmoorDebug.command(command), scenario.command)
+    await clickHudCommand(page, scenario.command)
+    await page.waitForFunction((mode) => JSON.parse(window.render_game_to_text()).hud?.mode === mode, scenario.command)
+  }
+
+  if (scenario.resolveTargetUnitId) {
+    await clickTargetUnit(page, scenario.resolveTargetUnitId)
+    await page.waitForFunction(() => {
+      const state = JSON.parse(window.render_game_to_text())
+      return state.hud?.phase === 'active' && state.hud?.mode !== 'busy'
+    })
     await page.waitForTimeout(140)
   }
 
   const hoverSamples = []
 
   if (scenario.hoverFirstTarget) {
-    const hoverTargets = await listTargetHoverPoints(page)
+    const preHoverState = await readState(page)
+    const hoverTargets = await listTargetHoverPoints(page, preHoverState)
     assert(hoverTargets.length > 0, `Expected hover targets for ${scenario.id}`)
 
     for (const hoverTarget of hoverTargets) {
@@ -438,9 +561,10 @@ for (const scenario of scenarios) {
       assertNoOverflow(hoverMetrics, 'activeCard')
       assertNoOverflow(hoverMetrics, 'initiativeRail')
       assertNoOverflow(hoverMetrics, 'statusLine')
-      assertActionMenuNearAnchor(hoverMetrics, scenario.viewport.width <= 1280 ? 240 : 280)
+      assertActionMenuNearAnchor(hoverMetrics, scenario.viewport.width <= 1280 ? 224 : 280)
       assertNoHits(hoverMetrics.passiveHits, `${scenario.id}/${hoverTarget.unitId} passive tile interceptions`)
       assertNoHits(hoverMetrics.actionMenuHits, `${scenario.id}/${hoverTarget.unitId} action menu interceptions`)
+      assertShortHeightCompaction(hoverMetrics, `${scenario.id}/${hoverTarget.unitId}`)
 
       if (scenario.expectTargetDetail) {
         assertRectInsideViewport(hoverMetrics, 'targetDetail')
@@ -468,9 +592,25 @@ for (const scenario of scenarios) {
     assertNoOverflow(metrics, 'activeCard')
     assertNoOverflow(metrics, 'initiativeRail')
     assertNoOverflow(metrics, 'statusLine')
-    assertActionMenuNearAnchor(metrics, scenario.viewport.width <= 1280 ? 240 : 280)
+    assertActionMenuNearAnchor(metrics, scenario.viewport.width <= 1280 ? 224 : 280)
     assertNoHits(metrics.passiveHits, `${scenario.id} passive tile interceptions`)
     assertNoHits(metrics.actionMenuHits, `${scenario.id} action menu interceptions`)
+    assertShortHeightCompaction(metrics, scenario.id)
+  }
+
+  if (scenario.expectedObjectivePhaseLabel) {
+    assert(
+      state.hud.statusLine.objectivePhaseLabel === scenario.expectedObjectivePhaseLabel,
+      `Expected ${scenario.id} objective phase label to match`,
+    )
+  }
+
+  if (scenario.expectedAnnouncement) {
+    assert(
+      state.hud.phaseAnnouncement?.body === scenario.expectedAnnouncement,
+      `Expected ${scenario.id} phase announcement body`,
+    )
+    assertRectInsideViewport(metrics, 'phaseAnnouncement')
   }
 
   if (hoverSamples.length > 0) {
@@ -482,8 +622,6 @@ for (const scenario of scenarios) {
 
     await page.mouse.move(mostConstrained.point.x, mostConstrained.point.y)
     await page.waitForTimeout(140)
-  } else if (scenario.hoverFirstTarget) {
-    await hoverFirstTarget(page)
   }
 
   assert(consoleErrors.length === 0, `Expected no console errors for ${scenario.id}`)

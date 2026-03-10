@@ -104,7 +104,10 @@ export class BattleScene extends Phaser.Scene {
   private debugAdvanceMs = 0
   private lastDebugInput: Record<string, unknown> = {}
   private lastActiveUnitId?: string
+  private pendingObjectivePhaseId?: string
+  private phaseAnnouncementKey?: string
   private currentModal?: HudViewModel['modal']
+  private battleMusic?: Phaser.Sound.BaseSound
   private duelTelemetry: DuelTelemetry = {
     active: false,
     stepIndex: 0,
@@ -169,6 +172,9 @@ export class BattleScene extends Phaser.Scene {
     this.uiBus.on('debug:stage', this.handleDebugStage, this)
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.battleMusic?.stop()
+      this.battleMusic?.destroy()
+      this.battleMusic = undefined
       this.uiBus.off('hud:command', this.handleHudCommand, this)
       this.uiBus.off('hud:locale', this.handleLocaleChange, this)
       this.uiBus.off('duel:complete', this.handleDuelComplete, this)
@@ -833,18 +839,22 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (command.startsWith('view-')) {
+      this.playSfx('select', { volume: 0.18 })
       this.handleViewCommand(command)
       return
     }
 
     if (command === 'start-battle') {
+      this.playSfx('confirm', { volume: 0.22 })
       this.currentModal = undefined
       this.runtime.startBattle()
+      this.ensureBattleMusic()
       this.syncPresentationFromActiveUnit(true)
       return
     }
 
     if (command === 'restart-battle') {
+      this.playSfx('confirm', { volume: 0.22 })
       this.resetBattle()
       return
     }
@@ -860,11 +870,13 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (command === 'move') {
+      this.playSfx('select', { volume: 0.18 })
       this.enterMoveMode()
       return
     }
 
     if (command === 'attack') {
+      this.playSfx('select', { volume: 0.18 })
       this.mode = 'attack'
       this.targetOptions = this.runtime.getTargetsForAction({ actorId: active.id, kind: 'attack' })
       this.reachableTiles = []
@@ -873,6 +885,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (command === 'skill') {
+      this.playSfx('select', { volume: 0.18 })
       this.mode = 'skill'
       this.targetOptions = this.runtime.getTargetsForAction({
         actorId: active.id,
@@ -885,11 +898,13 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (command === 'wait') {
+      this.playSfx('confirm', { volume: 0.2 })
       this.resolveAction({ actorId: active.id, kind: 'wait' })
       return
     }
 
     if (command === 'cancel') {
+      this.playSfx('cancel', { volume: 0.22 })
       const shouldRestoreMove =
         (this.mode === 'attack' || this.mode === 'skill') &&
         this.runtime.state.phase === 'active' &&
@@ -940,6 +955,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleLocaleChange(locale: Locale): void {
+    this.playSfx('select', { volume: 0.16 })
     this.i18n.setLocale(locale)
     this.currentModal =
       this.runtime?.state.phase === 'briefing'
@@ -987,11 +1003,15 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleDebugStage(stage: string): void {
-    if (!this.runtime) {
+    if (!this.runtime || !this.mapData) {
       return
     }
 
     this.clearMatterFx()
+    this.runtime.reset(this.mapData)
+
+    const initialPhase = this.runtime.definition.objectivePhases?.[0]
+
     for (const unit of Object.values(this.runtime.state.units)) {
       unit.statuses = []
       unit.hasMovedThisTurn = false
@@ -1003,7 +1023,15 @@ export class BattleScene extends Phaser.Scene {
 
     this.runtime.state.messages = []
     this.runtime.state.phase = 'active'
+    this.runtime.state.objectivePhaseId = initialPhase?.id ?? 'default-objective'
+    this.runtime.state.objectiveKey = initialPhase?.objectiveKey ?? this.runtime.definition.objectiveKey
+    this.runtime.state.briefingKey = initialPhase?.briefingKey ?? this.runtime.definition.briefingKey
+    this.runtime.state.victoryKey = initialPhase?.victoryKey ?? this.runtime.definition.victoryKey
+    this.runtime.state.defeatKey = initialPhase?.defeatKey ?? this.runtime.definition.defeatKey
+    this.runtime.state.resolvedEventIds = []
     this.currentModal = undefined
+    this.pendingObjectivePhaseId = undefined
+    this.phaseAnnouncementKey = undefined
 
     if (stage === 'engagement') {
       this.placeUnit('rowan', { x: 7, y: 8 }, 12)
@@ -1023,18 +1051,49 @@ export class BattleScene extends Phaser.Scene {
       this.runtime.state.activeUnitId = 'rowan'
     }
 
+    if (stage === 'phase-demo') {
+      for (const enemy of ['huntmaster', 'hexbinder', 'cutpurse', 'fanatic']) {
+        this.placeUnit(enemy, this.runtime.state.units[enemy].position, 0)
+      }
+      this.placeUnit('rowan', { x: 11, y: 5 }, 16)
+      this.placeUnit('shieldbearer', { x: 11, y: 4 }, 1)
+      this.placeUnit('brigandCaptain', { x: 12, y: 3 }, 20)
+      this.runtime.state.activeUnitId = 'rowan'
+    }
+
     if (stage === 'victory-demo') {
       for (const enemy of ['huntmaster', 'hexbinder', 'shieldbearer', 'cutpurse', 'fanatic']) {
         this.placeUnit(enemy, this.runtime.state.units[enemy].position, 0)
       }
       this.placeUnit('rowan', { x: 7, y: 8 }, 18)
       this.placeUnit('brigandCaptain', { x: 7, y: 7 }, 5)
+      this.setDebugObjectivePhase('hunt-the-captain')
       this.runtime.state.activeUnitId = 'rowan'
     }
 
     this.lastActiveUnitId = undefined
     this.pendingAiDelayMs = 0
     this.syncPresentationFromActiveUnit(true)
+  }
+
+  private setDebugObjectivePhase(phaseId: string): void {
+    if (!this.runtime) {
+      return
+    }
+
+    const phase =
+      this.runtime.definition.objectivePhases?.find((candidate) => candidate.id === phaseId) ??
+      this.runtime.definition.objectivePhases?.[0]
+
+    if (!phase) {
+      return
+    }
+
+    this.runtime.state.objectivePhaseId = phase.id
+    this.runtime.state.objectiveKey = phase.objectiveKey
+    this.runtime.state.briefingKey = phase.briefingKey ?? this.runtime.definition.briefingKey
+    this.runtime.state.victoryKey = phase.victoryKey ?? this.runtime.definition.victoryKey
+    this.runtime.state.defeatKey = phase.defeatKey ?? this.runtime.definition.defeatKey
   }
 
   private resetBattle(): void {
@@ -1046,6 +1105,8 @@ export class BattleScene extends Phaser.Scene {
     this.runtime.reset(this.mapData)
     this.resetViewState()
     this.currentModal = this.buildModal('briefing')
+    this.pendingObjectivePhaseId = undefined
+    this.phaseAnnouncementKey = undefined
     this.lastActiveUnitId = undefined
     this.pendingAiDelayMs = 0
     this.applyCameraView(true)
@@ -1058,6 +1119,7 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
+    this.pendingObjectivePhaseId = this.runtime.state.objectivePhaseId
     this.mode = 'busy'
     this.clearMatterFx()
     this.reachableTiles = []
@@ -1084,15 +1146,22 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (this.runtime.state.phase === 'victory') {
+      this.playSfx('victory', { volume: 0.28 })
+      this.phaseAnnouncementKey = undefined
       this.currentModal = this.buildModal('victory')
       this.syncPresentationFromActiveUnit(false)
     } else if (this.runtime.state.phase === 'defeat') {
+      this.playSfx('defeat', { volume: 0.26 })
+      this.phaseAnnouncementKey = undefined
       this.currentModal = this.buildModal('defeat')
       this.syncPresentationFromActiveUnit(false)
     } else {
       this.currentModal = undefined
+      this.updateObjectiveAnnouncement(this.pendingObjectivePhaseId)
       this.syncPresentationFromActiveUnit(true)
     }
+
+    this.pendingObjectivePhaseId = undefined
   }
 
   private createTileInputs(): void {
@@ -1624,7 +1693,8 @@ export class BattleScene extends Phaser.Scene {
       targetDetail: this.buildTargetDetail(),
       viewControls: this.buildViewControls(),
       statusLine: {
-        objectiveLabel: this.i18n.t(this.runtime.definition.objectiveKey),
+        objectivePhaseLabel: this.buildObjectivePhaseProgressLabel(),
+        objectiveLabel: this.i18n.t(this.runtime.state.objectiveKey),
         modeLabel: this.i18n.t(`hud.mode.${this.mode}`),
         logLabel: latestMessage,
         phaseLabel:
@@ -1632,6 +1702,12 @@ export class BattleScene extends Phaser.Scene {
             ? `${this.i18n.t('hud.currentTurn')}: ${this.i18n.t(`hud.team.${active.team}`)}`
             : this.i18n.t(`hud.phase.${this.runtime.state.phase}`),
       },
+      phaseAnnouncement: this.phaseAnnouncementKey
+        ? {
+            label: this.i18n.t('hud.phaseUpdate'),
+            body: this.i18n.t(this.phaseAnnouncementKey),
+          }
+        : undefined,
       modal: this.currentModal,
     }
 
@@ -1665,6 +1741,7 @@ export class BattleScene extends Phaser.Scene {
       reachableTiles: this.reachableTiles.map((tile) => tile.point),
       actionRangeTiles: this.getActionRangeTiles(),
       targetableUnitIds: this.targetOptions.map((option) => option.unitId),
+      objectivePhaseId: this.runtime.state.objectivePhaseId,
       activeStatusAuraIds: Array.from(
         new Set(
           Object.values(this.runtime.state.units).flatMap((unit) => unit.statuses.map((status) => status.id)),
@@ -2120,21 +2197,71 @@ export class BattleScene extends Phaser.Scene {
     if (kind === 'briefing') {
       return {
         kind,
+        eyebrow: this.i18n.t('hud.phase.briefing'),
         title: this.i18n.t(this.runtime.definition.titleKey),
-        body: this.i18n.t(this.runtime.definition.briefingKey),
+        body: this.i18n.t(this.runtime.state.briefingKey),
+        phaseLabel: this.buildObjectivePhaseProgressLabel(),
+        objectiveHeading: this.i18n.t('hud.modal.startingObjective'),
+        objectiveLabel: this.i18n.t(this.runtime.state.objectiveKey),
         buttonLabel: this.i18n.t('hud.startBattle'),
       }
     }
 
     return {
       kind,
+      eyebrow: this.i18n.t(`hud.phase.${kind}`),
       title: this.i18n.t(this.runtime.definition.titleKey),
       body:
         kind === 'victory'
-          ? this.i18n.t(this.runtime.definition.victoryKey)
-          : this.i18n.t(this.runtime.definition.defeatKey),
+          ? this.i18n.t(this.runtime.state.victoryKey)
+          : this.i18n.t(this.runtime.state.defeatKey),
+      phaseLabel: this.buildObjectivePhaseProgressLabel(),
+      objectiveHeading: this.i18n.t('hud.modal.finalObjective'),
+      objectiveLabel: this.i18n.t(this.runtime.state.objectiveKey),
       buttonLabel: this.i18n.t('hud.playAgain'),
     }
+  }
+
+  private getCurrentObjectivePhase(): NonNullable<NonNullable<BattleRuntime['definition']['objectivePhases']>[number]> | undefined {
+    if (!this.runtime) {
+      return undefined
+    }
+
+    return this.runtime.definition.objectivePhases?.find(
+      (phase) => phase.id === this.runtime!.state.objectivePhaseId,
+    )
+  }
+
+  private buildObjectivePhaseProgressLabel(): string {
+    if (!this.runtime) {
+      return ''
+    }
+
+    const phases = this.runtime.definition.objectivePhases ?? []
+
+    if (phases.length <= 1) {
+      return ''
+    }
+
+    const currentIndex = Math.max(
+      0,
+      phases.findIndex((phase) => phase.id === this.runtime!.state.objectivePhaseId),
+    )
+
+    return this.i18n.t('hud.phaseObjective', {
+      current: currentIndex + 1,
+      total: phases.length,
+    })
+  }
+
+  private updateObjectiveAnnouncement(previousObjectivePhaseId?: string): void {
+    if (!this.runtime || !previousObjectivePhaseId || previousObjectivePhaseId === this.runtime.state.objectivePhaseId) {
+      return
+    }
+
+    const phase = this.getCurrentObjectivePhase()
+
+    this.phaseAnnouncementKey = phase?.announcementKey ?? this.runtime.state.objectiveKey
   }
 
   private placeUnit(unitId: string, point: GridPoint, hp: number): void {
@@ -2146,6 +2273,34 @@ export class BattleScene extends Phaser.Scene {
     unit.position = point
     unit.hp = Math.max(0, hp)
     unit.defeated = hp <= 0
+  }
+
+  private playSfx(key: string, config: Phaser.Types.Sound.SoundConfig = {}): void {
+    if (!this.cache.audio.exists(`sfx:${key}`)) {
+      return
+    }
+
+    this.sound.play(`sfx:${key}`, {
+      volume: 0.22,
+      ...config,
+    })
+  }
+
+  private ensureBattleMusic(): void {
+    if (!this.cache.audio.exists('music:battle')) {
+      return
+    }
+
+    if (!this.battleMusic) {
+      this.battleMusic = this.sound.add('music:battle', {
+        loop: true,
+        volume: 0.2,
+      })
+    }
+
+    if (!this.battleMusic.isPlaying) {
+      this.battleMusic.play()
+    }
   }
 
   private isPlayerTurnInteractive(): boolean {
@@ -2276,6 +2431,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     if (moved) {
+      this.playSfx('move', { volume: 0.18 })
       this.mode = 'move'
       this.reachableTiles = this.moveRangeTiles
       this.targetOptions = []
@@ -2298,6 +2454,7 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
+    this.playSfx('select', { volume: 0.18 })
     this.resolveAction({
       actorId: this.runtime.getActiveUnit().id,
       kind: this.mode === 'attack' ? 'attack' : 'skill',
@@ -2307,41 +2464,6 @@ export class BattleScene extends Phaser.Scene {
           : undefined,
       targetId: unit.id,
     })
-  }
-
-  public debugProjectTile(point: GridPoint): {
-    point: GridPoint
-    world: { x: number; y: number }
-    screen: { x: number; y: number }
-    client: { x: number; y: number }
-  } | null {
-    if (!this.runtime) {
-      return null
-    }
-
-    const tile = this.runtime.state.map.tiles[point.y]?.[point.x]
-
-    if (!tile) {
-      return null
-    }
-
-    const world = this.projectTilePoint(point, tile.height)
-    const camera = this.cameras.main
-    const canvasBounds = this.game.canvas.getBoundingClientRect()
-    const screen = {
-      x: (world.x - camera.scrollX) * camera.zoom,
-      y: (world.y - camera.scrollY) * camera.zoom,
-    }
-
-    return {
-      point,
-      world,
-      screen,
-      client: {
-        x: canvasBounds.left + screen.x * (canvasBounds.width / camera.width),
-        y: canvasBounds.top + screen.y * (canvasBounds.height / camera.height),
-      },
-    }
   }
 
   public debugInspectClientPoint(clientX: number, clientY: number): Array<{

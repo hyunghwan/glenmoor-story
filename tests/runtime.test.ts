@@ -1,10 +1,42 @@
 import { describe, expect, it } from 'vitest'
 import mapData from '../public/data/maps/glenmoor-pass.json'
+import { battleDefinition } from '../src/game/content'
 import { BattleRuntime } from '../src/game/runtime'
-import type { TiledMapData } from '../src/game/types'
+import type { BattleDefinition, TiledMapData } from '../src/game/types'
 
-function makeRuntime(): BattleRuntime {
-  return new BattleRuntime(mapData as TiledMapData)
+function makeRuntime(definition: BattleDefinition = battleDefinition): BattleRuntime {
+  return new BattleRuntime(mapData as TiledMapData, structuredClone(definition))
+}
+
+function makeScriptedDefinition(overrides: Partial<BattleDefinition> = {}): BattleDefinition {
+  const rowan = structuredClone(battleDefinition.allies.find((unit) => unit.id === 'rowan')!)
+  const talia = structuredClone(battleDefinition.allies.find((unit) => unit.id === 'talia')!)
+
+  return {
+    ...structuredClone(battleDefinition),
+    id: 'scriptedTest',
+    allies: [rowan, talia],
+    enemies: [
+      {
+        id: 'captain',
+        nameKey: 'unit.brigandCaptain',
+        classId: 'vanguard',
+        team: 'enemies',
+        position: { x: 5, y: 4 },
+        aiProfileId: 'spearhead',
+        startingHp: 12,
+      },
+    ],
+    objectivePhases: [
+      {
+        id: 'default-objective',
+        objectiveKey: 'battle.glenmoorPass.objective',
+        victoryConditions: [{ type: 'eliminate-team', team: 'enemies' }],
+      },
+    ],
+    events: [],
+    ...overrides,
+  }
 }
 
 function setActive(runtime: BattleRuntime, unitId: string): void {
@@ -332,6 +364,178 @@ describe('Battle runtime', () => {
       targetId: 'brigandCaptain',
     })
 
+    expect(runtime.state.phase).toBe('victory')
+  })
+
+  it('can shift objective phase and deploy reinforcements before victory resolves', () => {
+    const runtime = makeRuntime(
+      makeScriptedDefinition({
+        objectivePhases: [
+          {
+            id: 'assassinate-captain',
+            objectiveKey: 'battle.test.objective.assassinate',
+            victoryKey: 'battle.test.victory.assassinate',
+            victoryConditions: [{ type: 'defeat-unit', unitId: 'captain' }],
+          },
+          {
+            id: 'hold-bridge',
+            objectiveKey: 'battle.test.objective.holdBridge',
+            victoryKey: 'battle.test.victory.holdBridge',
+            victoryConditions: [{ type: 'eliminate-team', team: 'enemies' }],
+          },
+        ],
+        events: [
+          {
+            id: 'captain-falls',
+            trigger: {
+              type: 'unit-defeated',
+              unitId: 'captain',
+              objectivePhaseId: 'assassinate-captain',
+            },
+            effects: [
+              { type: 'set-objective-phase', objectivePhaseId: 'hold-bridge' },
+              {
+                type: 'deploy-unit',
+                unit: {
+                  id: 'reinforcement',
+                  nameKey: 'unit.cutpurse',
+                  classId: 'skirmisher',
+                  team: 'enemies',
+                  position: { x: 8, y: 4 },
+                  aiProfileId: 'opportunist',
+                  startingHp: 16,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    )
+
+    setActive(runtime, 'rowan')
+    place(runtime, 'rowan', 5, 5)
+    place(runtime, 'captain', 5, 4)
+    runtime.getUnit('captain')!.hp = 2
+
+    runtime.commitAction({
+      actorId: 'rowan',
+      kind: 'attack',
+      targetId: 'captain',
+    })
+
+    expect(runtime.state.phase).toBe('active')
+    expect(runtime.state.objectivePhaseId).toBe('hold-bridge')
+    expect(runtime.state.objectiveKey).toBe('battle.test.objective.holdBridge')
+    expect(runtime.state.victoryKey).toBe('battle.test.victory.holdBridge')
+    expect(runtime.getUnit('reinforcement')).toMatchObject({
+      team: 'enemies',
+      defeated: false,
+      hp: 16,
+      position: { x: 8, y: 4 },
+    })
+  })
+
+  it('supports turn-based victory conditions on objective phases', () => {
+    const runtime = makeRuntime(
+      makeScriptedDefinition({
+        objectivePhases: [
+          {
+            id: 'hold-two-turns',
+            objectiveKey: 'battle.test.objective.holdTwoTurns',
+            victoryConditions: [{ type: 'turn-at-least', turnIndex: 2 }],
+          },
+        ],
+      }),
+    )
+
+    setActive(runtime, 'rowan')
+
+    runtime.commitAction({
+      actorId: 'rowan',
+      kind: 'wait',
+    })
+
+    expect(runtime.state.phase).toBe('victory')
+    expect(runtime.state.objectivePhaseId).toBe('hold-two-turns')
+  })
+
+  it('supports phase-specific defeat conditions beyond ally wipeout', () => {
+    const runtime = makeRuntime(
+      makeScriptedDefinition({
+        objectivePhases: [
+          {
+            id: 'protect-rowan',
+            objectiveKey: 'battle.test.objective.protectRowan',
+            victoryConditions: [{ type: 'eliminate-team', team: 'enemies' }],
+            defeatConditions: [{ type: 'defeat-unit', unitId: 'rowan' }],
+          },
+        ],
+      }),
+    )
+
+    setActive(runtime, 'captain')
+    place(runtime, 'captain', 5, 4)
+    place(runtime, 'rowan', 5, 5)
+    runtime.getUnit('rowan')!.hp = 1
+
+    runtime.commitAction({
+      actorId: 'captain',
+      kind: 'attack',
+      targetId: 'rowan',
+    })
+
+    expect(runtime.getUnit('rowan')?.defeated).toBe(true)
+    expect(runtime.getUnit('talia')?.defeated).toBe(false)
+    expect(runtime.state.phase).toBe('defeat')
+  })
+
+  it('authors the Glenmoor Pass reserve beat around the shieldbearer collapse', () => {
+    const runtime = makeRuntime()
+
+    setActive(runtime, 'rowan')
+    place(runtime, 'rowan', 11, 5)
+    place(runtime, 'shieldbearer', 11, 4)
+    runtime.getUnit('shieldbearer')!.hp = 1
+
+    runtime.commitAction({
+      actorId: 'rowan',
+      kind: 'attack',
+      targetId: 'shieldbearer',
+    })
+
+    expect(runtime.getUnit('shieldbearer')?.defeated).toBe(true)
+    expect(runtime.state.phase).toBe('active')
+    expect(runtime.state.objectivePhaseId).toBe('hunt-the-captain')
+    expect(runtime.state.objectiveKey).toBe('battle.glenmoorPass.phaseHuntCaptain.objective')
+    expect(runtime.state.victoryKey).toBe('battle.glenmoorPass.phaseHuntCaptain.victory')
+    expect(runtime.state.defeatKey).toBe('battle.glenmoorPass.phaseHuntCaptain.defeat')
+    expect(runtime.getUnit('fordStalker')).toMatchObject({
+      team: 'enemies',
+      defeated: false,
+      hp: 18,
+      position: { x: 13, y: 9 },
+    })
+    expect(runtime.getUnit('roadReaver')).toMatchObject({
+      team: 'enemies',
+      defeated: false,
+      hp: 19,
+      position: { x: 12, y: 10 },
+    })
+
+    setActive(runtime, 'rowan')
+    place(runtime, 'rowan', 12, 4)
+    place(runtime, 'brigandCaptain', 12, 3)
+    runtime.getUnit('brigandCaptain')!.hp = 1
+
+    runtime.commitAction({
+      actorId: 'rowan',
+      kind: 'attack',
+      targetId: 'brigandCaptain',
+    })
+
+    expect(runtime.getUnit('brigandCaptain')?.defeated).toBe(true)
+    expect(runtime.getUnit('fordStalker')?.defeated).toBe(false)
+    expect(runtime.getUnit('roadReaver')?.defeated).toBe(false)
     expect(runtime.state.phase).toBe('victory')
   })
 

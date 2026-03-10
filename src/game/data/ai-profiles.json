@@ -1,0 +1,50 @@
+[
+  {
+    "id": "spearhead",
+    "aggression": 1.1,
+    "support": 0.2,
+    "riskTolerance": 0.8,
+    "terrainBias": 0.4,
+    "controlBias": 0.9
+  },
+  {
+    "id": "artillery",
+    "aggression": 1,
+    "support": 0.1,
+    "riskTolerance": 0.5,
+    "terrainBias": 0.8,
+    "controlBias": 0.6
+  },
+  {
+    "id": "tactician",
+    "aggression": 0.9,
+    "support": 0.3,
+    "riskTolerance": 0.6,
+    "terrainBias": 0.7,
+    "controlBias": 1
+  },
+  {
+    "id": "bulwark",
+    "aggression": 0.8,
+    "support": 1,
+    "riskTolerance": 0.4,
+    "terrainBias": 1,
+    "controlBias": 0.5
+  },
+  {
+    "id": "opportunist",
+    "aggression": 1.2,
+    "support": 0.1,
+    "riskTolerance": 1,
+    "terrainBias": 0.5,
+    "controlBias": 0.8
+  },
+  {
+    "id": "cantor",
+    "aggression": 0.5,
+    "support": 1.2,
+    "riskTolerance": 0.3,
+    "terrainBias": 0.5,
+    "controlBias": 0.4
+  }
+]

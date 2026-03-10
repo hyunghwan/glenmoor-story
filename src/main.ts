@@ -93,10 +93,6 @@ window.__glenmoorDebug = {
   stage(name: string) {
     uiBus.emit('debug:stage', name)
   },
-  projectTile(x: number, y: number) {
-    const battle = game.scene.getScene('battle') as BattleScene
-    return battle.debugProjectTile({ x, y })
-  },
   inspectClient(x: number, y: number) {
     const battle = game.scene.getScene('battle') as BattleScene
     return battle.debugInspectClientPoint(x, y)
@@ -116,17 +112,6 @@ declare global {
       locale: (locale: 'en' | 'ko') => void
       tile: (x: number, y: number) => void
       stage: (name: string) => void
-      projectTile: (
-        x: number,
-        y: number,
-      ) =>
-        | {
-            point: { x: number; y: number }
-            world: { x: number; y: number }
-            screen: { x: number; y: number }
-            client: { x: number; y: number }
-          }
-        | null
       inspectClient: (
         x: number,
         y: number,

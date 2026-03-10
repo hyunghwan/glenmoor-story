@@ -68,8 +68,10 @@ button {
   position: absolute;
   inset: 0;
   background:
+    linear-gradient(180deg, rgba(6, 11, 15, 0.62), rgba(4, 8, 12, 0.78)),
     linear-gradient(135deg, rgba(215, 192, 138, 0.08), transparent 42%),
-    linear-gradient(315deg, rgba(83, 121, 166, 0.08), transparent 32%);
+    linear-gradient(315deg, rgba(83, 121, 166, 0.08), transparent 32%),
+    url('/assets/textures/parchment_background.jpg') center / cover no-repeat;
   pointer-events: none;
 }
 
@@ -111,6 +113,12 @@ button {
   align-items: start;
   gap: 12px;
   pointer-events: none;
+}
+
+.hud-status-stack {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
 }
 
 .hud-locales {
@@ -186,6 +194,7 @@ button {
 .hud-card {
   border: 1px solid var(--panel-border);
   background:
+    url('/assets/ui/kenney/panel_brown.png') center / 100% 100% no-repeat,
     linear-gradient(180deg, rgba(21, 29, 37, 0.96), rgba(8, 13, 19, 0.98)),
     linear-gradient(135deg, rgba(216, 191, 132, 0.06), transparent 50%);
   box-shadow: var(--shadow);
@@ -217,6 +226,13 @@ button {
   pointer-events: none;
 }
 
+.hud-status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
 .hud-status-tag {
   flex: 0 0 auto;
   border-radius: 999px;
@@ -228,6 +244,11 @@ button {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+.hud-status-tag.is-objective-phase {
+  background: rgba(20, 34, 47, 0.68);
+  color: #e7f2fb;
 }
 
 .hud-status-columns {
@@ -277,6 +298,25 @@ button {
   border-radius: 999px;
   background: rgba(216, 191, 132, 0.44);
   transform: translateY(-50%);
+}
+
+.hud-phase-announcement {
+  width: min(540px, calc(100vw - 220px));
+  border-radius: 18px;
+  padding: 10px 14px;
+  justify-self: center;
+  background:
+    linear-gradient(180deg, rgba(23, 35, 46, 0.96), rgba(12, 19, 27, 0.98)),
+    linear-gradient(135deg, rgba(216, 191, 132, 0.08), transparent 55%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.hud-phase-announcement strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .hud-bottom-band {
@@ -774,7 +814,9 @@ button {
   width: min(460px, calc(100% - 40px));
   border-radius: 24px;
   border: 1px solid rgba(216, 191, 132, 0.5);
-  background: linear-gradient(180deg, rgba(18, 29, 39, 0.98), rgba(10, 16, 23, 0.98));
+  background:
+    url('/assets/ui/kenney/panel_brown.png') center / 100% 100% no-repeat,
+    linear-gradient(180deg, rgba(18, 29, 39, 0.98), rgba(10, 16, 23, 0.98));
   padding: 28px;
   pointer-events: auto;
 }
@@ -789,6 +831,27 @@ button {
   color: rgba(236, 243, 249, 0.84);
 }
 
+.hud-modal-objective {
+  margin-top: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(216, 191, 132, 0.24);
+  background:
+    url('/assets/ui/kenney/panelInset_brown.png') center / 100% 100% no-repeat,
+    rgba(13, 23, 32, 0.76);
+  padding: 14px 16px;
+}
+
+.hud-modal-objective strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.hud-modal-objective p {
+  margin: 8px 0 0;
+}
+
 .hud-button {
   border-radius: 14px;
   border: 1px solid rgba(216, 191, 132, 0.28);
@@ -800,8 +863,14 @@ button {
 .hud-button.is-cta {
   width: 100%;
   margin-top: 18px;
-  border-color: rgba(240, 179, 95, 0.7);
-  background: linear-gradient(90deg, rgba(178, 103, 45, 0.88), rgba(219, 149, 72, 0.88));
+  border-color: transparent;
+  background: url('/assets/ui/kenney/buttonLong_brown.png') center / 100% 100% no-repeat;
+  color: #fff5e8;
+  text-shadow: 0 1px 0 rgba(41, 19, 4, 0.45);
+}
+
+.hud-button.is-cta:hover:not(:disabled) {
+  background-image: url('/assets/ui/kenney/buttonLong_brown_pressed.png');
 }
 
 .hud-overlay.is-busy .hud-target-marker,
@@ -859,6 +928,207 @@ canvas {
   }
 }
 
+@media (max-height: 760px) and (min-width: 960px) {
+  .hud-topbar {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    gap: 8px;
+  }
+
+  .hud-view-cluster {
+    min-height: 40px;
+    padding: 3px;
+  }
+
+  .hud-view-actions {
+    grid-auto-columns: 34px;
+    gap: 4px;
+  }
+
+  .hud-icon-button {
+    width: 34px;
+    height: 32px;
+  }
+
+  .hud-icon-button .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  .hud-locales {
+    gap: 8px;
+  }
+
+  .hud-locale {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .hud-status-line {
+    min-height: 40px;
+    padding: 6px 10px;
+    gap: 8px;
+    max-width: min(760px, calc(100% - 164px));
+  }
+
+  .hud-status-tag {
+    font-size: 9px;
+    padding: 3px 8px;
+  }
+
+  .hud-status-columns.is-inline p {
+    font-size: 11px;
+  }
+
+  .hud-status-columns.is-inline p:last-child {
+    display: none;
+  }
+
+  .hud-bottom-shell {
+    left: 12px;
+    right: 12px;
+    bottom: 10px;
+  }
+
+  .hud-bottom-band {
+    grid-template-columns: minmax(286px, 332px) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .hud-active-card {
+    min-height: 186px;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 8px;
+    padding: 9px;
+    border-radius: 20px;
+  }
+
+  .hud-active-crest {
+    border-radius: 14px;
+  }
+
+  .hud-active-crest span {
+    font-size: 24px;
+  }
+
+  .hud-active-body {
+    gap: 6px;
+  }
+
+  .hud-active-head {
+    gap: 8px;
+  }
+
+  .hud-active-head h2 {
+    font-size: 20px;
+  }
+
+  .hud-active-role span {
+    display: none;
+  }
+
+  .hud-active-role strong,
+  .hud-hp-row,
+  .hud-active-metrics strong {
+    font-size: 12px;
+  }
+
+  .hud-hp-bar {
+    height: 8px;
+  }
+
+  .hud-active-metrics {
+    gap: 6px 10px;
+  }
+
+  .hud-statuses {
+    gap: 4px;
+  }
+
+  .hud-status-chip {
+    padding: 3px 7px;
+    font-size: 10px;
+  }
+
+  .hud-initiative-rail {
+    border-radius: 20px;
+    padding: 9px 9px 7px;
+  }
+
+  .hud-initiative-head {
+    gap: 8px;
+  }
+
+  .hud-initiative-now {
+    font-size: 11px;
+  }
+
+  .hud-initiative-strip {
+    margin-top: 8px;
+    gap: 6px;
+  }
+
+  .hud-initiative-chip {
+    min-width: 96px;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 14px;
+  }
+
+  .hud-initiative-chip.is-active {
+    min-width: 114px;
+  }
+
+  .hud-initiative-order {
+    min-width: 26px;
+    padding: 3px 5px;
+    font-size: 9px;
+  }
+
+  .hud-initiative-token {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .hud-initiative-meta strong {
+    font-size: 12px;
+  }
+
+  .hud-initiative-meta span {
+    display: none;
+  }
+
+  .hud-command-button {
+    min-height: 30px;
+    padding: 7px 9px;
+    font-size: 12px;
+  }
+
+  .hud-action-menu {
+    width: min(184px, calc(100vw - 28px));
+    padding: 8px;
+    border-radius: 16px;
+  }
+
+  .hud-target-detail {
+    width: min(220px, calc(100vw - 28px));
+    padding: 10px 12px;
+  }
+
+  .hud-target-detail h3 {
+    margin: 4px 0 6px;
+    font-size: 18px;
+  }
+
+  .hud-target-detail p {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 1180px) {
   .hud-bottom-band {
     grid-template-columns: 1fr;
@@ -887,6 +1157,14 @@ canvas {
   .hud-status-line {
     max-width: 100%;
     justify-self: stretch;
+  }
+
+  .hud-status-stack {
+    justify-items: stretch;
+  }
+
+  .hud-phase-announcement {
+    width: 100%;
   }
 
   .hud-bottom-band {
@@ -923,6 +1201,10 @@ canvas {
   .hud-status-line {
     align-items: flex-start;
     border-radius: 16px;
+  }
+
+  .hud-status-tags {
+    width: 100%;
   }
 
   .hud-view-cluster {

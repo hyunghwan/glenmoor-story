@@ -80,6 +80,9 @@ export class DuelScene extends Phaser.Scene {
     const { width, height } = this.scale
     const panelY = height / 2
 
+    if (this.textures.exists('duel:backdrop')) {
+      this.add.image(width / 2, height / 2, 'duel:backdrop').setDisplaySize(width, height).setAlpha(0.22)
+    }
     this.add.rectangle(width / 2, height / 2, width, height, 0x071018, 0.96)
     this.add.rectangle(width / 2, panelY, width - 120, 420, 0x13202b, 0.96).setStrokeStyle(2, 0xd8c08a)
     this.add.rectangle(width / 2, 128, width - 280, 86, 0x0d171f, 0.88).setStrokeStyle(1, 0x4d6578)
@@ -299,7 +302,30 @@ export class DuelScene extends Phaser.Scene {
       this.cameras.main.flash(95, 255, 232, 188, false)
     }
 
+    this.playStepSfx(step)
     this.emitTelemetry()
+  }
+
+  private playSfx(key: string, config: Phaser.Types.Sound.SoundConfig = {}): void {
+    if (!this.cache.audio.exists(`sfx:${key}`)) {
+      return
+    }
+
+    this.sound.play(`sfx:${key}`, {
+      volume: 0.22,
+      ...config,
+    })
+  }
+
+  private playStepSfx(step: CombatPresentation['steps'][number]): void {
+    if (step.kind === 'cast' || step.kind === 'status') {
+      this.playSfx('skill', { volume: 0.18 })
+      return
+    }
+
+    if (step.kind === 'hit' || step.kind === 'counter' || step.kind === 'defeat' || step.kind === 'push') {
+      this.playSfx('hit', { volume: 0.18 })
+    }
   }
 
   private rebuildDisplayState(): void {

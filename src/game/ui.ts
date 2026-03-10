@@ -469,17 +469,37 @@ export class HudController {
             </div>
           </section>
 
-          <div class="hud-status-line hud-card">
-            <span class="hud-status-tag">${view.statusLine.phaseLabel}</span>
-            <div class="hud-status-columns is-inline">
-              ${statusItems
-                .map(
-                  (item) => `
-                    <p><span>${item}</span></p>
-                  `,
-                )
-                .join('')}
+          <div class="hud-status-stack">
+            <div class="hud-status-line hud-card">
+              <div class="hud-status-tags">
+                <span class="hud-status-tag">${view.statusLine.phaseLabel}</span>
+                ${
+                  view.statusLine.objectivePhaseLabel
+                    ? `<span class="hud-status-tag is-objective-phase">${view.statusLine.objectivePhaseLabel}</span>`
+                    : ''
+                }
+              </div>
+              <div class="hud-status-columns is-inline">
+                ${statusItems
+                  .map(
+                    (item) => `
+                      <p><span>${item}</span></p>
+                    `,
+                  )
+                  .join('')}
+              </div>
             </div>
+
+            ${
+              view.phaseAnnouncement
+                ? `
+                  <div class="hud-phase-announcement hud-card">
+                    <p class="hud-eyebrow">${view.phaseAnnouncement.label}</p>
+                    <strong>${view.phaseAnnouncement.body}</strong>
+                  </div>
+                `
+                : ''
+            }
           </div>
 
           <div class="hud-locales">
@@ -527,9 +547,14 @@ export class HudController {
             ? `
               <div class="hud-modal">
                 <div class="hud-modal-card">
-                  <p class="hud-eyebrow">${view.modal.kind.toUpperCase()}</p>
+                  <p class="hud-eyebrow">${view.modal.eyebrow}</p>
                   <h2>${view.modal.title}</h2>
                   <p>${view.modal.body}</p>
+                  <div class="hud-modal-objective">
+                    ${view.modal.phaseLabel ? `<strong>${view.modal.phaseLabel}</strong>` : ''}
+                    <span class="hud-label">${view.modal.objectiveHeading}</span>
+                    <p>${view.modal.objectiveLabel}</p>
+                  </div>
                   <button class="hud-button is-cta" data-command="${
                     view.modal.kind === 'briefing' ? 'start-battle' : 'restart-battle'
                   }">${view.modal.buttonLabel}</button>

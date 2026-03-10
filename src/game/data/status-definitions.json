@@ -1,0 +1,62 @@
+[
+  {
+    "id": "burning",
+    "labelKey": "status.burning",
+    "descriptionKey": "status.burning.desc",
+    "maxStacks": 3,
+    "presentation": {
+      "fxCueId": "status.burning",
+      "telegraphStyle": "status",
+      "castMs": 120,
+      "impactMs": 180,
+      "cameraCue": "impact-light",
+      "matterProfile": "ember-plume",
+      "tone": "ember"
+    }
+  },
+  {
+    "id": "guardBreak",
+    "labelKey": "status.guardBreak",
+    "descriptionKey": "status.guardBreak.desc",
+    "maxStacks": 2,
+    "presentation": {
+      "fxCueId": "status.guardBreak",
+      "telegraphStyle": "status",
+      "castMs": 100,
+      "impactMs": 170,
+      "cameraCue": "impact-light",
+      "matterProfile": "guard-fragments",
+      "tone": "hazard"
+    }
+  },
+  {
+    "id": "warded",
+    "labelKey": "status.warded",
+    "descriptionKey": "status.warded.desc",
+    "maxStacks": 3,
+    "presentation": {
+      "fxCueId": "status.warded",
+      "telegraphStyle": "status",
+      "castMs": 140,
+      "impactMs": 180,
+      "cameraCue": "support-pulse",
+      "matterProfile": "ward-orbit",
+      "tone": "ward"
+    }
+  },
+  {
+    "id": "slow",
+    "labelKey": "status.slow",
+    "descriptionKey": "status.slow.desc",
+    "maxStacks": 2,
+    "presentation": {
+      "fxCueId": "status.slow",
+      "telegraphStyle": "status",
+      "castMs": 120,
+      "impactMs": 170,
+      "cameraCue": "impact-light",
+      "matterProfile": "slow-haze",
+      "tone": "wind"
+    }
+  }
+]

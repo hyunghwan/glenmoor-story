@@ -1,0 +1,134 @@
+[
+  {
+    "id": "shieldBash",
+    "nameKey": "skill.shieldBash.name",
+    "descriptionKey": "skill.shieldBash.desc",
+    "targetType": "enemy",
+    "rangeMin": 1,
+    "rangeMax": 1,
+    "counterable": true,
+    "effects": [
+      { "type": "damage", "amount": 3, "flavor": "power" },
+      { "type": "status", "statusId": "guardBreak", "stacks": 1, "duration": 2 },
+      { "type": "push", "distance": 1 }
+    ],
+    "presentation": {
+      "fxCueId": "skill.shieldBash",
+      "telegraphStyle": "skill",
+      "castMs": 220,
+      "impactMs": 240,
+      "cameraCue": "impact-heavy",
+      "matterProfile": "shock-ring",
+      "tone": "steel"
+    }
+  },
+  {
+    "id": "snareVolley",
+    "nameKey": "skill.snareVolley.name",
+    "descriptionKey": "skill.snareVolley.desc",
+    "targetType": "enemy",
+    "rangeMin": 2,
+    "rangeMax": 4,
+    "counterable": false,
+    "effects": [
+      { "type": "damage", "amount": 3, "flavor": "power" },
+      { "type": "status", "statusId": "slow", "stacks": 1, "duration": 3 }
+    ],
+    "presentation": {
+      "fxCueId": "skill.snareVolley",
+      "telegraphStyle": "skill",
+      "castMs": 260,
+      "impactMs": 200,
+      "cameraCue": "impact-light",
+      "matterProfile": "arrow-streak",
+      "tone": "wind"
+    }
+  },
+  {
+    "id": "emberSigil",
+    "nameKey": "skill.emberSigil.name",
+    "descriptionKey": "skill.emberSigil.desc",
+    "targetType": "enemy",
+    "rangeMin": 2,
+    "rangeMax": 3,
+    "counterable": false,
+    "effects": [
+      { "type": "damage", "amount": 4, "flavor": "magic" },
+      { "type": "status", "statusId": "burning", "stacks": 1, "duration": 3 }
+    ],
+    "presentation": {
+      "fxCueId": "skill.emberSigil",
+      "telegraphStyle": "skill",
+      "castMs": 320,
+      "impactMs": 240,
+      "cameraCue": "impact-heavy",
+      "matterProfile": "ember-plume",
+      "tone": "ember"
+    }
+  },
+  {
+    "id": "aegisField",
+    "nameKey": "skill.aegisField.name",
+    "descriptionKey": "skill.aegisField.desc",
+    "targetType": "ally",
+    "rangeMin": 0,
+    "rangeMax": 2,
+    "counterable": false,
+    "effects": [
+      { "type": "heal", "amount": 5 },
+      { "type": "status", "statusId": "warded", "stacks": 2, "duration": 2 }
+    ],
+    "presentation": {
+      "fxCueId": "skill.aegisField",
+      "telegraphStyle": "support",
+      "castMs": 260,
+      "impactMs": 220,
+      "cameraCue": "support-pulse",
+      "matterProfile": "light-shards",
+      "tone": "ward"
+    }
+  },
+  {
+    "id": "shadowLunge",
+    "nameKey": "skill.shadowLunge.name",
+    "descriptionKey": "skill.shadowLunge.desc",
+    "targetType": "enemy",
+    "rangeMin": 1,
+    "rangeMax": 1,
+    "counterable": true,
+    "effects": [
+      { "type": "damage", "amount": 5, "flavor": "power" }
+    ],
+    "presentation": {
+      "fxCueId": "skill.shadowLunge",
+      "telegraphStyle": "skill",
+      "castMs": 160,
+      "impactMs": 200,
+      "cameraCue": "impact-heavy",
+      "matterProfile": "dash-burst",
+      "tone": "shadow"
+    }
+  },
+  {
+    "id": "resolveHymn",
+    "nameKey": "skill.resolveHymn.name",
+    "descriptionKey": "skill.resolveHymn.desc",
+    "targetType": "ally",
+    "rangeMin": 1,
+    "rangeMax": 3,
+    "counterable": false,
+    "effects": [
+      { "type": "heal", "amount": 6 },
+      { "type": "status", "statusId": "warded", "stacks": 1, "duration": 2 }
+    ],
+    "presentation": {
+      "fxCueId": "skill.resolveHymn",
+      "telegraphStyle": "support",
+      "castMs": 290,
+      "impactMs": 220,
+      "cameraCue": "support-pulse",
+      "matterProfile": "light-shards",
+      "tone": "radiant"
+    }
+  }
+]

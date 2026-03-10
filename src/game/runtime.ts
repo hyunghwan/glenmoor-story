@@ -15,7 +15,12 @@ import type {
   BattleFeedEntry,
   BattleAction,
   BattleDefinition,
+  BattleEventEffect,
+  BattleEventTrigger,
   BattleMapData,
+  BattleObjectiveCondition,
+  BattleObjectivePhaseDefinition,
+  BattleScriptedEvent,
   BattleState,
   ClassDefinition,
   CombatImpulseProfile,
@@ -47,6 +52,12 @@ interface UnitStateSnapshot {
   hp: number
   statuses: StatusInstance[]
   position: GridPoint
+}
+
+interface EventTriggerContext {
+  type: BattleEventTrigger['type']
+  unitId?: string
+  team?: Team
 }
 
 const directions: GridPoint[] = [
@@ -196,15 +207,143 @@ function addMessage(state: BattleState, message: BattleFeedEntry): void {
   state.messages = [message, ...state.messages].slice(0, 8)
 }
 
-function updateBattleOutcome(state: BattleState): void {
+function getObjectivePhases(definition: BattleDefinition): BattleObjectivePhaseDefinition[] {
+  if (definition.objectivePhases && definition.objectivePhases.length > 0) {
+    return definition.objectivePhases
+  }
+
+  return [
+    {
+      id: 'default-objective',
+      objectiveKey: definition.objectiveKey,
+      briefingKey: definition.briefingKey,
+      victoryKey: definition.victoryKey,
+      defeatKey: definition.defeatKey,
+      victoryConditions: [{ type: 'eliminate-team', team: 'enemies' }],
+    },
+  ]
+}
+
+function getObjectivePhase(definition: BattleDefinition, phaseId: string): BattleObjectivePhaseDefinition {
+  return getObjectivePhases(definition).find((phase) => phase.id === phaseId) ?? getObjectivePhases(definition)[0]
+}
+
+function applyObjectivePhaseState(state: BattleState, definition: BattleDefinition, phaseId: string): void {
+  const phase = getObjectivePhase(definition, phaseId)
+  state.objectivePhaseId = phase.id
+  state.objectiveKey = phase.objectiveKey
+  state.briefingKey = phase.briefingKey ?? definition.briefingKey
+  state.victoryKey = phase.victoryKey ?? definition.victoryKey
+  state.defeatKey = phase.defeatKey ?? definition.defeatKey
+}
+
+function isObjectiveConditionMet(state: BattleState, condition: BattleObjectiveCondition): boolean {
+  switch (condition.type) {
+    case 'eliminate-team':
+      return !Object.values(state.units).some((unit) => unit.team === condition.team && !unit.defeated)
+    case 'defeat-unit':
+      return state.units[condition.unitId]?.defeated === true
+    case 'turn-at-least':
+      return state.turnIndex >= condition.turnIndex
+  }
+}
+
+function updateBattleOutcome(state: BattleState, definition: BattleDefinition): void {
   const alliesAlive = Object.values(state.units).some((unit) => unit.team === 'allies' && !unit.defeated)
-  const enemiesAlive = Object.values(state.units).some((unit) => unit.team === 'enemies' && !unit.defeated)
 
   if (!alliesAlive) {
     state.phase = 'defeat'
-  } else if (!enemiesAlive) {
+    return
+  }
+
+  const phase = getObjectivePhase(definition, state.objectivePhaseId)
+  const defeatConditions = phase.defeatConditions ?? []
+
+  if (defeatConditions.some((condition) => isObjectiveConditionMet(state, condition))) {
+    state.phase = 'defeat'
+    return
+  }
+
+  if (phase.victoryConditions.every((condition) => isObjectiveConditionMet(state, condition))) {
     state.phase = 'victory'
   }
+}
+
+function triggerMatches(
+  state: BattleState,
+  event: BattleScriptedEvent,
+  context: EventTriggerContext,
+): boolean {
+  if (event.trigger.type !== context.type) {
+    return false
+  }
+
+  if (event.once !== false && state.resolvedEventIds.includes(event.id)) {
+    return false
+  }
+
+  if (event.trigger.objectivePhaseId && event.trigger.objectivePhaseId !== state.objectivePhaseId) {
+    return false
+  }
+
+  if (event.trigger.type === 'turn-start') {
+    return (
+      (event.trigger.turnIndex === undefined || event.trigger.turnIndex === state.turnIndex) &&
+      (event.trigger.team === undefined || event.trigger.team === context.team) &&
+      (event.trigger.unitId === undefined || event.trigger.unitId === context.unitId)
+    )
+  }
+
+  if (event.trigger.type === 'unit-defeated') {
+    return (
+      (event.trigger.team === undefined || event.trigger.team === context.team) &&
+      (event.trigger.unitId === undefined || event.trigger.unitId === context.unitId)
+    )
+  }
+
+  return true
+}
+
+function applyEventEffect(state: BattleState, definition: BattleDefinition, effect: BattleEventEffect): void {
+  if (effect.type === 'set-objective-phase') {
+    applyObjectivePhaseState(state, definition, effect.objectivePhaseId)
+    return
+  }
+
+  const deploymentIndex = Object.keys(state.units).length
+  const deployed = createUnitState(effect.unit, deploymentIndex)
+  const active = state.units[state.activeUnitId]
+  deployed.facing = effect.facing ?? deployed.facing
+  deployed.nextActAt = effect.nextActAt ?? (active ? active.nextActAt + getActionDelay(deployed) : deployed.nextActAt)
+  state.units[deployed.id] = deployed
+}
+
+function processScriptedEvents(
+  state: BattleState,
+  definition: BattleDefinition,
+  context: EventTriggerContext,
+): void {
+  if (state.phase !== 'active') {
+    return
+  }
+
+  if (definition.events && definition.events.length > 0) {
+    for (const event of definition.events) {
+      if (!triggerMatches(state, event, context)) {
+        continue
+      }
+
+      for (const effect of event.effects) {
+        applyEventEffect(state, definition, effect)
+      }
+
+      if (event.once !== false) {
+        state.resolvedEventIds.push(event.id)
+      }
+    }
+  }
+
+  updateBattleOutcome(state, definition)
 }
 
 function applyStatus(unit: UnitState, statusId: StatusInstance['id'], stacks: number, duration: number): AppliedStatusResult {
@@ -756,6 +895,7 @@ function createBattleState(definition: BattleDefinition, map: BattleMapData): Ba
     }, {})
 
   const activeUnitId = Object.values(units).sort(sortTurnUnits)[0]?.id ?? definition.allies[0].id
+  const initialPhase = getObjectivePhases(definition)[0]
 
   return {
     definitionId: definition.id,
@@ -764,6 +904,12 @@ function createBattleState(definition: BattleDefinition, map: BattleMapData): Ba
     activeUnitId,
     turnIndex: 1,
     phase: 'briefing',
+    objectivePhaseId: initialPhase.id,
+    objectiveKey: initialPhase.objectiveKey,
+    briefingKey: initialPhase.briefingKey ?? definition.briefingKey,
+    victoryKey: initialPhase.victoryKey ?? definition.victoryKey,
+    defeatKey: initialPhase.defeatKey ?? definition.defeatKey,
+    resolvedEventIds: [],
     messages: [],
   }
 }
@@ -775,13 +921,13 @@ function consumeTurn(actor: UnitState): void {
   tickStatuses(actor)
 }
 
-function setNextActiveUnit(state: BattleState): void {
+function setNextActiveUnit(state: BattleState, definition: BattleDefinition): void {
   const next = Object.values(state.units)
     .filter((unit) => !unit.defeated)
     .sort(sortTurnUnits)[0]
 
   if (!next) {
-    updateBattleOutcome(state)
+    updateBattleOutcome(state, definition)
     return
   }
 
@@ -794,7 +940,7 @@ function setNextActiveUnit(state: BattleState): void {
   }
 }
 
-function processTurnStart(state: BattleState): BattleFeedEntry[] {
+function processTurnStart(state: BattleState, definition: BattleDefinition): BattleFeedEntry[] {
   const messages: BattleFeedEntry[] = []
   const actor = state.units[state.activeUnitId]
 
@@ -813,20 +959,35 @@ function processTurnStart(state: BattleState): BattleFeedEntry[] {
       actor.defeated = true
       messages.push({ kind: 'fell', unitId: actor.id })
       consumeTurn(actor)
-      updateBattleOutcome(state)
+      processScriptedEvents(state, definition, { type: 'unit-defeated', unitId: actor.id, team: actor.team })
 
       if (state.phase === 'active') {
-        setNextActiveUnit(state)
-        return [...messages, ...processTurnStart(state)]
+        setNextActiveUnit(state, definition)
+        return [...messages, ...processTurnStart(state, definition)]
       }
     }
+  }
+
+  processScriptedEvents(state, definition, {
+    type: 'turn-start',
+    unitId: actor.id,
+    team: actor.team,
+  })
+
+  if (state.phase !== 'active') {
+    return messages
   }
 
   messages.unshift({ kind: 'turn', unitId: actor.id })
   return messages
 }
 
-function simulateAction(baseState: BattleState, action: BattleAction, options: SimulateOptions): CombatResolution {
+function simulateAction(
+  baseState: BattleState,
+  definition: BattleDefinition,
+  action: BattleAction,
+  options: SimulateOptions,
+): CombatResolution {
   const state = options.mutate ? baseState : structuredClone(baseState)
   const actor = state.units[action.actorId]
   const startTurnMessages: BattleFeedEntry[] = []
@@ -854,11 +1015,11 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
   if (action.kind === 'wait') {
     result.messages.push({ kind: 'wait', unitId: actor.id })
     consumeTurn(actor)
-    updateBattleOutcome(state)
+    updateBattleOutcome(state, definition)
 
     if (state.phase === 'active') {
-      setNextActiveUnit(state)
-      result.startTurnMessages.push(...processTurnStart(state))
+      setNextActiveUnit(state, definition)
+      result.startTurnMessages.push(...processTurnStart(state, definition))
     }
 
     return result
@@ -997,11 +1158,30 @@ function simulateAction(baseState: BattleState, action: BattleAction, options: S
 
   actor.hasActedThisTurn = true
   consumeTurn(actor)
-  updateBattleOutcome(state)
+
+  const defeatedUnits: UnitState[] = []
+
+  if (targetBefore.hp > 0 && target.defeated) {
+    defeatedUnits.push(target)
+  }
+
+  if (actorBefore.hp > 0 && actor.defeated) {
+    defeatedUnits.push(actor)
+  }
+
+  for (const defeatedUnit of defeatedUnits) {
+    processScriptedEvents(state, definition, {
+      type: 'unit-defeated',
+      unitId: defeatedUnit.id,
+      team: defeatedUnit.team,
+    })
+  }
+
+  updateBattleOutcome(state, definition)
 
   if (state.phase === 'active') {
-    setNextActiveUnit(state)
-    result.startTurnMessages.push(...processTurnStart(state))
+    setNextActiveUnit(state, definition)
+    result.startTurnMessages.push(...processTurnStart(state, definition))
   }
 
   return result
@@ -1011,8 +1191,8 @@ export class BattleRuntime {
   state: BattleState
   readonly definition: BattleDefinition
 
-  constructor(mapData: TiledMapData) {
-    this.definition = battleDefinition
+  constructor(mapData: TiledMapData, definition: BattleDefinition = battleDefinition) {
+    this.definition = definition
     this.state = createBattleState(this.definition, parseTiledMap(this.definition.mapId, mapData))
   }
 
@@ -1022,7 +1202,8 @@ export class BattleRuntime {
 
   startBattle(): BattleFeedEntry[] {
     this.state.phase = 'active'
-    const messages = processTurnStart(this.state)
+    processScriptedEvents(this.state, this.definition, { type: 'battle-start' })
+    const messages = this.state.phase === 'active' ? processTurnStart(this.state, this.definition) : []
 
     for (const message of messages) {
       addMessage(this.state, message)
@@ -1113,11 +1294,11 @@ export class BattleRuntime {
   }
 
   previewAction(action: BattleAction): CombatResolution {
-    return simulateAction(this.state, action, { mutate: false })
+    return simulateAction(this.state, this.definition, action, { mutate: false })
   }
 
   commitAction(action: BattleAction): CombatResolution {
-    const resolution = simulateAction(this.state, action, { mutate: true })
+    const resolution = simulateAction(this.state, this.definition, action, { mutate: true })
     this.state = resolution.state
 
     for (const message of [...resolution.messages, ...resolution.startTurnMessages].reverse()) {

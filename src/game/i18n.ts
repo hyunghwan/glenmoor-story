@@ -8,11 +8,20 @@ const bundles: Record<Locale, Bundle> = {
     'battle.glenmoorPass.title': 'Skirmish at Glenmoor Pass',
     'battle.glenmoorPass.objective': 'Rout every enemy on the field.',
     'battle.glenmoorPass.briefing':
-      'A rebel vanguard has seized the pass above Glenmoor Ford. Break their line, keep the ridge, and leave no hostile standard standing.',
+      'Captain Veyr has locked the ridge behind a shield wall while reserve horns wait below Glenmoor Ford. Break the line before he can regroup and seal the pass.',
     'battle.glenmoorPass.victory':
-      'The pass is ours. Glenmoor breathes again, and the road to the heartland stands open.',
+      'Captain Veyr is down, the reserve horn is broken, and the pass is ours again.',
     'battle.glenmoorPass.defeat':
-      'The line collapsed. Glenmoor falls silent beneath enemy banners.',
+      'The line collapsed under the reserve push. Glenmoor falls silent beneath enemy banners.',
+    'battle.glenmoorPass.phaseBreakLine.objective': 'Break the shield wall at the ridge.',
+    'battle.glenmoorPass.phaseHuntCaptain.objective':
+      'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+    'battle.glenmoorPass.phaseHuntCaptain.announcement':
+      'Reserve horns are sounding at the ford. Captain Veyr is exposed.',
+    'battle.glenmoorPass.phaseHuntCaptain.victory':
+      'Veyr fell before the reserve trap could close. Glenmoor breathes again, and the pass stands open.',
+    'battle.glenmoorPass.phaseHuntCaptain.defeat':
+      'The reserve horn closed around the ford, and Glenmoor was crushed in the vice.',
     'hud.startBattle': 'Commence Battle',
     'hud.returnToBriefing': 'Review Briefing',
     'hud.playAgain': 'Restart Battle',
@@ -37,6 +46,10 @@ const bundles: Record<Locale, Bundle> = {
     'hud.phase.active': 'Battle',
     'hud.phase.victory': 'Victory',
     'hud.phase.defeat': 'Defeat',
+    'hud.phaseObjective': 'Battle Phase {current}/{total}',
+    'hud.phaseUpdate': 'Objective Updated',
+    'hud.modal.startingObjective': 'Starting Objective',
+    'hud.modal.finalObjective': 'Final Objective',
     'hud.mode.idle': 'Choose a command or inspect the field.',
     'hud.mode.move': 'Choose a reachable tile for repositioning.',
     'hud.mode.attack': 'Select an enemy in range.',
@@ -130,6 +143,8 @@ const bundles: Record<Locale, Bundle> = {
     'unit.shieldbearer': 'Shieldbearer',
     'unit.cutpurse': 'Cutpurse',
     'unit.fanatic': 'Ash Fanatic',
+    'unit.fordStalker': 'Ford Stalker',
+    'unit.roadReaver': 'Road Reaver',
     'log.turn': '{name} takes the initiative.',
     'log.move': '{name} repositions.',
     'log.wait': '{name} holds position.',
@@ -158,11 +173,20 @@ const bundles: Record<Locale, Bundle> = {
     'battle.glenmoorPass.title': '글렌무어 협곡 전투',
     'battle.glenmoorPass.objective': '전장의 적을 모두 섬멸하라.',
     'battle.glenmoorPass.briefing':
-      '반란군 선봉이 글렌무어 나루 위의 협곡을 점거했다. 능선을 되찾고 적 기치를 하나도 남기지 마라.',
+      '베이르 대장이 방패벽으로 능선을 막아섰고, 글렌무어 나루 아래에서는 예비대의 뿔나팔이 대기한다. 그들이 협곡을 봉쇄하기 전에 전열을 찢어라.',
     'battle.glenmoorPass.victory':
-      '협곡을 탈환했다. 글렌무어는 다시 숨을 쉬고, 심장부로 향하는 길이 열렸다.',
+      '베이르 대장이 쓰러지고 예비대의 뿔나팔도 꺾였다. 협곡은 다시 우리의 것이다.',
     'battle.glenmoorPass.defeat':
-      '방어선이 무너졌다. 글렌무어는 적의 깃발 아래 침묵한다.',
+      '예비대의 압박에 전열이 무너졌다. 글렌무어는 적의 깃발 아래 침묵한다.',
+    'battle.glenmoorPass.phaseBreakLine.objective': '능선의 방패벽을 돌파하라.',
+    'battle.glenmoorPass.phaseHuntCaptain.objective':
+      '나루에서 예비대의 뿔나팔이 울린다. 포위가 닫히기 전에 베이르 대장을 쓰러뜨려라.',
+    'battle.glenmoorPass.phaseHuntCaptain.announcement':
+      '나루에서 예비대의 뿔나팔이 울린다. 베이르 대장이 모습을 드러냈다.',
+    'battle.glenmoorPass.phaseHuntCaptain.victory':
+      '예비대의 포위가 닫히기 전에 베이르 대장을 베어냈다. 글렌무어는 다시 숨을 쉬고 협곡은 열렸다.',
+    'battle.glenmoorPass.phaseHuntCaptain.defeat':
+      '예비대의 뿔나팔이 나루를 에워쌌고, 글렌무어는 협공 속에 짓눌렸다.',
     'hud.startBattle': '전투 개시',
     'hud.returnToBriefing': '브리핑 보기',
     'hud.playAgain': '전투 재시작',
@@ -187,6 +211,10 @@ const bundles: Record<Locale, Bundle> = {
     'hud.phase.active': '전투',
     'hud.phase.victory': '승리',
     'hud.phase.defeat': '패배',
+    'hud.phaseObjective': '전투 국면 {current}/{total}',
+    'hud.phaseUpdate': '목표 갱신',
+    'hud.modal.startingObjective': '시작 목표',
+    'hud.modal.finalObjective': '최종 목표',
     'hud.mode.idle': '명령을 고르거나 전장을 살펴보세요.',
     'hud.mode.move': '이동 가능한 타일을 선택하세요.',
     'hud.mode.attack': '사거리 안의 적을 선택하세요.',
@@ -280,6 +308,8 @@ const bundles: Record<Locale, Bundle> = {
     'unit.shieldbearer': '방패병',
     'unit.cutpurse': '소매치기',
     'unit.fanatic': '재의 광신도',
+    'unit.fordStalker': '나루 추격병',
+    'unit.roadReaver': '대로 약탈자',
     'log.turn': '{name}의 차례입니다.',
     'log.move': '{name}이(가) 위치를 옮겼다.',
     'log.wait': '{name}이(가) 대기한다.',

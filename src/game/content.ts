@@ -1,12 +1,21 @@
 import type {
-  AIProfile,
   BattleDefinition,
-  ClassDefinition,
   PresentationProfile,
-  SkillDefinition,
-  StatusDefinition,
   TerrainDefinition,
 } from './types'
+import aiProfilesData from './data/ai-profiles.json'
+import classDefinitionsData from './data/class-definitions.json'
+import glenmoorPassScenarioData from './data/glenmoor-pass.scenario.json'
+import skillDefinitionsData from './data/skill-definitions.json'
+import statusDefinitionsData from './data/status-definitions.json'
+import {
+  loadAIProfiles,
+  loadClassDefinitions,
+  loadSkillDefinitions,
+  loadStatusDefinitions,
+  validateContentDefinitions,
+} from './content-loader'
+import { loadBattleDefinition, validateBattleDefinitionContent } from './scenario-loader'
 
 function presentation(
   fxCueId: string,
@@ -117,330 +126,30 @@ export const attackPresentationDefinitions: Record<string, PresentationProfile> 
   clericChant: presentation('attack.clericChant', 'support', 240, 170, 'support-pulse', 'light-shards', 'radiant'),
 }
 
-export const statusDefinitions: Record<string, StatusDefinition> = {
-  burning: {
-    id: 'burning',
-    labelKey: 'status.burning',
-    descriptionKey: 'status.burning.desc',
-    maxStacks: 3,
-    presentation: presentation('status.burning', 'status', 120, 180, 'impact-light', 'ember-plume', 'ember'),
+const loadedContentDefinitions = validateContentDefinitions(
+  {
+    statusDefinitions: loadStatusDefinitions(statusDefinitionsData, 'status-definitions.json'),
+    skillDefinitions: loadSkillDefinitions(skillDefinitionsData, 'skill-definitions.json'),
+    classDefinitions: loadClassDefinitions(classDefinitionsData, 'class-definitions.json'),
+    aiProfiles: loadAIProfiles(aiProfilesData, 'ai-profiles.json'),
   },
-  guardBreak: {
-    id: 'guardBreak',
-    labelKey: 'status.guardBreak',
-    descriptionKey: 'status.guardBreak.desc',
-    maxStacks: 2,
-    presentation: presentation('status.guardBreak', 'status', 100, 170, 'impact-light', 'guard-fragments', 'hazard'),
+  {
+    attackPresentationIds: Object.keys(attackPresentationDefinitions),
   },
-  warded: {
-    id: 'warded',
-    labelKey: 'status.warded',
-    descriptionKey: 'status.warded.desc',
-    maxStacks: 3,
-    presentation: presentation('status.warded', 'status', 140, 180, 'support-pulse', 'ward-orbit', 'ward'),
-  },
-  slow: {
-    id: 'slow',
-    labelKey: 'status.slow',
-    descriptionKey: 'status.slow.desc',
-    maxStacks: 2,
-    presentation: presentation('status.slow', 'status', 120, 170, 'impact-light', 'slow-haze', 'wind'),
-  },
-}
+)
 
-export const skillDefinitions: Record<string, SkillDefinition> = {
-  shieldBash: {
-    id: 'shieldBash',
-    nameKey: 'skill.shieldBash.name',
-    descriptionKey: 'skill.shieldBash.desc',
-    targetType: 'enemy',
-    rangeMin: 1,
-    rangeMax: 1,
-    counterable: true,
-    effects: [
-      { type: 'damage', amount: 3, flavor: 'power' },
-      { type: 'status', statusId: 'guardBreak', stacks: 1, duration: 2 },
-      { type: 'push', distance: 1 },
-    ],
-    presentation: presentation('skill.shieldBash', 'skill', 220, 240, 'impact-heavy', 'shock-ring', 'steel'),
-  },
-  snareVolley: {
-    id: 'snareVolley',
-    nameKey: 'skill.snareVolley.name',
-    descriptionKey: 'skill.snareVolley.desc',
-    targetType: 'enemy',
-    rangeMin: 2,
-    rangeMax: 4,
-    counterable: false,
-    effects: [
-      { type: 'damage', amount: 3, flavor: 'power' },
-      { type: 'status', statusId: 'slow', stacks: 1, duration: 3 },
-    ],
-    presentation: presentation('skill.snareVolley', 'skill', 260, 200, 'impact-light', 'arrow-streak', 'wind'),
-  },
-  emberSigil: {
-    id: 'emberSigil',
-    nameKey: 'skill.emberSigil.name',
-    descriptionKey: 'skill.emberSigil.desc',
-    targetType: 'enemy',
-    rangeMin: 2,
-    rangeMax: 3,
-    counterable: false,
-    effects: [
-      { type: 'damage', amount: 4, flavor: 'magic' },
-      { type: 'status', statusId: 'burning', stacks: 1, duration: 3 },
-    ],
-    presentation: presentation('skill.emberSigil', 'skill', 320, 240, 'impact-heavy', 'ember-plume', 'ember'),
-  },
-  aegisField: {
-    id: 'aegisField',
-    nameKey: 'skill.aegisField.name',
-    descriptionKey: 'skill.aegisField.desc',
-    targetType: 'ally',
-    rangeMin: 0,
-    rangeMax: 2,
-    counterable: false,
-    effects: [
-      { type: 'heal', amount: 5 },
-      { type: 'status', statusId: 'warded', stacks: 2, duration: 2 },
-    ],
-    presentation: presentation('skill.aegisField', 'support', 260, 220, 'support-pulse', 'light-shards', 'ward'),
-  },
-  shadowLunge: {
-    id: 'shadowLunge',
-    nameKey: 'skill.shadowLunge.name',
-    descriptionKey: 'skill.shadowLunge.desc',
-    targetType: 'enemy',
-    rangeMin: 1,
-    rangeMax: 1,
-    counterable: true,
-    effects: [{ type: 'damage', amount: 5, flavor: 'power' }],
-    presentation: presentation('skill.shadowLunge', 'skill', 160, 200, 'impact-heavy', 'dash-burst', 'shadow'),
-  },
-  resolveHymn: {
-    id: 'resolveHymn',
-    nameKey: 'skill.resolveHymn.name',
-    descriptionKey: 'skill.resolveHymn.desc',
-    targetType: 'ally',
-    rangeMin: 1,
-    rangeMax: 3,
-    counterable: false,
-    effects: [
-      { type: 'heal', amount: 6 },
-      { type: 'status', statusId: 'warded', stacks: 1, duration: 2 },
-    ],
-    presentation: presentation('skill.resolveHymn', 'support', 290, 220, 'support-pulse', 'light-shards', 'radiant'),
-  },
-}
+export const statusDefinitions = loadedContentDefinitions.statusDefinitions
 
-export const classDefinitions: Record<string, ClassDefinition> = {
-  vanguard: {
-    id: 'vanguard',
-    nameKey: 'class.vanguard',
-    roleKey: 'role.vanguard',
-    basicAttackNameKey: 'attack.strike',
-    basicAttackPresentationId: 'vanguardStrike',
-    basicAttackFlavor: 'power',
-    basicAttackPower: 4,
-    basicAttackRangeMin: 1,
-    basicAttackRangeMax: 1,
-    signatureSkillId: 'shieldBash',
-    stats: {
-      maxHp: 30,
-      power: 8,
-      magic: 2,
-      defense: 7,
-      resistance: 3,
-      speed: 6,
-      move: 5,
-      maxClimb: 1,
-    },
-  },
-  ranger: {
-    id: 'ranger',
-    nameKey: 'class.ranger',
-    roleKey: 'role.ranger',
-    basicAttackNameKey: 'attack.shot',
-    basicAttackPresentationId: 'rangerShot',
-    basicAttackFlavor: 'power',
-    basicAttackPower: 4,
-    basicAttackRangeMin: 2,
-    basicAttackRangeMax: 3,
-    signatureSkillId: 'snareVolley',
-    stats: {
-      maxHp: 22,
-      power: 7,
-      magic: 2,
-      defense: 4,
-      resistance: 3,
-      speed: 8,
-      move: 5,
-      maxClimb: 1,
-    },
-  },
-  arcanist: {
-    id: 'arcanist',
-    nameKey: 'class.arcanist',
-    roleKey: 'role.arcanist',
-    basicAttackNameKey: 'attack.bolt',
-    basicAttackPresentationId: 'arcanistBolt',
-    basicAttackFlavor: 'magic',
-    basicAttackPower: 3,
-    basicAttackRangeMin: 1,
-    basicAttackRangeMax: 2,
-    signatureSkillId: 'emberSigil',
-    stats: {
-      maxHp: 20,
-      power: 2,
-      magic: 8,
-      defense: 3,
-      resistance: 5,
-      speed: 7,
-      move: 5,
-      maxClimb: 1,
-    },
-  },
-  warden: {
-    id: 'warden',
-    nameKey: 'class.warden',
-    roleKey: 'role.warden',
-    basicAttackNameKey: 'attack.guard',
-    basicAttackPresentationId: 'wardenGuard',
-    basicAttackFlavor: 'power',
-    basicAttackPower: 3,
-    basicAttackRangeMin: 1,
-    basicAttackRangeMax: 1,
-    signatureSkillId: 'aegisField',
-    stats: {
-      maxHp: 28,
-      power: 6,
-      magic: 4,
-      defense: 6,
-      resistance: 5,
-      speed: 5,
-      move: 4,
-      maxClimb: 1,
-    },
-  },
-  skirmisher: {
-    id: 'skirmisher',
-    nameKey: 'class.skirmisher',
-    roleKey: 'role.skirmisher',
-    basicAttackNameKey: 'attack.slash',
-    basicAttackPresentationId: 'skirmisherSlash',
-    basicAttackFlavor: 'power',
-    basicAttackPower: 4,
-    basicAttackRangeMin: 1,
-    basicAttackRangeMax: 1,
-    signatureSkillId: 'shadowLunge',
-    stats: {
-      maxHp: 24,
-      power: 7,
-      magic: 1,
-      defense: 4,
-      resistance: 3,
-      speed: 8,
-      move: 6,
-      maxClimb: 2,
-    },
-  },
-  cleric: {
-    id: 'cleric',
-    nameKey: 'class.cleric',
-    roleKey: 'role.cleric',
-    basicAttackNameKey: 'attack.chant',
-    basicAttackPresentationId: 'clericChant',
-    basicAttackFlavor: 'magic',
-    basicAttackPower: 2,
-    basicAttackRangeMin: 1,
-    basicAttackRangeMax: 2,
-    signatureSkillId: 'resolveHymn',
-    stats: {
-      maxHp: 21,
-      power: 2,
-      magic: 8,
-      defense: 3,
-      resistance: 6,
-      speed: 6,
-      move: 5,
-      maxClimb: 1,
-    },
-  },
-}
+export const skillDefinitions = loadedContentDefinitions.skillDefinitions
 
-export const aiProfiles: Record<string, AIProfile> = {
-  spearhead: {
-    id: 'spearhead',
-    aggression: 1.1,
-    support: 0.2,
-    riskTolerance: 0.8,
-    terrainBias: 0.4,
-    controlBias: 0.9,
-  },
-  artillery: {
-    id: 'artillery',
-    aggression: 1,
-    support: 0.1,
-    riskTolerance: 0.5,
-    terrainBias: 0.8,
-    controlBias: 0.6,
-  },
-  tactician: {
-    id: 'tactician',
-    aggression: 0.9,
-    support: 0.3,
-    riskTolerance: 0.6,
-    terrainBias: 0.7,
-    controlBias: 1,
-  },
-  bulwark: {
-    id: 'bulwark',
-    aggression: 0.8,
-    support: 1,
-    riskTolerance: 0.4,
-    terrainBias: 1,
-    controlBias: 0.5,
-  },
-  opportunist: {
-    id: 'opportunist',
-    aggression: 1.2,
-    support: 0.1,
-    riskTolerance: 1,
-    terrainBias: 0.5,
-    controlBias: 0.8,
-  },
-  cantor: {
-    id: 'cantor',
-    aggression: 0.5,
-    support: 1.2,
-    riskTolerance: 0.3,
-    terrainBias: 0.5,
-    controlBias: 0.4,
-  },
-}
+export const classDefinitions = loadedContentDefinitions.classDefinitions
 
-export const battleDefinition: BattleDefinition = {
-  id: 'glenmoorPass',
-  titleKey: 'battle.glenmoorPass.title',
-  objectiveKey: 'battle.glenmoorPass.objective',
-  briefingKey: 'battle.glenmoorPass.briefing',
-  victoryKey: 'battle.glenmoorPass.victory',
-  defeatKey: 'battle.glenmoorPass.defeat',
-  mapId: 'glenmoor-pass',
-  allies: [
-    { id: 'rowan', nameKey: 'unit.rowan', classId: 'vanguard', team: 'allies', position: { x: 2, y: 11 }, aiProfileId: 'spearhead' },
-    { id: 'elira', nameKey: 'unit.elira', classId: 'ranger', team: 'allies', position: { x: 1, y: 12 }, aiProfileId: 'artillery' },
-    { id: 'sable', nameKey: 'unit.sable', classId: 'skirmisher', team: 'allies', position: { x: 4, y: 12 }, aiProfileId: 'opportunist' },
-    { id: 'maelin', nameKey: 'unit.maelin', classId: 'arcanist', team: 'allies', position: { x: 3, y: 13 }, aiProfileId: 'tactician' },
-    { id: 'osric', nameKey: 'unit.osric', classId: 'warden', team: 'allies', position: { x: 2, y: 14 }, aiProfileId: 'bulwark' },
-    { id: 'talia', nameKey: 'unit.talia', classId: 'cleric', team: 'allies', position: { x: 4, y: 14 }, aiProfileId: 'cantor' },
-  ],
-  enemies: [
-    { id: 'brigandCaptain', nameKey: 'unit.brigandCaptain', classId: 'vanguard', team: 'enemies', position: { x: 12, y: 3 }, aiProfileId: 'spearhead', startingHp: 27 },
-    { id: 'huntmaster', nameKey: 'unit.huntmaster', classId: 'ranger', team: 'enemies', position: { x: 13, y: 2 }, aiProfileId: 'artillery', startingHp: 20 },
-    { id: 'hexbinder', nameKey: 'unit.hexbinder', classId: 'arcanist', team: 'enemies', position: { x: 10, y: 2 }, aiProfileId: 'tactician', startingHp: 18 },
-    { id: 'shieldbearer', nameKey: 'unit.shieldbearer', classId: 'warden', team: 'enemies', position: { x: 11, y: 4 }, aiProfileId: 'bulwark' },
-    { id: 'cutpurse', nameKey: 'unit.cutpurse', classId: 'skirmisher', team: 'enemies', position: { x: 14, y: 4 }, aiProfileId: 'opportunist', startingHp: 21 },
-    { id: 'fanatic', nameKey: 'unit.fanatic', classId: 'cleric', team: 'enemies', position: { x: 9, y: 3 }, aiProfileId: 'cantor' },
-  ],
-}
+export const aiProfiles = loadedContentDefinitions.aiProfiles
+
+export const battleDefinition: BattleDefinition = validateBattleDefinitionContent(
+  loadBattleDefinition(glenmoorPassScenarioData, 'glenmoor-pass.scenario.json'),
+  {
+    classIds: Object.keys(classDefinitions),
+    aiProfileIds: Object.keys(aiProfiles),
+  },
+)

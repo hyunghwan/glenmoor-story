@@ -1,0 +1,134 @@
+[
+  {
+    "id": "vanguard",
+    "nameKey": "class.vanguard",
+    "roleKey": "role.vanguard",
+    "basicAttackNameKey": "attack.strike",
+    "basicAttackPresentationId": "vanguardStrike",
+    "basicAttackFlavor": "power",
+    "basicAttackPower": 4,
+    "basicAttackRangeMin": 1,
+    "basicAttackRangeMax": 1,
+    "signatureSkillId": "shieldBash",
+    "stats": {
+      "maxHp": 30,
+      "power": 8,
+      "magic": 2,
+      "defense": 7,
+      "resistance": 3,
+      "speed": 6,
+      "move": 5,
+      "maxClimb": 1
+    }
+  },
+  {
+    "id": "ranger",
+    "nameKey": "class.ranger",
+    "roleKey": "role.ranger",
+    "basicAttackNameKey": "attack.shot",
+    "basicAttackPresentationId": "rangerShot",
+    "basicAttackFlavor": "power",
+    "basicAttackPower": 4,
+    "basicAttackRangeMin": 2,
+    "basicAttackRangeMax": 3,
+    "signatureSkillId": "snareVolley",
+    "stats": {
+      "maxHp": 22,
+      "power": 7,
+      "magic": 2,
+      "defense": 4,
+      "resistance": 3,
+      "speed": 8,
+      "move": 5,
+      "maxClimb": 1
+    }
+  },
+  {
+    "id": "arcanist",
+    "nameKey": "class.arcanist",
+    "roleKey": "role.arcanist",
+    "basicAttackNameKey": "attack.bolt",
+    "basicAttackPresentationId": "arcanistBolt",
+    "basicAttackFlavor": "magic",
+    "basicAttackPower": 3,
+    "basicAttackRangeMin": 1,
+    "basicAttackRangeMax": 2,
+    "signatureSkillId": "emberSigil",
+    "stats": {
+      "maxHp": 20,
+      "power": 2,
+      "magic": 8,
+      "defense": 3,
+      "resistance": 5,
+      "speed": 7,
+      "move": 5,
+      "maxClimb": 1
+    }
+  },
+  {
+    "id": "warden",
+    "nameKey": "class.warden",
+    "roleKey": "role.warden",
+    "basicAttackNameKey": "attack.guard",
+    "basicAttackPresentationId": "wardenGuard",
+    "basicAttackFlavor": "power",
+    "basicAttackPower": 3,
+    "basicAttackRangeMin": 1,
+    "basicAttackRangeMax": 1,
+    "signatureSkillId": "aegisField",
+    "stats": {
+      "maxHp": 28,
+      "power": 6,
+      "magic": 4,
+      "defense": 6,
+      "resistance": 5,
+      "speed": 5,
+      "move": 4,
+      "maxClimb": 1
+    }
+  },
+  {
+    "id": "skirmisher",
+    "nameKey": "class.skirmisher",
+    "roleKey": "role.skirmisher",
+    "basicAttackNameKey": "attack.slash",
+    "basicAttackPresentationId": "skirmisherSlash",
+    "basicAttackFlavor": "power",
+    "basicAttackPower": 4,
+    "basicAttackRangeMin": 1,
+    "basicAttackRangeMax": 1,
+    "signatureSkillId": "shadowLunge",
+    "stats": {
+      "maxHp": 24,
+      "power": 7,
+      "magic": 1,
+      "defense": 4,
+      "resistance": 3,
+      "speed": 8,
+      "move": 6,
+      "maxClimb": 2
+    }
+  },
+  {
+    "id": "cleric",
+    "nameKey": "class.cleric",
+    "roleKey": "role.cleric",
+    "basicAttackNameKey": "attack.chant",
+    "basicAttackPresentationId": "clericChant",
+    "basicAttackFlavor": "magic",
+    "basicAttackPower": 2,
+    "basicAttackRangeMin": 1,
+    "basicAttackRangeMax": 2,
+    "signatureSkillId": "resolveHymn",
+    "stats": {
+      "maxHp": 21,
+      "power": 2,
+      "magic": 8,
+      "defense": 3,
+      "resistance": 6,
+      "speed": 6,
+      "move": 5,
+      "maxClimb": 1
+    }
+  }
+]
