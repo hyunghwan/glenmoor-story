@@ -1648,6 +1648,15 @@ export class BattleScene extends Phaser.Scene {
     const camera = this.cameras.main
 
     this.uiBus.emit('telemetry:update', {
+      mapId: this.runtime.definition.mapId,
+      boardProjection: {
+        origin: { x: BOARD_ORIGIN.x, y: BOARD_ORIGIN.y },
+        tileWidth: TILE_WIDTH,
+        tileHeight: TILE_HEIGHT,
+        heightStep: HEIGHT_STEP,
+        mapWidth: this.runtime.state.map.width,
+        mapHeight: this.runtime.state.map.height,
+      },
       phase: this.runtime.state.phase,
       mode: this.mode,
       activeUnitId: active.id,
@@ -1971,6 +1980,16 @@ export class BattleScene extends Phaser.Scene {
         active: this.viewState.panModeActive,
       },
     ]
+
+    if (this.runtime?.state.phase === 'active') {
+      buttons.push({
+        id: 'restart-battle',
+        label: this.i18n.t('hud.playAgain'),
+        icon: 'replay',
+        disabled: false,
+        active: false,
+      })
+    }
 
     return {
       label: this.i18n.t('hud.view'),

@@ -89,3 +89,31 @@ The canonical implementation log lives in `docs/progress.md`.
   - `npm test`
   - `npm run build`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:hud`
+
+## 2026-03-10
+
+- Added `docs/backlog.md` as the concrete execution backlog for the next prototype passes
+- Synced the GitHub Project `Glenmoor Story` to the current plan using issue-backed backlog items:
+  - `#4` pointer-only browser QA completion and debug-assist removal
+  - `#5` `1280x720` HUD compaction and locale-fit readability
+  - `#6` multi-phase objective model and battle event hooks
+  - `#7` authored Glenmoor Pass phase beat
+  - `#8` objective UX, wrapper copy, and QA coverage
+  - `#1` open-source placeholder asset and audio pass
+  - `#9` scenario data extraction
+  - `#10` class / skill / status / AI content extraction with validation
+- Working rule:
+  - execute the backlog in order
+  - keep docs and GitHub Project status synchronized
+  - use open-source placeholders for the art/audio pass, with future custom replacement deferred
+- Backlog item `#4` is now implemented:
+  - `qa:playthrough` and `qa:camera` now use real DOM clicks and projected canvas pointer clicks instead of debug command or `projectTile()` shortcuts
+  - external QA projection now comes from telemetry `mapId` / `boardProjection` plus map height data
+  - an in-battle restart HUD control was added so camera reset validation stays on the user-visible input path
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `QA_CAMERA_INCLUDE_1280=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+- Remaining note:
+  - `qa:hud` still uses `window.__glenmoorDebug.projectTile()` and should be cleaned up during backlog item `#5`

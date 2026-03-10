@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { clickProjectedTile, getUnitPosition } from './projection.mjs'
 
 const outputDir = path.resolve('output/web-game/playthrough')
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173'
@@ -161,38 +162,56 @@ async function captureDuelSequence(prefix) {
   )
 }
 
+async function clickHudCommand(commandId) {
+  await page.locator(`[data-command="${commandId}"]`).click()
+  await page.waitForTimeout(120)
+}
+
+async function clickLocaleButton(localeId) {
+  await page.locator(`[data-locale="${localeId}"]`).click()
+  await page.waitForFunction((locale) => JSON.parse(window.render_game_to_text()).hud?.locale === locale, localeId)
+  await page.waitForTimeout(120)
+}
+
+async function selectAction(commandId) {
+  await clickHudCommand(commandId)
+  await page.waitForFunction((mode) => JSON.parse(window.render_game_to_text()).hud?.mode === mode, commandId)
+}
+
+async function clickTargetUnit(unitId) {
+  const state = await readState()
+  const point = getUnitPosition(state, unitId)
+  await clickProjectedTile(page, state, point)
+}
+
 await page.goto(baseUrl, { waitUntil: 'domcontentloaded' })
 await page.waitForFunction(() => Boolean(window.__glenmoorDebug))
+await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud?.modal?.kind === 'briefing')
 
 await saveShot('01-briefing-en')
 await saveState('01-briefing-en')
 
-await page.evaluate(() => window.__glenmoorDebug.command('start-battle'))
+await clickHudCommand('start-battle')
 await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud.phase === 'active')
 let state = await readState()
 assertPresentationTelemetry(state, ['active-unit', 'move-range'])
 await saveShot('02-battle-en')
 await saveState('02-battle-en')
 
-await page.evaluate(() => window.__glenmoorDebug.locale('ko'))
-await page.waitForTimeout(150)
+await clickLocaleButton('ko')
 await saveShot('03-battle-ko')
 await saveState('03-battle-ko')
 
-await page.evaluate(() => {
-  window.__glenmoorDebug.locale('en')
-  window.__glenmoorDebug.stage('engagement')
-})
+await clickLocaleButton('en')
+await page.evaluate(() => window.__glenmoorDebug.stage('engagement'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
 await saveShot('04-engagement-before')
 await saveState('04-engagement-before')
 
-await page.evaluate(() => {
-  window.__glenmoorDebug.command('attack')
-  window.__glenmoorDebug.tile(7, 7)
-})
+await selectAction('attack')
+await clickTargetUnit('brigandCaptain')
 await captureDuelSequence('05-engagement')
 state = await readState()
 assertPresentationTelemetry(state)
@@ -204,10 +223,8 @@ await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
 await saveShot('07-skill-before')
-await page.evaluate(() => {
-  window.__glenmoorDebug.command('skill')
-  window.__glenmoorDebug.tile(8, 7)
-})
+await selectAction('skill')
+await clickTargetUnit('brigandCaptain')
 await captureDuelSequence('08-skill')
 state = await readState()
 assertPresentationTelemetry(state)
@@ -219,10 +236,8 @@ await page.evaluate(() => window.__glenmoorDebug.stage('push-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
-await page.evaluate(() => {
-  window.__glenmoorDebug.command('skill')
-  window.__glenmoorDebug.tile(0, 0)
-})
+await selectAction('skill')
+await clickTargetUnit('brigandCaptain')
 await captureDuelSequence('10-push')
 state = await readState()
 assertPresentationTelemetry(state)
@@ -234,10 +249,8 @@ await page.evaluate(() => window.__glenmoorDebug.stage('victory-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
-await page.evaluate(() => {
-  window.__glenmoorDebug.command('attack')
-  window.__glenmoorDebug.tile(7, 7)
-})
+await selectAction('attack')
+await clickTargetUnit('brigandCaptain')
 await captureDuelSequence('11-victory')
 await saveShot('11-victory')
 await saveState('11-victory')

@@ -24,6 +24,7 @@ The goal of v1 is not a full game. It is one polished battle: medieval-fantasy t
 ## Documentation
 
 - `docs/plan.md`: implementation plan and delivery structure
+- `docs/backlog.md`: concrete execution backlog and GitHub Project sync source of truth
 - `docs/game-design.md`: prototype GDD
 - `docs/progress.md`: canonical implementation log
 - `docs/qa-inventory.md`: QA coverage list for functional and visual validation

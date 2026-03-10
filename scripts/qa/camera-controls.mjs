@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { chromium } from 'playwright'
+import { clickProjectedTile, hoverProjectedTile } from './projection.mjs'
 
 const outputDir = path.resolve('output/web-game/camera-controls')
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173'
@@ -68,28 +69,25 @@ function assertPresentationTelemetry(state, expectedKinds = []) {
   }
 }
 
-async function projectTile(page, x, y) {
-  const projection = await page.evaluate(([tileX, tileY]) => window.__glenmoorDebug.projectTile(tileX, tileY), [x, y])
-  assert(projection, `Missing projection for tile ${x},${y}`)
-  return projection
-}
-
 async function clickTile(page, x, y) {
-  const projection = await projectTile(page, x, y)
-  await page.mouse.click(projection.client.x, projection.client.y)
-  await page.waitForTimeout(150)
+  const state = await readState(page)
+  await clickProjectedTile(page, state, { x, y })
 }
 
 async function hoverTile(page, x, y) {
-  const projection = await projectTile(page, x, y)
-  await page.mouse.move(projection.client.x, projection.client.y)
-  await page.waitForTimeout(150)
+  const state = await readState(page)
+  await hoverProjectedTile(page, state, { x, y })
+}
+
+async function clickHudCommand(page, commandId) {
+  await page.locator(`[data-command="${commandId}"]`).click()
+  await page.waitForTimeout(120)
 }
 
 async function startBattle(page) {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded' })
-  await page.waitForFunction(() => Boolean(window.__glenmoorDebug?.projectTile))
-  await page.evaluate(() => window.__glenmoorDebug.command('start-battle'))
+  await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud?.modal?.kind === 'briefing')
+  await clickHudCommand(page, 'start-battle')
   await page.waitForFunction(() => {
     const state = JSON.parse(window.render_game_to_text())
     return state.hud?.phase === 'active' || state.telemetry?.phase === 'active'
@@ -212,7 +210,7 @@ async function runDesktop1600(browser) {
   await saveShot(page, '04-pan-mode-1600x900')
   await saveState(page, '04-pan-mode-1600x900')
 
-  await page.evaluate(() => window.__glenmoorDebug.command('restart-battle'))
+  await clickHudCommand(page, 'restart-battle')
   await page.waitForTimeout(150)
   state = await readState(page)
   assert(state.hud.phase === 'briefing', 'Expected restart to return to briefing')

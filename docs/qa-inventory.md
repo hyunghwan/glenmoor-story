@@ -148,10 +148,30 @@ Any final signoff claim for the prototype must map back to one or more entries h
 - `output/web-game/camera-controls/06-rotated-1280x720.json`
 - `output/web-game/camera-controls-smoke-final/state-0.json`
 
+## Captured On 2026-03-10
+
+- `output/web-game/playthrough/01-briefing-en.png`
+- `output/web-game/playthrough/02-battle-en.png`
+- `output/web-game/playthrough/03-battle-ko.png`
+- `output/web-game/playthrough/05-engagement-duel-start.png`
+- `output/web-game/playthrough/05-engagement-duel-mid.png`
+- `output/web-game/playthrough/05-engagement-duel-end.png`
+- `output/web-game/playthrough/08-skill-duel-mid.png`
+- `output/web-game/playthrough/10-push-duel-mid.png`
+- `output/web-game/playthrough/11-victory-duel-end.png`
+- `output/web-game/camera-controls/01-battle-1600x900.png`
+- `output/web-game/camera-controls/02-rotated-1600x900.png`
+- `output/web-game/camera-controls/03-zoom-pan-1600x900.png`
+- `output/web-game/camera-controls/04-pan-mode-1600x900.png`
+- `output/web-game/camera-controls/05-restart-reset-1600x900.json`
+- `output/web-game/camera-controls/06-rotated-1280x720.png`
+- `output/web-game/camera-controls/06-rotated-1280x720.json`
+
 ## Current Gap
 
 - Tactical flows, locale rendering, duel presentation, blocked push handling, and victory wrapping are covered by artifacts plus automated tests.
 - Auto-active turn presentation, briefing start, and provisional movement retargeting are now covered by screenshots plus state snapshots.
-- Raw pointer camera and rotated tile-selection checks are now covered; the remaining debug assist is only the tile-projection helper that converts logical tiles into browser click coordinates for automation.
+- `qa:playthrough` and `qa:camera` now drive briefing start, locale swap, combat commands, tile targeting, camera rotation, zoom, pan, and restart through real DOM or pointer inputs.
+- The remaining debug tile-projection dependency is now isolated to `qa:hud`; `qa:playthrough` and `qa:camera` no longer call `window.__glenmoorDebug.projectTile()`.
 - The viewport-fit regression for the fullscreen shell must be rechecked at `1600x900` and `1280x720` after any future HUD layout changes.
 - At `1280x720`, the lower `View` and `Forecast` cards are reachable through the right-panel's internal scroll area rather than fitting fully in the first visible panel frame.

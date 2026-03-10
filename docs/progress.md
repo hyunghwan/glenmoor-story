@@ -198,3 +198,44 @@ This is the canonical implementation log for `Glenmoor Story`.
 - Fresh QA evidence was regenerated under:
   - `output/web-game/playthrough/`
   - `output/web-game/camera-controls/`
+
+## 2026-03-10
+
+### Completed
+
+- Converted the next prototype steps into a concrete execution backlog in `docs/backlog.md`
+- Synced the backlog into the GitHub Project `Glenmoor Story` with issue-backed items:
+  - `#4` complete pointer-only browser QA coverage and remove the final debug assist
+  - `#5` compact the battle HUD for `1280x720` and locale-fit readability
+  - `#6` add multi-phase objectives and battle event hooks to the tactics core
+  - `#7` author a phased Glenmoor Pass encounter with one memorable mid-battle beat
+  - `#8` expose objective phases in HUD, briefing, result copy, and QA coverage
+  - `#1` open-source placeholder asset and audio pass
+  - `#9` externalize Glenmoor Pass scenario data from `content.ts` into data files
+  - `#10` externalize class, skill, status, and AI content with load validation
+- Updated the existing open issues so their scope reflects the current execution plan:
+  - `#4` now tracks the pointer-only QA finish line rather than generic browser automation
+  - `#1` now records the open-source-only placeholder art/audio direction for the later polish pass
+- Completed backlog item `#4` by moving the main browser QA flows onto real player input paths:
+  - added `scripts/qa/projection.mjs` so automation can convert tactical tiles into browser client coordinates from telemetry plus map data instead of calling app-side `projectTile()`
+  - changed `scripts/qa/playthrough.mjs` to click real briefing, locale, and action-menu buttons and to confirm attack / skill / push / victory targets through projected canvas clicks
+  - changed `scripts/qa/camera-controls.mjs` to hover and click rotated tiles through the shared projection helper and to restart through a real HUD command
+  - extended `render_game_to_text()` telemetry with `mapId` and `boardProjection` metadata so external QA can project tile coordinates without internal scene helpers
+  - exposed an in-battle `restart-battle` HUD control so camera reset coverage no longer depends on a debug command path
+- Left `window.__glenmoorDebug.stage()` in place as the only staged setup shortcut for the scripted QA scenarios
+- Left `window.__glenmoorDebug.projectTile()` in place only for `qa:hud`, which remains deferred to backlog item `#5`
+
+### Verification
+
+- `npm test`
+- `npm run build`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+- `QA_CAMERA_INCLUDE_1280=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+- `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+
+### Notes
+
+- The execution order remains sequential: `#4 -> #5 -> #6 -> #7 -> #8 -> #1 -> #9 -> #10`
+- Keep the prototype scoped to one battle even as the authored encounter flow becomes deeper
+- Keep docs and project-board status aligned when individual backlog items move
+- Pointer-only QA is now complete for `qa:playthrough` and `qa:camera`; the remaining debug projection helper use lives only in `qa:hud` and should be removed as part of `#5`
