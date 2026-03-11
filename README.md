@@ -28,6 +28,7 @@ The goal of v1 is not a full game. It is one polished battle: medieval-fantasy t
 - `docs/game-design.md`: prototype GDD
 - `docs/progress.md`: canonical implementation log
 - `docs/qa-inventory.md`: QA coverage list for functional and visual validation
+- `docs/prototype-visual-asset-spec.md`: canonical tile, unit, duel, VFX, and HUD asset sizing contract
 - `docs/asset-replacement-manifest.md`: placeholder asset slots and replacement targets
 - `progress.md`: handoff-friendly agent log required by the web-game workflow
 
