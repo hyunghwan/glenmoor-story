@@ -35,10 +35,12 @@ import { BattleRuntime } from '../runtime'
 import type {
   ActionTarget,
   BattleAction,
+  CombatResolution,
   DuelTelemetry,
   GridPoint,
   HudAnchor,
   HudViewModel,
+  ImpactWeight,
   Locale,
   ReachableTile,
   TiledMapData,
@@ -78,6 +80,30 @@ interface MatterFxParticle {
   cueId: string
 }
 
+interface ActionFeedbackState {
+  elapsedMs: number
+  durationMs: number
+  sourcePoint: GridPoint
+  targetPoint: GridPoint
+  color: number
+  impactWeight: ImpactWeight
+}
+
+interface PendingDuelLaunch {
+  remainingMs: number
+  resolution: CombatResolution
+}
+
+interface PhaseSequenceState {
+  elapsedMs: number
+  durationMs: number
+  focusUnitId?: string
+  returnScrollX: number
+  returnScrollY: number
+  focusScrollX: number
+  focusScrollY: number
+}
+
 export class BattleScene extends Phaser.Scene {
   private readonly uiBus: Phaser.Events.EventEmitter
   private readonly i18n: I18n
@@ -105,9 +131,15 @@ export class BattleScene extends Phaser.Scene {
   private lastDebugInput: Record<string, unknown> = {}
   private lastActiveUnitId?: string
   private pendingObjectivePhaseId?: string
+  private pendingReinforcementIds: string[] = []
   private phaseAnnouncementKey?: string
+  private phaseAnnouncementCueId?: string
+  private phaseAnnouncementMs = 0
   private currentModal?: HudViewModel['modal']
   private battleMusic?: Phaser.Sound.BaseSound
+  private actionFeedback?: ActionFeedbackState
+  private pendingDuelLaunch?: PendingDuelLaunch
+  private phaseSequence?: PhaseSequenceState
   private duelTelemetry: DuelTelemetry = {
     active: false,
     stepIndex: 0,
@@ -195,10 +227,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    const effectiveDelta = delta + this.debugAdvanceMs
+    this.debugAdvanceMs = 0
+
     if (this.runtime) {
       this.flushPointerGestureFallback()
-      this.pulseElapsedMs += delta
-      this.updateMatterFx(delta)
+      this.pulseElapsedMs += effectiveDelta
+      this.updateMatterFx(effectiveDelta)
+      this.updateTransientFeedback(effectiveDelta)
       this.drawOverlays()
       this.drawStatusAuras()
       this.drawScreenFx()
@@ -209,8 +245,6 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const active = this.runtime.getActiveUnit()
-    const effectiveDelta = delta + this.debugAdvanceMs
-    this.debugAdvanceMs = 0
 
     if (active.team === 'allies') {
       this.pendingAiDelayMs = 0
@@ -323,6 +357,43 @@ export class BattleScene extends Phaser.Scene {
         return 0xd8bf84
       default:
         return 0xff8870
+    }
+  }
+
+  private resolveCueColor(fxCueId: string): number {
+    if (fxCueId.includes('ember') || fxCueId.includes('burning')) {
+      return 0xf09046
+    }
+
+    if (fxCueId.includes('ward') || fxCueId.includes('hymn') || fxCueId.includes('aegis')) {
+      return 0x8bdcff
+    }
+
+    if (fxCueId.includes('shadow')) {
+      return 0x9a77ff
+    }
+
+    if (fxCueId.includes('snare') || fxCueId.includes('slow') || fxCueId.includes('ranger')) {
+      return 0x9cd3ff
+    }
+
+    if (fxCueId.includes('guard')) {
+      return 0xffa37d
+    }
+
+    return 0xf5d18c
+  }
+
+  private resolveImpactScale(weight: ImpactWeight): number {
+    switch (weight) {
+      case 'light':
+        return 0.9
+      case 'medium':
+        return 1
+      case 'heavy':
+        return 1.18
+      case 'finisher':
+        return 1.3
     }
   }
 
@@ -527,6 +598,89 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private updateTransientFeedback(delta: number): void {
+    if (this.phaseAnnouncementMs > 0) {
+      this.phaseAnnouncementMs = Math.max(0, this.phaseAnnouncementMs - delta)
+
+      if (this.phaseAnnouncementMs === 0) {
+        this.phaseAnnouncementKey = undefined
+        this.phaseAnnouncementCueId = undefined
+        this.publishHud()
+      }
+    }
+
+    if (this.actionFeedback) {
+      this.actionFeedback.elapsedMs += delta
+
+      if (this.actionFeedback.elapsedMs >= this.actionFeedback.durationMs) {
+        this.actionFeedback = undefined
+      }
+    }
+
+    if (this.pendingDuelLaunch) {
+      this.pendingDuelLaunch.remainingMs -= delta
+
+      if (this.pendingDuelLaunch.remainingMs <= 0) {
+        const pending = this.pendingDuelLaunch
+        this.pendingDuelLaunch = undefined
+        this.scene.launch('duel', {
+          resolution: pending.resolution,
+          locale: this.i18n.getLocale(),
+        })
+        this.scene.bringToTop('duel')
+        this.refreshPresentation()
+      }
+    }
+
+    if (this.phaseSequence && this.runtime) {
+      this.phaseSequence.elapsedMs += delta
+      const progress = Phaser.Math.Clamp(this.phaseSequence.elapsedMs / this.phaseSequence.durationMs, 0, 1)
+      const camera = this.cameras.main
+      const focusEase =
+        progress < 0.42
+          ? Phaser.Math.Easing.Sine.Out(progress / 0.42)
+          : progress < 0.72
+            ? 1
+            : 1 - Phaser.Math.Easing.Sine.InOut((progress - 0.72) / 0.28)
+
+      camera.scrollX = Phaser.Math.Linear(
+        this.phaseSequence.returnScrollX,
+        this.phaseSequence.focusScrollX,
+        focusEase,
+      )
+      camera.scrollY = Phaser.Math.Linear(
+        this.phaseSequence.returnScrollY,
+        this.phaseSequence.focusScrollY,
+        focusEase,
+      )
+      this.clampCameraScroll()
+
+      if (progress >= 1) {
+        camera.setScroll(this.phaseSequence.returnScrollX, this.phaseSequence.returnScrollY)
+        this.phaseSequence = undefined
+        this.syncPresentationFromActiveUnit(true)
+      }
+    }
+  }
+
+  private computeCameraFocusScroll(point: GridPoint): { x: number; y: number } | undefined {
+    if (!this.runtime || !this.cameraBounds) {
+      return undefined
+    }
+
+    const world = this.projectTilePoint(point, this.getTileHeight(point))
+    const camera = this.cameras.main
+    const visibleWidth = camera.width / camera.zoom
+    const visibleHeight = camera.height / camera.zoom
+    const maxScrollX = Math.max(this.cameraBounds.x, this.cameraBounds.x + this.cameraBounds.width - visibleWidth)
+    const maxScrollY = Math.max(this.cameraBounds.y, this.cameraBounds.y + this.cameraBounds.height - visibleHeight)
+
+    return {
+      x: Phaser.Math.Clamp(world.x - visibleWidth / 2, this.cameraBounds.x, maxScrollX),
+      y: Phaser.Math.Clamp(world.y - visibleHeight / 2, this.cameraBounds.y, maxScrollY),
+    }
+  }
+
   private drawStatusAuras(): void {
     if (!this.runtime || !this.statusAuraGraphics) {
       return
@@ -564,6 +718,28 @@ export class BattleScene extends Phaser.Scene {
 
     this.screenFxGraphics.clear()
 
+    const width = this.scale.width
+    const height = this.scale.height
+
+    if (this.actionFeedback) {
+      const progress = Phaser.Math.Clamp(this.actionFeedback.elapsedMs / this.actionFeedback.durationMs, 0, 1)
+      const pulse = Math.sin(progress * Math.PI)
+      const alpha = 0.05 + (1 - progress) * 0.1
+      this.screenFxGraphics.fillStyle(this.actionFeedback.color, alpha)
+      this.screenFxGraphics.fillRect(0, 0, width, height)
+      this.screenFxGraphics.lineStyle(3, this.actionFeedback.color, 0.22 + pulse * 0.2)
+      this.screenFxGraphics.strokeRect(12, 12, width - 24, height - 24)
+    }
+
+    if (this.phaseSequence) {
+      const progress = Phaser.Math.Clamp(this.phaseSequence.elapsedMs / this.phaseSequence.durationMs, 0, 1)
+      const pulse = Math.sin(progress * Math.PI)
+      this.screenFxGraphics.fillStyle(0xf0c877, 0.03 + pulse * 0.035)
+      this.screenFxGraphics.fillRect(0, 0, width, height)
+      this.screenFxGraphics.lineStyle(2, 0xf5d18c, 0.18 + pulse * 0.2)
+      this.screenFxGraphics.strokeRect(22, 22, width - 44, height - 44)
+    }
+
     const hoveredPoint = this.hoveredPoint
     const hoveredTarget =
       hoveredPoint ? this.targetOptions.find((option) => samePoint(option.point, hoveredPoint)) : undefined
@@ -573,8 +749,6 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
-    const width = this.scale.width
-    const height = this.scale.height
     const pulse = this.getPulse(720)
     let color = 0
     let alpha = 0
@@ -979,6 +1153,8 @@ export class BattleScene extends Phaser.Scene {
       fxCueId: undefined,
       targetUnitId: undefined,
     }
+    this.pendingDuelLaunch = undefined
+    this.actionFeedback = undefined
     this.mode = 'idle'
     this.emitTelemetry()
     this.finalizeTurnTransition()
@@ -1031,7 +1207,13 @@ export class BattleScene extends Phaser.Scene {
     this.runtime.state.resolvedEventIds = []
     this.currentModal = undefined
     this.pendingObjectivePhaseId = undefined
+    this.pendingReinforcementIds = []
     this.phaseAnnouncementKey = undefined
+    this.phaseAnnouncementCueId = undefined
+    this.phaseAnnouncementMs = 0
+    this.pendingDuelLaunch = undefined
+    this.actionFeedback = undefined
+    this.phaseSequence = undefined
 
     if (stage === 'engagement') {
       this.placeUnit('rowan', { x: 7, y: 8 }, 12)
@@ -1106,9 +1288,15 @@ export class BattleScene extends Phaser.Scene {
     this.resetViewState()
     this.currentModal = this.buildModal('briefing')
     this.pendingObjectivePhaseId = undefined
+    this.pendingReinforcementIds = []
     this.phaseAnnouncementKey = undefined
+    this.phaseAnnouncementCueId = undefined
+    this.phaseAnnouncementMs = 0
     this.lastActiveUnitId = undefined
     this.pendingAiDelayMs = 0
+    this.pendingDuelLaunch = undefined
+    this.actionFeedback = undefined
+    this.phaseSequence = undefined
     this.applyCameraView(true)
     this.syncUnits()
     this.syncPresentationFromActiveUnit(false)
@@ -1119,12 +1307,14 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
+    const previousUnitIds = new Set(Object.keys(this.runtime.state.units))
     this.pendingObjectivePhaseId = this.runtime.state.objectivePhaseId
     this.mode = 'busy'
     this.clearMatterFx()
     this.reachableTiles = []
     this.targetOptions = []
     const resolution = this.runtime.commitAction(action)
+    this.pendingReinforcementIds = Object.keys(this.runtime.state.units).filter((unitId) => !previousUnitIds.has(unitId))
     this.syncUnits()
 
     if (action.kind === 'wait') {
@@ -1132,11 +1322,12 @@ export class BattleScene extends Phaser.Scene {
       return
     }
 
-    this.scene.launch('duel', {
+    this.actionFeedback = this.buildActionFeedback(resolution)
+    this.pendingDuelLaunch = {
+      remainingMs: this.actionFeedback?.durationMs ?? 0,
       resolution,
-      locale: this.i18n.getLocale(),
-    })
-    this.scene.bringToTop('duel')
+    }
+    this.playActionCommitCue(resolution)
     this.refreshPresentation()
   }
 
@@ -1148,20 +1339,26 @@ export class BattleScene extends Phaser.Scene {
     if (this.runtime.state.phase === 'victory') {
       this.playSfx('victory', { volume: 0.28 })
       this.phaseAnnouncementKey = undefined
+      this.phaseAnnouncementCueId = undefined
+      this.phaseAnnouncementMs = 0
       this.currentModal = this.buildModal('victory')
       this.syncPresentationFromActiveUnit(false)
     } else if (this.runtime.state.phase === 'defeat') {
       this.playSfx('defeat', { volume: 0.26 })
       this.phaseAnnouncementKey = undefined
+      this.phaseAnnouncementCueId = undefined
+      this.phaseAnnouncementMs = 0
       this.currentModal = this.buildModal('defeat')
       this.syncPresentationFromActiveUnit(false)
     } else {
       this.currentModal = undefined
-      this.updateObjectiveAnnouncement(this.pendingObjectivePhaseId)
-      this.syncPresentationFromActiveUnit(true)
+      if (!this.startPhaseSequence(this.pendingObjectivePhaseId)) {
+        this.syncPresentationFromActiveUnit(true)
+      }
     }
 
     this.pendingObjectivePhaseId = undefined
+    this.pendingReinforcementIds = []
   }
 
   private createTileInputs(): void {
@@ -1636,6 +1833,16 @@ export class BattleScene extends Phaser.Scene {
         : 0xf6dc9f
       this.overlayGraphics.lineStyle(2.5, hoveredColor, 0.96)
       this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
+
+      if (hoveredTargetOption) {
+        const actorWorld = this.projectTilePoint(active.position, this.getTileHeight(active.position))
+        const targetWorld = this.projectTilePoint(this.hoveredPoint, height)
+        telegraphKinds.add('target-focus')
+        this.overlayGraphics.lineStyle(3, hoveredColor, 0.34 + targetPulse * 0.28)
+        this.overlayGraphics.lineBetween(actorWorld.x, actorWorld.y - 10, targetWorld.x, targetWorld.y - 10)
+        this.overlayGraphics.lineStyle(1.5, hoveredColor, 0.84)
+        this.overlayGraphics.strokeCircle(targetWorld.x, targetWorld.y - 8, 22 + targetPulse * 10)
+      }
     }
 
     const activeHeight = this.runtime.state.map.tiles[active.position.y][active.position.x].height
@@ -1651,6 +1858,28 @@ export class BattleScene extends Phaser.Scene {
     const activeWorld = this.projectTilePoint(active.position, activeHeight)
     this.overlayGraphics.lineStyle(2, 0xf9f0c7, 0.3 + movePulse * 0.24)
     this.overlayGraphics.strokeEllipse(activeWorld.x, activeWorld.y + 12, 56 + movePulse * 10, 20 + movePulse * 4)
+
+    if (this.actionFeedback) {
+      const progress = Phaser.Math.Clamp(this.actionFeedback.elapsedMs / this.actionFeedback.durationMs, 0, 1)
+      const pulse = Math.sin(progress * Math.PI)
+      const sourceWorld = this.projectTilePoint(
+        this.actionFeedback.sourcePoint,
+        this.getTileHeight(this.actionFeedback.sourcePoint),
+      )
+      const targetWorld = this.projectTilePoint(
+        this.actionFeedback.targetPoint,
+        this.getTileHeight(this.actionFeedback.targetPoint),
+      )
+      const scale = this.resolveImpactScale(this.actionFeedback.impactWeight)
+
+      telegraphKinds.add('impact-burst')
+      this.overlayGraphics.lineStyle(4, this.actionFeedback.color, 0.24 + pulse * 0.4)
+      this.overlayGraphics.lineBetween(sourceWorld.x, sourceWorld.y - 8, targetWorld.x, targetWorld.y - 8)
+      this.overlayGraphics.fillStyle(this.actionFeedback.color, 0.12 + pulse * 0.18)
+      this.overlayGraphics.fillCircle(targetWorld.x, targetWorld.y - 8, (18 + pulse * 22) * scale)
+      this.overlayGraphics.lineStyle(2, this.actionFeedback.color, 0.68 + pulse * 0.2)
+      this.overlayGraphics.strokeCircle(targetWorld.x, targetWorld.y - 8, (24 + pulse * 28) * scale)
+    }
 
     this.activeTelegraphKinds = Array.from(telegraphKinds)
   }
@@ -1706,6 +1935,7 @@ export class BattleScene extends Phaser.Scene {
         ? {
             label: this.i18n.t('hud.phaseUpdate'),
             body: this.i18n.t(this.phaseAnnouncementKey),
+            cueId: this.phaseAnnouncementCueId,
           }
         : undefined,
       modal: this.currentModal,
@@ -1968,6 +2198,7 @@ export class BattleScene extends Phaser.Scene {
       amountLabel: preview.amountLabel,
       counterLabel: preview.counterLabel,
       effectLabel: preview.effectLabel,
+      verdictChips: preview.verdictChips,
       telegraphSummary: preview.telegraphSummary,
     }
   }
@@ -2262,6 +2493,98 @@ export class BattleScene extends Phaser.Scene {
     const phase = this.getCurrentObjectivePhase()
 
     this.phaseAnnouncementKey = phase?.announcementKey ?? this.runtime.state.objectiveKey
+    this.phaseAnnouncementCueId = phase?.announcementCueId
+    this.phaseAnnouncementMs = 1800
+    this.publishHud()
+  }
+
+  private resolvePhaseFocusUnit(): string | undefined {
+    if (!this.runtime) {
+      return undefined
+    }
+
+    if (this.pendingReinforcementIds.length > 0) {
+      return this.pendingReinforcementIds[0]
+    }
+
+    const phase = this.getCurrentObjectivePhase()
+    const defeatTarget = phase?.victoryConditions.find((condition) => condition.type === 'defeat-unit')
+    return defeatTarget?.type === 'defeat-unit' ? defeatTarget.unitId : undefined
+  }
+
+  private startPhaseSequence(previousObjectivePhaseId?: string): boolean {
+    if (!this.runtime || !previousObjectivePhaseId || previousObjectivePhaseId === this.runtime.state.objectivePhaseId) {
+      return false
+    }
+
+    this.updateObjectiveAnnouncement(previousObjectivePhaseId)
+
+    const focusUnitId = this.resolvePhaseFocusUnit()
+    const focusUnit = focusUnitId ? this.runtime.getUnit(focusUnitId) : undefined
+    const focusScroll = focusUnit ? this.computeCameraFocusScroll(focusUnit.position) : undefined
+
+    if (this.phaseAnnouncementCueId) {
+      this.playCueSfx(this.phaseAnnouncementCueId, { volume: 0.24 })
+    }
+
+    if (!focusScroll) {
+      this.syncPresentationFromActiveUnit(true)
+      return true
+    }
+
+    const camera = this.cameras.main
+    this.phaseSequence = {
+      elapsedMs: 0,
+      durationMs: 780,
+      focusUnitId,
+      returnScrollX: camera.scrollX,
+      returnScrollY: camera.scrollY,
+      focusScrollX: focusScroll.x,
+      focusScrollY: focusScroll.y,
+    }
+    this.mode = 'busy'
+    this.refreshPresentation()
+    return true
+  }
+
+  private buildActionFeedback(resolution: CombatResolution): ActionFeedbackState | undefined {
+    const step = resolution.presentation?.steps.find((candidate) =>
+      candidate.kind === 'hit' ||
+      candidate.kind === 'status' ||
+      candidate.kind === 'push' ||
+      candidate.kind === 'counter' ||
+      candidate.kind === 'defeat',
+    )
+
+    if (!step) {
+      return undefined
+    }
+
+    return {
+      elapsedMs: 0,
+      durationMs: 96,
+      sourcePoint: step.sourcePoint,
+      targetPoint: step.targetPoint,
+      color: this.resolveCueColor(step.fxCueId),
+      impactWeight: step.impactWeight,
+    }
+  }
+
+  private playActionCommitCue(resolution: CombatResolution): void {
+    const step = resolution.presentation?.steps.find((candidate) =>
+      candidate.kind === 'cast' ||
+      candidate.kind === 'hit' ||
+      candidate.kind === 'status' ||
+      candidate.kind === 'counter',
+    )
+
+    if (!step) {
+      return
+    }
+
+    this.playCueSfx(step.sfxCueId, {
+      volume: step.kind === 'cast' ? 0.12 : 0.16,
+    })
   }
 
   private placeUnit(unitId: string, point: GridPoint, hp: number): void {
@@ -2282,6 +2605,24 @@ export class BattleScene extends Phaser.Scene {
 
     this.sound.play(`sfx:${key}`, {
       volume: 0.22,
+      ...config,
+    })
+  }
+
+  private playCueSfx(key: string, config: Phaser.Types.Sound.SoundConfig = {}): void {
+    const cueConfig: Record<string, Phaser.Types.Sound.SoundConfig> = {
+      'melee-light': { volume: 0.17, rate: 1.16 },
+      'melee-heavy': { volume: 0.22, rate: 0.94 },
+      'ranged-shot': { volume: 0.18, rate: 1.08 },
+      'magic-cast': { volume: 0.18, rate: 0.98 },
+      heal: { volume: 0.16, rate: 1.05 },
+      counter: { volume: 0.2, rate: 1.12 },
+      'phase-shift': { volume: 0.24, rate: 1.02 },
+      'kill-confirm': { volume: 0.24, rate: 0.92 },
+    }
+
+    this.playSfx(key, {
+      ...(cueConfig[key] ?? {}),
       ...config,
     })
   }

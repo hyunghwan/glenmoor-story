@@ -6,9 +6,13 @@
     "maxStacks": 3,
     "presentation": {
       "fxCueId": "status.burning",
+      "sfxCueId": "magic-cast",
       "telegraphStyle": "status",
+      "impactWeight": "medium",
       "castMs": 120,
       "impactMs": 180,
+      "hitStopMs": 10,
+      "lingerMs": 140,
       "cameraCue": "impact-light",
       "matterProfile": "ember-plume",
       "tone": "ember"
@@ -21,9 +25,13 @@
     "maxStacks": 2,
     "presentation": {
       "fxCueId": "status.guardBreak",
+      "sfxCueId": "melee-light",
       "telegraphStyle": "status",
+      "impactWeight": "light",
       "castMs": 100,
       "impactMs": 170,
+      "hitStopMs": 12,
+      "lingerMs": 120,
       "cameraCue": "impact-light",
       "matterProfile": "guard-fragments",
       "tone": "hazard"
@@ -36,9 +44,13 @@
     "maxStacks": 3,
     "presentation": {
       "fxCueId": "status.warded",
+      "sfxCueId": "heal",
       "telegraphStyle": "status",
+      "impactWeight": "medium",
       "castMs": 140,
       "impactMs": 180,
+      "hitStopMs": 8,
+      "lingerMs": 150,
       "cameraCue": "support-pulse",
       "matterProfile": "ward-orbit",
       "tone": "ward"
@@ -51,9 +63,13 @@
     "maxStacks": 2,
     "presentation": {
       "fxCueId": "status.slow",
+      "sfxCueId": "ranged-shot",
       "telegraphStyle": "status",
+      "impactWeight": "light",
       "castMs": 120,
       "impactMs": 170,
+      "hitStopMs": 10,
+      "lingerMs": 130,
       "cameraCue": "impact-light",
       "matterProfile": "slow-haze",
       "tone": "wind"

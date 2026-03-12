@@ -4,6 +4,7 @@ import type {
   CombatResolution,
   GridPoint,
   HudActionButton,
+  HudStatusChipViewModel,
   HudViewModel,
   InitiativeRailEntryViewModel,
   Team,
@@ -78,6 +79,7 @@ export interface TargetPreviewStrings {
   amountLabel: string
   counterLabel: string
   effectLabel: string
+  verdictChips: HudStatusChipViewModel[]
   markerLabel: string
   markerKind: 'damage' | 'heal' | 'effect'
   markerTone: CombatTelegraphSummary['markerTone']
@@ -271,6 +273,7 @@ export function buildTargetPreviewStrings(
       amountLabel: context.t('hud.none'),
       counterLabel: `${context.t('hud.forecast.counterRisk')}: ${context.t('duel.noCounter')}`,
       effectLabel: `${context.t('hud.forecast.effects')}: ${context.t('hud.none')}`,
+      verdictChips: [],
       markerLabel: 'FX',
       markerKind: 'effect',
       markerTone: telegraphSummary.markerTone,
@@ -281,6 +284,45 @@ export function buildTargetPreviewStrings(
   const amountLabel = `${
     primary.kind === 'heal' ? '+' : '-'
   }${primary.amount}`
+  const verdictChips: HudStatusChipViewModel[] = []
+
+  if (telegraphSummary.lethal) {
+    verdictChips.push({
+      id: 'verdict-lethal',
+      label: context.t('hud.forecast.lethal'),
+      tone: 'accent',
+    })
+  }
+
+  if (telegraphSummary.counterRisk > 0) {
+    verdictChips.push({
+      id: 'verdict-counter',
+      label: `${context.t('hud.counter')} ${telegraphSummary.counterRisk}`,
+      tone: 'enemy',
+    })
+  }
+
+  if (telegraphSummary.pushOutcome === 'push') {
+    verdictChips.push({
+      id: 'verdict-push',
+      label: context.t('effect.push'),
+      tone: 'accent',
+    })
+  } else if (telegraphSummary.pushOutcome === 'blocked') {
+    verdictChips.push({
+      id: 'verdict-push-blocked',
+      label: context.t('effect.pushBlocked'),
+      tone: 'neutral',
+    })
+  }
+
+  for (const statusId of telegraphSummary.predictedStatusIds) {
+    verdictChips.push({
+      id: `verdict-status-${statusId}`,
+      label: context.t(`status.${statusId}`),
+      tone: 'ally',
+    })
+  }
 
   return {
     title: context.t(primary.labelKey),
@@ -292,6 +334,7 @@ export function buildTargetPreviewStrings(
       resolution.counter ? resolution.counter.amount : context.t('duel.noCounter')
     }`,
     effectLabel: `${context.t('hud.forecast.effects')}: ${formatEffectSummary(resolution, context)}`,
+    verdictChips,
     markerLabel: amountLabel,
     markerKind:
       telegraphSummary.markerTone === 'damage' || telegraphSummary.markerTone === 'lethal'

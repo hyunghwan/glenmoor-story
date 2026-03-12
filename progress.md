@@ -192,3 +192,26 @@ The canonical implementation log lives in `docs/progress.md`.
   - `npm run build`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
   - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+
+## 2026-03-12
+
+- Started the tactile-feedback polish pass without changing tactics outcomes
+- Extended presentation metadata across attack / skill / status definitions:
+  - `PresentationProfile` now carries `sfxCueId`, `impactWeight`, `hitStopMs`, and `lingerMs`
+  - `CombatPresentationStep` now carries `sfxCueId`, `impactWeight`, and `hitStopMs`
+  - objective phases can now declare optional `announcementCueId`
+- Updated content and loader validation so missing presentation cue metadata fails at parse time
+- Expanded battle and duel scene consumption of presentation metadata:
+  - short pre-duel commit burst on action confirm
+  - stronger hovered-target lock line and target-detail verdict chips
+  - phase-shift announcement cue plus brief camera focus on reinforcements / objective targets
+  - cue-driven duel hit-stop, recoil, pulse, and finisher feel
+  - modal entrance styling and richer HUD animation classes
+- Added new audio key aliases in `BootScene` so the current placeholder SFX set can drive differentiated cue ids without introducing new licensed assets
+- Updated test coverage for the new cue metadata and scenario announcement cue parsing
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+- Remaining work in this pass:
+  - refresh Playwright QA scripts and artifacts for commit-burst, phase-focus, and result-modal entrance behavior
+  - run `qa:playthrough`, `qa:hud`, and the `develop-web-game` smoke client against the updated build

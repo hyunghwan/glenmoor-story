@@ -3,6 +3,7 @@ import type {
   AttackFlavor,
   CameraCue,
   ClassDefinition,
+  ImpactWeight,
   MatterProfile,
   PresentationProfile,
   PresentationTone,
@@ -94,6 +95,14 @@ function expectTelegraphStyle(value: unknown, path: string): TelegraphStyle {
   throw new Error(`Expected telegraph style at ${path}`)
 }
 
+function expectImpactWeight(value: unknown, path: string): ImpactWeight {
+  if (value === 'light' || value === 'medium' || value === 'heavy' || value === 'finisher') {
+    return value
+  }
+
+  throw new Error(`Expected impact weight at ${path}`)
+}
+
 function expectPresentationTone(value: unknown, path: string): PresentationTone {
   if (
     value === 'steel' ||
@@ -150,9 +159,13 @@ function parsePresentationProfile(value: unknown, path: string): PresentationPro
 
   return {
     fxCueId: expectString(record.fxCueId, `${path}.fxCueId`),
+    sfxCueId: expectString(record.sfxCueId, `${path}.sfxCueId`),
     telegraphStyle: expectTelegraphStyle(record.telegraphStyle, `${path}.telegraphStyle`),
+    impactWeight: expectImpactWeight(record.impactWeight, `${path}.impactWeight`),
     castMs: expectInteger(record.castMs, `${path}.castMs`),
     impactMs: expectInteger(record.impactMs, `${path}.impactMs`),
+    hitStopMs: expectInteger(record.hitStopMs, `${path}.hitStopMs`),
+    lingerMs: expectInteger(record.lingerMs, `${path}.lingerMs`),
     cameraCue: expectCameraCue(record.cameraCue, `${path}.cameraCue`),
     matterProfile: expectMatterProfile(record.matterProfile, `${path}.matterProfile`),
     tone: expectPresentationTone(record.tone, `${path}.tone`),

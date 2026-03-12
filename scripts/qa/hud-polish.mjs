@@ -302,6 +302,7 @@ async function collectHudMetrics(page) {
     const actionMenuAnchor = getAnchor('.hud-action-menu')
     const targetDetailRect = rectOf('.hud-target-detail')
     const phaseAnnouncementRect = rectOf('.hud-phase-announcement')
+    const modalCardRect = rectOf('.hud-modal-card')
     const activeCardRect = rectOf('.hud-active-card')
     const initiativeRailRect = rectOf('.hud-initiative-rail')
     const topbarBottom = Math.max(
@@ -328,11 +329,13 @@ async function collectHudMetrics(page) {
         statusLine: statusLineRect,
         targetDetail: targetDetailRect,
         phaseAnnouncement: phaseAnnouncementRect,
+        modalCard: modalCardRect,
       },
       overflows: {
         activeCard: overflowOf('.hud-active-card'),
         initiativeRail: overflowOf('.hud-initiative-rail'),
         statusLine: overflowOf('.hud-status-line'),
+        modalCard: overflowOf('.hud-modal-card'),
       },
       compact: {
         topbarOccupiedHeight: Math.round(topbarBottom),
@@ -500,6 +503,32 @@ const scenarios = [
     expectedObjectivePhaseLabel: 'Battle Phase 2/2',
     expectedAnnouncement: 'Reserve horns are sounding at the ford. Captain Veyr is exposed.',
   },
+  {
+    id: '09-victory-modal-1600-en',
+    viewport: { width: 1600, height: 900 },
+    locale: 'en',
+    stage: 'victory-demo',
+    command: 'attack',
+    resolveTargetUnitId: 'brigandCaptain',
+    expectedPhase: 'victory',
+    expectedModalKind: 'victory',
+    expectedModalPhaseLabel: 'Battle Phase 2/2',
+    expectedModalObjectiveLabel: 'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+    modalSettleMs: 340,
+  },
+  {
+    id: '10-victory-modal-1280-ko',
+    viewport: { width: 1280, height: 720 },
+    locale: 'ko',
+    stage: 'victory-demo',
+    command: 'attack',
+    resolveTargetUnitId: 'brigandCaptain',
+    expectedPhase: 'victory',
+    expectedModalKind: 'victory',
+    expectedModalPhaseLabel: '전투 국면 2/2',
+    expectedModalObjectiveLabel: '나루에서 예비대의 뿔나팔이 울린다. 포위가 닫히기 전에 베이르 대장을 쓰러뜨려라.',
+    modalSettleMs: 340,
+  },
 ]
 
 for (const scenario of scenarios) {
@@ -529,11 +558,19 @@ for (const scenario of scenarios) {
 
   if (scenario.resolveTargetUnitId) {
     await clickTargetUnit(page, scenario.resolveTargetUnitId)
-    await page.waitForFunction(() => {
-      const state = JSON.parse(window.render_game_to_text())
-      return state.hud?.phase === 'active' && state.hud?.mode !== 'busy'
-    })
-    await page.waitForTimeout(140)
+    if (scenario.expectedModalKind) {
+      await page.waitForFunction((kind) => {
+        const state = JSON.parse(window.render_game_to_text())
+        return state.hud?.modal?.kind === kind && state.telemetry?.duel?.active !== true
+      }, scenario.expectedModalKind)
+      await page.waitForTimeout(scenario.modalSettleMs ?? 320)
+    } else {
+      await page.waitForFunction(() => {
+        const state = JSON.parse(window.render_game_to_text())
+        return state.hud?.phase === 'active' && state.hud?.mode !== 'busy'
+      })
+      await page.waitForTimeout(140)
+    }
   }
 
   const hoverSamples = []
@@ -584,18 +621,28 @@ for (const scenario of scenarios) {
   const metrics = hoverSamples.at(-1)?.metrics ?? (await collectHudMetrics(page))
 
   if (!scenario.hoverFirstTarget) {
-    assert(state.hud.mode === scenario.expectedMode, `Expected ${scenario.id} to settle in ${scenario.expectedMode}`)
-    assertRectInsideViewport(metrics, 'actionMenu')
-    assertRectInsideViewport(metrics, 'activeCard')
-    assertRectInsideViewport(metrics, 'initiativeRail')
-    assertRectInsideViewport(metrics, 'statusLine')
-    assertNoOverflow(metrics, 'activeCard')
-    assertNoOverflow(metrics, 'initiativeRail')
-    assertNoOverflow(metrics, 'statusLine')
-    assertActionMenuNearAnchor(metrics, scenario.viewport.width <= 1280 ? 224 : 280)
-    assertNoHits(metrics.passiveHits, `${scenario.id} passive tile interceptions`)
-    assertNoHits(metrics.actionMenuHits, `${scenario.id} action menu interceptions`)
-    assertShortHeightCompaction(metrics, scenario.id)
+    if (scenario.expectedModalKind) {
+      assert(state.hud.modal?.kind === scenario.expectedModalKind, `Expected ${scenario.id} modal kind`)
+      assertRectInsideViewport(metrics, 'modalCard')
+      assertNoOverflow(metrics, 'modalCard')
+    } else {
+      assert(state.hud.mode === scenario.expectedMode, `Expected ${scenario.id} to settle in ${scenario.expectedMode}`)
+      assertRectInsideViewport(metrics, 'actionMenu')
+      assertRectInsideViewport(metrics, 'activeCard')
+      assertRectInsideViewport(metrics, 'initiativeRail')
+      assertRectInsideViewport(metrics, 'statusLine')
+      assertNoOverflow(metrics, 'activeCard')
+      assertNoOverflow(metrics, 'initiativeRail')
+      assertNoOverflow(metrics, 'statusLine')
+      assertActionMenuNearAnchor(metrics, scenario.viewport.width <= 1280 ? 224 : 280)
+      assertNoHits(metrics.passiveHits, `${scenario.id} passive tile interceptions`)
+      assertNoHits(metrics.actionMenuHits, `${scenario.id} action menu interceptions`)
+      assertShortHeightCompaction(metrics, scenario.id)
+    }
+  }
+
+  if (scenario.expectedPhase) {
+    assert(state.hud.phase === scenario.expectedPhase, `Expected ${scenario.id} phase to match`)
   }
 
   if (scenario.expectedObjectivePhaseLabel) {
@@ -611,6 +658,17 @@ for (const scenario of scenarios) {
       `Expected ${scenario.id} phase announcement body`,
     )
     assertRectInsideViewport(metrics, 'phaseAnnouncement')
+  }
+
+  if (scenario.expectedModalPhaseLabel) {
+    assert(state.hud.modal?.phaseLabel === scenario.expectedModalPhaseLabel, `Expected ${scenario.id} modal phase label`)
+  }
+
+  if (scenario.expectedModalObjectiveLabel) {
+    assert(
+      state.hud.modal?.objectiveLabel === scenario.expectedModalObjectiveLabel,
+      `Expected ${scenario.id} modal objective label`,
+    )
   }
 
   if (hoverSamples.length > 0) {

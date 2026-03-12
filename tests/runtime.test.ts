@@ -69,6 +69,10 @@ function pointKey(x: number, y: number): string {
 function expectStepMetadata(step: NonNullable<ReturnType<BattleRuntime['commitAction']>['presentation']>['steps'][number]): void {
   expect(step.fxCueId).toEqual(expect.any(String))
   expect(step.fxCueId.length).toBeGreaterThan(0)
+  expect(step.sfxCueId).toEqual(expect.any(String))
+  expect(step.sfxCueId.length).toBeGreaterThan(0)
+  expect(['light', 'medium', 'heavy', 'finisher']).toContain(step.impactWeight)
+  expect(step.hitStopMs).toBeGreaterThanOrEqual(0)
   expect(step.sourcePoint).toEqual(expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }))
   expect(step.targetPoint).toEqual(expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }))
   expect(step.durationMs).toBeGreaterThan(0)
@@ -281,6 +285,7 @@ describe('Battle runtime', () => {
     })
     expect(steps.find((step) => step.kind === 'hit')).toMatchObject({
       fxCueId: 'skill.shieldBash',
+      sfxCueId: 'melee-heavy',
       sourcePoint: { x: 0, y: 1 },
       targetPoint: { x: 0, y: 0 },
     })
@@ -318,6 +323,7 @@ describe('Battle runtime', () => {
       expectStepMetadata(step)
     }
     expect(steps.find((step) => step.kind === 'projectile')).toMatchObject({
+      sfxCueId: 'heal',
       targetId: 'rowan',
     })
     expect(steps.find((step) => step.kind === 'hit')).toMatchObject({

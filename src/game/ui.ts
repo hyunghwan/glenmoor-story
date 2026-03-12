@@ -493,7 +493,7 @@ export class HudController {
             ${
               view.phaseAnnouncement
                 ? `
-                  <div class="hud-phase-announcement hud-card">
+                  <div class="hud-phase-announcement hud-card ${view.phaseAnnouncement.cueId ? `is-cue-${view.phaseAnnouncement.cueId}` : ''}">
                     <p class="hud-eyebrow">${view.phaseAnnouncement.label}</p>
                     <strong>${view.phaseAnnouncement.body}</strong>
                   </div>
@@ -546,7 +546,7 @@ export class HudController {
           view.modal
             ? `
               <div class="hud-modal">
-                <div class="hud-modal-card">
+                <div class="hud-modal-card is-${view.modal.kind}">
                   <p class="hud-eyebrow">${view.modal.eyebrow}</p>
                   <h2>${view.modal.title}</h2>
                   <p>${view.modal.body}</p>
@@ -710,19 +710,11 @@ export class HudController {
         <p>${view.targetDetail.amountLabel}</p>
         <p>${view.targetDetail.counterLabel}</p>
         <p>${view.targetDetail.effectLabel}</p>
-        <p class="hud-target-verdict">
-          ${view.targetDetail.telegraphSummary.lethal ? '<span class="is-lethal">Lethal</span>' : ''}
-          ${
-            view.targetDetail.telegraphSummary.counterRisk > 0
-              ? `<span class="is-counter">Counter ${view.targetDetail.telegraphSummary.counterRisk}</span>`
-              : ''
-          }
-          ${
-            view.targetDetail.telegraphSummary.predictedStatusIds.length > 0
-              ? `<span class="is-status">${view.targetDetail.telegraphSummary.predictedStatusIds.length} status</span>`
-              : ''
-          }
-        </p>
+        <div class="hud-target-verdict">
+          ${view.targetDetail.verdictChips
+            .map((chip) => this.renderStatusChip(chip.label, chip.stacks, chip.tone))
+            .join('')}
+        </div>
       </section>
     `
   }

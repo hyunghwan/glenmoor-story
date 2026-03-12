@@ -10,6 +10,7 @@ describe('Scenario loader', () => {
     expect(definition.id).toBe('glenmoorPass')
     expect(definition.mapId).toBe('glenmoor-pass')
     expect(definition.objectivePhases?.map((phase) => phase.id)).toEqual(['break-the-line', 'hunt-the-captain'])
+    expect(definition.objectivePhases?.[1]?.announcementCueId).toBe('phase-shift')
     expect(definition.events?.[0]).toMatchObject({
       id: 'shieldbearer-falls',
       trigger: {
@@ -52,5 +53,12 @@ describe('Scenario loader', () => {
     }
 
     expect(() => loadBattleDefinition(broken, 'broken-scenario.json')).toThrow(/Unknown objective phase "missing-phase"/)
+  })
+
+  it('allows objective phases without announcementCueId', () => {
+    const variant = structuredClone(glenmoorPassScenarioData) as typeof glenmoorPassScenarioData
+    delete (variant.objectivePhases[1] as Record<string, unknown>).announcementCueId
+
+    expect(() => loadBattleDefinition(variant, 'variant-scenario.json')).not.toThrow()
   })
 })

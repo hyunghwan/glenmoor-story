@@ -122,6 +122,24 @@ async function waitForDuelActivation() {
   return page.waitForFunction(() => JSON.parse(window.render_game_to_text()).telemetry.duel?.active === true)
 }
 
+async function captureCommitFeedback(prefix, startedAt) {
+  for (let iteration = 0; iteration < 24; iteration += 1) {
+    const state = await readState()
+
+    if (state.hud?.mode === 'busy' && state.telemetry?.duel?.active !== true) {
+      const elapsedMs = Date.now() - startedAt
+      assert(elapsedMs <= 150, `Expected ${prefix} commit feedback within 150ms (${elapsedMs}ms)`)
+      await saveShot(`${prefix}-commit`)
+      await saveState(`${prefix}-commit`)
+      return
+    }
+
+    await page.waitForTimeout(8)
+  }
+
+  throw new Error(`Timed out waiting for ${prefix} commit feedback before duel start`)
+}
+
 async function captureDuelSequence(prefix) {
   await waitForDuelActivation()
   let state = await readState()
@@ -178,10 +196,26 @@ async function selectAction(commandId) {
   await page.waitForFunction((mode) => JSON.parse(window.render_game_to_text()).hud?.mode === mode, commandId)
 }
 
-async function clickTargetUnit(unitId) {
+async function clickTargetUnit(unitId, pauseMs = 150) {
   const state = await readState()
   const point = getUnitPosition(state, unitId)
-  await clickProjectedTile(page, state, point)
+  await clickProjectedTile(page, state, point, pauseMs)
+}
+
+async function commitTargetedAction(prefix, unitId) {
+  const startedAt = Date.now()
+  await clickTargetUnit(unitId, 0)
+  await captureCommitFeedback(prefix, startedAt)
+  await captureDuelSequence(prefix)
+}
+
+async function waitForSettledModal(kind, settleMs = 320) {
+  await page.waitForFunction((expectedKind) => {
+    const state = JSON.parse(window.render_game_to_text())
+    return state.hud?.modal?.kind === expectedKind && state.telemetry?.duel?.active !== true
+  }, kind)
+  await page.waitForTimeout(settleMs)
+  return readState()
 }
 
 await page.goto(baseUrl, { waitUntil: 'domcontentloaded' })
@@ -215,8 +249,7 @@ await saveShot('04-engagement-before')
 await saveState('04-engagement-before')
 
 await selectAction('attack')
-await clickTargetUnit('brigandCaptain')
-await captureDuelSequence('05-engagement')
+await commitTargetedAction('05-engagement', 'brigandCaptain')
 state = await readState()
 assertPresentationTelemetry(state)
 await saveShot('06-engagement-after')
@@ -254,9 +287,8 @@ await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
 await selectAction('attack')
-await clickTargetUnit('brigandCaptain')
-await captureDuelSequence('11-victory')
-state = await readState()
+await commitTargetedAction('11-victory', 'brigandCaptain')
+state = await waitForSettledModal('victory')
 assert(state.hud.modal?.phaseLabel === 'Battle Phase 2/2', 'Expected victory wrapper phase progress label')
 assert(
   state.hud.modal?.objectiveLabel === 'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',

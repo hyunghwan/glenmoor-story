@@ -33,8 +33,19 @@ describe('Content loader', () => {
 
     expect(definitions.classDefinitions.vanguard.signatureSkillId).toBe('shieldBash')
     expect(definitions.skillDefinitions.shieldBash.effects).toHaveLength(3)
+    expect(definitions.skillDefinitions.shieldBash.presentation.sfxCueId).toBe('melee-heavy')
     expect(definitions.statusDefinitions.burning.presentation.tone).toBe('ember')
+    expect(definitions.statusDefinitions.burning.presentation.hitStopMs).toBeGreaterThan(0)
     expect(definitions.aiProfiles.spearhead.aggression).toBe(1.1)
+  })
+
+  it('rejects missing presentation cue metadata', () => {
+    const brokenStatuses = structuredClone(statusDefinitionsData) as typeof statusDefinitionsData
+    delete (brokenStatuses[0].presentation as Record<string, unknown>).sfxCueId
+
+    expect(() => loadStatusDefinitions(brokenStatuses, 'broken-status-definitions.json')).toThrow(
+      /Expected non-empty string at broken-status-definitions\.json\[0\]\.presentation\.sfxCueId/,
+    )
   })
 
   it('rejects unknown status ids referenced by skills', () => {

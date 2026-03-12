@@ -25,6 +25,8 @@ export type AttackFlavor = 'power' | 'magic'
 
 export type TelegraphStyle = 'attack' | 'skill' | 'support' | 'status' | 'move' | 'counter'
 
+export type ImpactWeight = 'light' | 'medium' | 'heavy' | 'finisher'
+
 export type PresentationTone =
   | 'steel'
   | 'ember'
@@ -57,9 +59,13 @@ export type MatterProfile =
 
 export interface PresentationProfile {
   fxCueId: string
+  sfxCueId: string
   telegraphStyle: TelegraphStyle
+  impactWeight: ImpactWeight
   castMs: number
   impactMs: number
+  hitStopMs: number
+  lingerMs: number
   cameraCue: CameraCue
   matterProfile: MatterProfile
   tone: PresentationTone
@@ -272,6 +278,7 @@ export interface BattleObjectivePhaseDefinition {
   victoryKey?: string
   defeatKey?: string
   announcementKey?: string
+  announcementCueId?: string
   victoryConditions: BattleObjectiveCondition[]
   defeatConditions?: BattleObjectiveCondition[]
 }
@@ -371,6 +378,9 @@ export interface CombatPresentationStep {
   targetId?: string
   labelKey: string
   fxCueId: string
+  sfxCueId: string
+  impactWeight: ImpactWeight
+  hitStopMs: number
   sourcePoint: GridPoint
   targetPoint: GridPoint
   amount?: number
@@ -570,6 +580,7 @@ export interface TargetDetailPopupViewModel {
   amountLabel: string
   counterLabel: string
   effectLabel: string
+  verdictChips: HudStatusChipViewModel[]
   telegraphSummary: CombatTelegraphSummary
 }
 
@@ -619,6 +630,7 @@ export interface HudViewModel {
   phaseAnnouncement?: {
     label: string
     body: string
+    cueId?: string
   }
   modal?: {
     kind: 'briefing' | 'victory' | 'defeat'

@@ -23,6 +23,7 @@
       "victoryKey": "battle.glenmoorPass.phaseHuntCaptain.victory",
       "defeatKey": "battle.glenmoorPass.phaseHuntCaptain.defeat",
       "announcementKey": "battle.glenmoorPass.phaseHuntCaptain.announcement",
+      "announcementCueId": "phase-shift",
       "victoryConditions": [
         {
           "type": "defeat-unit",

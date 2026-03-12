@@ -140,6 +140,7 @@ function parseObjectivePhase(value: unknown, path: string): BattleObjectivePhase
     victoryKey: optionalString(record.victoryKey, `${path}.victoryKey`),
     defeatKey: optionalString(record.defeatKey, `${path}.defeatKey`),
     announcementKey: optionalString(record.announcementKey, `${path}.announcementKey`),
+    announcementCueId: optionalString(record.announcementCueId, `${path}.announcementCueId`),
     victoryConditions: expectArray(record.victoryConditions, `${path}.victoryConditions`).map((condition, index) =>
       parseObjectiveCondition(condition, `${path}.victoryConditions[${index}]`),
     ),

@@ -26,6 +26,41 @@
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
 }
 
+@keyframes hudFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hudPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes hudModalEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -309,6 +344,15 @@ button {
     linear-gradient(180deg, rgba(23, 35, 46, 0.96), rgba(12, 19, 27, 0.98)),
     linear-gradient(135deg, rgba(216, 191, 132, 0.08), transparent 55%);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  animation: hudFloatIn 240ms ease;
+}
+
+.hud-phase-announcement.is-cue-phase-shift {
+  border-color: rgba(240, 200, 119, 0.78);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(240, 200, 119, 0.2),
+    0 0 28px rgba(240, 200, 119, 0.14);
 }
 
 .hud-phase-announcement strong {
@@ -701,6 +745,10 @@ button {
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
 }
 
 .hud-target-marker.is-damage {
@@ -734,7 +782,11 @@ button {
 }
 
 .hud-target-marker.is-emphasis {
-  box-shadow: 0 0 0 1px rgba(240, 200, 119, 0.16);
+  box-shadow:
+    0 0 0 1px rgba(240, 200, 119, 0.16),
+    0 0 20px rgba(240, 200, 119, 0.18);
+  animation: hudPulse 680ms ease-in-out infinite;
+  transform-origin: center;
 }
 
 .hud-target-detail {
@@ -747,6 +799,7 @@ button {
     linear-gradient(135deg, rgba(216, 191, 132, 0.08), transparent 46%);
   box-shadow: var(--shadow);
   padding: 12px 14px;
+  animation: hudFloatIn 180ms ease;
 }
 
 .hud-action-menu {
@@ -778,27 +831,9 @@ button {
   gap: 8px;
 }
 
-.hud-target-verdict span {
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 11px;
-  letter-spacing: 0.06em;
+.hud-target-verdict .hud-status-chip {
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.hud-target-verdict .is-lethal {
-  background: rgba(246, 216, 141, 0.16);
-  color: #f6df9d;
-}
-
-.hud-target-verdict .is-counter {
-  background: rgba(163, 31, 47, 0.22);
-  color: #ffc2ca;
-}
-
-.hud-target-verdict .is-status {
-  background: rgba(80, 151, 189, 0.22);
-  color: #d3f2ff;
 }
 
 .hud-modal {
@@ -807,6 +842,7 @@ button {
   display: grid;
   place-items: center;
   background: rgba(4, 7, 10, 0.66);
+  backdrop-filter: blur(4px);
   pointer-events: auto;
 }
 
@@ -819,6 +855,25 @@ button {
     linear-gradient(180deg, rgba(18, 29, 39, 0.98), rgba(10, 16, 23, 0.98));
   padding: 28px;
   pointer-events: auto;
+  animation: hudModalEnter 260ms ease;
+}
+
+.hud-modal-card.is-briefing {
+  box-shadow: var(--shadow);
+}
+
+.hud-modal-card.is-victory {
+  border-color: rgba(240, 200, 119, 0.74);
+  box-shadow:
+    var(--shadow),
+    0 0 32px rgba(240, 200, 119, 0.14);
+}
+
+.hud-modal-card.is-defeat {
+  border-color: rgba(187, 50, 70, 0.72);
+  box-shadow:
+    var(--shadow),
+    0 0 32px rgba(187, 50, 70, 0.14);
 }
 
 .hud-modal-card h2 {

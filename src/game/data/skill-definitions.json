@@ -14,9 +14,13 @@
     ],
     "presentation": {
       "fxCueId": "skill.shieldBash",
+      "sfxCueId": "melee-heavy",
       "telegraphStyle": "skill",
+      "impactWeight": "heavy",
       "castMs": 220,
       "impactMs": 240,
+      "hitStopMs": 44,
+      "lingerMs": 170,
       "cameraCue": "impact-heavy",
       "matterProfile": "shock-ring",
       "tone": "steel"
@@ -36,9 +40,13 @@
     ],
     "presentation": {
       "fxCueId": "skill.snareVolley",
+      "sfxCueId": "ranged-shot",
       "telegraphStyle": "skill",
+      "impactWeight": "light",
       "castMs": 260,
       "impactMs": 200,
+      "hitStopMs": 14,
+      "lingerMs": 120,
       "cameraCue": "impact-light",
       "matterProfile": "arrow-streak",
       "tone": "wind"
@@ -58,9 +66,13 @@
     ],
     "presentation": {
       "fxCueId": "skill.emberSigil",
+      "sfxCueId": "magic-cast",
       "telegraphStyle": "skill",
+      "impactWeight": "medium",
       "castMs": 320,
       "impactMs": 240,
+      "hitStopMs": 20,
+      "lingerMs": 160,
       "cameraCue": "impact-heavy",
       "matterProfile": "ember-plume",
       "tone": "ember"
@@ -80,9 +92,13 @@
     ],
     "presentation": {
       "fxCueId": "skill.aegisField",
+      "sfxCueId": "heal",
       "telegraphStyle": "support",
+      "impactWeight": "medium",
       "castMs": 260,
       "impactMs": 220,
+      "hitStopMs": 12,
+      "lingerMs": 180,
       "cameraCue": "support-pulse",
       "matterProfile": "light-shards",
       "tone": "ward"
@@ -101,9 +117,13 @@
     ],
     "presentation": {
       "fxCueId": "skill.shadowLunge",
+      "sfxCueId": "melee-heavy",
       "telegraphStyle": "skill",
+      "impactWeight": "finisher",
       "castMs": 160,
       "impactMs": 200,
+      "hitStopMs": 48,
+      "lingerMs": 150,
       "cameraCue": "impact-heavy",
       "matterProfile": "dash-burst",
       "tone": "shadow"
@@ -123,9 +143,13 @@
     ],
     "presentation": {
       "fxCueId": "skill.resolveHymn",
+      "sfxCueId": "heal",
       "telegraphStyle": "support",
+      "impactWeight": "medium",
       "castMs": 290,
       "impactMs": 220,
+      "hitStopMs": 12,
+      "lingerMs": 190,
       "cameraCue": "support-pulse",
       "matterProfile": "light-shards",
       "tone": "radiant"

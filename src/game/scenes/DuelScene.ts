@@ -38,6 +38,7 @@ export class DuelScene extends Phaser.Scene {
   private readonly uiBus: Phaser.Events.EventEmitter
   private stepIndex = 0
   private stepElapsedMs = 0
+  private hitStopRemainingMs = 0
   private fastMode = false
   private skipHandler?: () => void
   private advanceHandler?: (ms: number) => void
@@ -66,6 +67,7 @@ export class DuelScene extends Phaser.Scene {
     this.presentation = data.resolution.presentation
     this.stepIndex = 0
     this.stepElapsedMs = 0
+    this.hitStopRemainingMs = 0
     this.fastMode = false
     this.cards.clear()
     this.displayUnits.clear()
@@ -185,6 +187,12 @@ export class DuelScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.hitStopRemainingMs > 0) {
+      this.hitStopRemainingMs = Math.max(0, this.hitStopRemainingMs - delta)
+      this.drawStepFx()
+      return
+    }
+
     this.advanceTimeline(this.fastMode ? delta * 3 : delta)
     this.drawStepFx()
   }
@@ -267,6 +275,7 @@ export class DuelScene extends Phaser.Scene {
     this.detailText?.setText(
       [...detailLines.slice(1), ...(hpLine ? [hpLine] : [])].filter(Boolean).join('\n'),
     )
+    this.hitStopRemainingMs = step.hitStopMs
 
     for (const [unitId, card] of this.cards) {
       const snapshot = this.getSnapshot(unitId)
@@ -317,14 +326,56 @@ export class DuelScene extends Phaser.Scene {
     })
   }
 
+  private playCueSfx(key: string, config: Phaser.Types.Sound.SoundConfig = {}): void {
+    const cueConfig: Record<string, Phaser.Types.Sound.SoundConfig> = {
+      'melee-light': { volume: 0.17, rate: 1.16 },
+      'melee-heavy': { volume: 0.24, rate: 0.94 },
+      'ranged-shot': { volume: 0.18, rate: 1.08 },
+      'magic-cast': { volume: 0.18, rate: 0.98 },
+      heal: { volume: 0.17, rate: 1.05 },
+      counter: { volume: 0.22, rate: 1.12 },
+      'phase-shift': { volume: 0.24, rate: 1.02 },
+      'kill-confirm': { volume: 0.26, rate: 0.92 },
+    }
+
+    this.playSfx(key, {
+      ...(cueConfig[key] ?? {}),
+      ...config,
+    })
+  }
+
   private playStepSfx(step: CombatPresentation['steps'][number]): void {
-    if (step.kind === 'cast' || step.kind === 'status') {
-      this.playSfx('skill', { volume: 0.18 })
+    if (step.kind === 'cast' && (step.sfxCueId === 'magic-cast' || step.sfxCueId === 'heal')) {
+      this.playCueSfx(step.sfxCueId)
       return
     }
 
-    if (step.kind === 'hit' || step.kind === 'counter' || step.kind === 'defeat' || step.kind === 'push') {
-      this.playSfx('hit', { volume: 0.18 })
+    if (step.kind === 'projectile' && step.sfxCueId === 'ranged-shot') {
+      this.playCueSfx(step.sfxCueId, { volume: 0.15 })
+      return
+    }
+
+    if (
+      step.kind === 'hit' ||
+      step.kind === 'status' ||
+      step.kind === 'counter' ||
+      step.kind === 'defeat' ||
+      step.kind === 'push'
+    ) {
+      this.playCueSfx(step.sfxCueId)
+    }
+  }
+
+  private resolveImpactScale(weight: CombatPresentation['steps'][number]['impactWeight']): number {
+    switch (weight) {
+      case 'light':
+        return 0.92
+      case 'medium':
+        return 1
+      case 'heavy':
+        return 1.2
+      case 'finisher':
+        return 1.35
     }
   }
 
@@ -550,6 +601,7 @@ export class DuelScene extends Phaser.Scene {
       ? { x: targetCard.tokenBaseX, y: targetCard.tokenBaseY }
       : { x: this.scale.width * 0.7, y: this.scale.height * 0.5 }
     const color = this.resolveCueColor(step.fxCueId)
+    const impactScale = this.resolveImpactScale(step.impactWeight)
 
     if (step.kind === 'announce') {
       this.fxGraphics.lineStyle(2, color, 0.26 + (1 - progress) * 0.2)
@@ -558,9 +610,11 @@ export class DuelScene extends Phaser.Scene {
     }
 
     if (step.kind === 'cast' && actorCard) {
-      const lift = Math.sin(progress * Math.PI) * 12
+      const lift = Math.sin(progress * Math.PI) * (12 + impactScale * 6)
+      const surge = Math.sin(progress * Math.PI) * (step.sfxCueId === 'melee-heavy' ? 14 : 0)
       actorCard.token.setY(actorCard.tokenBaseY - lift)
-      actorCard.token.setScale(1 + Math.sin(progress * Math.PI) * 0.08)
+      actorCard.token.setX(actorCard.tokenBaseX + surge)
+      actorCard.token.setScale(1 + Math.sin(progress * Math.PI) * (0.08 + (impactScale - 1) * 0.1))
       this.fxGraphics.lineStyle(2, color, 0.3 + progress * 0.3)
       this.fxGraphics.strokeCircle(actorPos.x, actorPos.y + 2, 26 + progress * 16)
       this.fxGraphics.strokeCircle(actorPos.x, actorPos.y + 2, 40 + progress * 22)
@@ -581,33 +635,39 @@ export class DuelScene extends Phaser.Scene {
 
     if ((step.kind === 'hit' || step.kind === 'counter') && targetCard) {
       const direction = step.kind === 'counter' ? -1 : 1
-      const thrust = Math.sin(progress * Math.PI) * 12 * direction
-      targetCard.token.setX(targetCard.tokenBaseX + thrust)
-      targetCard.token.setScale(1.08 + (1 - progress) * 0.16)
+      const thrust = Math.sin(progress * Math.PI) * 12 * direction * impactScale
+      const recoil = Math.sin(progress * Math.PI) * 18 * impactScale
+      targetCard.token.setX(targetCard.tokenBaseX + thrust + recoil)
+      targetCard.token.setScale(1.04 + (1 - progress) * 0.18 * impactScale)
+      if (actorCard) {
+        actorCard.token.setX(actorCard.tokenBaseX + Math.sin(progress * Math.PI) * 10 * direction)
+      }
       this.fxGraphics.fillStyle(color, 0.2)
-      this.fxGraphics.fillCircle(targetPos.x, targetPos.y, 22 + Math.sin(progress * Math.PI) * 18)
+      this.fxGraphics.fillCircle(targetPos.x, targetPos.y, (22 + Math.sin(progress * Math.PI) * 18) * impactScale)
       this.fxGraphics.lineStyle(3, color, 0.88)
       this.fxGraphics.lineBetween(targetPos.x - 20, targetPos.y, targetPos.x + 20, targetPos.y)
       this.fxGraphics.lineBetween(targetPos.x, targetPos.y - 20, targetPos.x, targetPos.y + 20)
-      this.flashGraphics.fillStyle(color, 0.045 + Math.sin(progress * Math.PI) * 0.08)
+      this.flashGraphics.fillStyle(color, 0.045 + Math.sin(progress * Math.PI) * 0.1 * impactScale)
       this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
       return
     }
 
     if (step.kind === 'status' && targetCard) {
       this.fxGraphics.lineStyle(2, color, 0.7)
-      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 28 + progress * 14)
-      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 42 + progress * 18)
+      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, (28 + progress * 14) * impactScale)
+      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, (42 + progress * 18) * impactScale)
       for (let index = 0; index < Math.max(3, step.statusChanges.length * 2); index += 1) {
         const angle = progress * Math.PI * 2 + index * ((Math.PI * 2) / Math.max(3, step.statusChanges.length * 2))
         this.fxGraphics.fillStyle(color, 0.6)
         this.fxGraphics.fillCircle(targetPos.x + Math.cos(angle) * 28, targetPos.y + Math.sin(angle) * 18, 4)
       }
+      this.flashGraphics.fillStyle(color, 0.025 + Math.sin(progress * Math.PI) * 0.05)
+      this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
       return
     }
 
     if (step.kind === 'push' && targetCard) {
-      const distance = step.push?.succeeded ? 28 : 14
+      const distance = (step.push?.succeeded ? 28 : 14) * impactScale
       targetCard.token.setX(targetCard.tokenBaseX + Math.sin(progress * Math.PI) * distance)
       this.fxGraphics.lineStyle(3, color, 0.82)
       this.fxGraphics.lineBetween(targetPos.x - 24, targetPos.y + 22, targetPos.x + 18, targetPos.y + 22)
@@ -617,18 +677,21 @@ export class DuelScene extends Phaser.Scene {
     }
 
     if (step.kind === 'defeat' && targetCard) {
-      targetCard.token.setY(targetCard.tokenBaseY + progress * 26)
+      targetCard.token.setY(targetCard.tokenBaseY + progress * 30 * impactScale)
       targetCard.token.setAlpha(0.92 * (1 - progress))
       this.fxGraphics.fillStyle(0xf3d89a, 0.08 + (1 - progress) * 0.12)
-      this.fxGraphics.fillCircle(targetPos.x, targetPos.y, 26 + progress * 36)
+      this.fxGraphics.fillCircle(targetPos.x, targetPos.y, (26 + progress * 36) * impactScale)
       this.fxGraphics.lineStyle(2, 0xf3d89a, 0.7 * (1 - progress))
-      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 40 + progress * 36)
+      this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, (40 + progress * 36) * impactScale)
+      this.flashGraphics.fillStyle(0xf3d89a, 0.04 + (1 - progress) * 0.06)
+      this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
       return
     }
 
     if (step.kind === 'recover' && actorCard) {
       this.fxGraphics.lineStyle(2, color, 0.5 * (1 - progress))
       this.fxGraphics.strokeCircle(actorPos.x, actorPos.y, 38 + progress * 24)
+      actorCard.token.setScale(1 + (1 - progress) * 0.06)
     }
   }
 
