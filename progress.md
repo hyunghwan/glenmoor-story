@@ -212,6 +212,33 @@ The canonical implementation log lives in `docs/progress.md`.
 - Verification completed:
   - `npm test`
   - `npm run build`
-- Remaining work in this pass:
-  - refresh Playwright QA scripts and artifacts for commit-burst, phase-focus, and result-modal entrance behavior
-  - run `qa:playthrough`, `qa:hud`, and the `develop-web-game` smoke client against the updated build
+- Refreshed the browser QA harness for the tactile-feedback pass:
+  - `scripts/qa/playthrough.mjs` now captures the action-commit beat and waits for the animated victory modal settle state
+  - `scripts/qa/hud-polish.mjs` now verifies the new victory modal entrance at `1600x900 EN` and `1280x720 KO`
+  - regenerated fresh QA evidence under `output/web-game/playthrough/` and `output/web-game/hud-polish/`
+- Verification completed:
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+- Completed the terrain-reaction readability pass without expanding the prototype beyond one battle
+- Added a typed terrain-reaction layer to the tactics core:
+  - introduced `TerrainReactionId` / `TerrainReactionResult`
+  - extended `CombatTelegraphSummary` with `terrainReactions`
+  - added `terrain` as a `CombatPresentationStep` kind so battlefield and duel scenes can consume reaction beats directly
+- Implemented three authored terrain reactions in runtime resolution before counter checks:
+  - `Forest Kindling` adds extra `burning` and `+2` damage on forest targets when fire / burning chains connect
+  - `Ruins Echo` adds `+2` healing and an upgraded `warded` stack / duration on ruins support targets
+  - `Bridge Drop` converts an outward bridge push into an immediate defeat over water and suppresses counterplay
+- Updated scene readability and authored QA staging around those reactions:
+  - battle telegraphs now add reaction-specific chips and overlays for ember, ward, and drop warnings
+  - duel presentation now renders dedicated `terrain` beats for forest flare, ruins echo, and bridge splash / drop finishers
+  - browser QA now includes staged `forest-demo`, `ruins-demo`, and `bridge-demo` captures in both playthrough and HUD-polish flows
+- Updated tactical readability around the new rules:
+  - AI now values `bridge-drop` as a lethal line, gives `forest-kindling` / `ruins-echo` bonus score, and avoids ending on enemy-threatened bridge tiles
+  - localized labels and combat-feed text now surface terrain-reaction names in English and Korean
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`

@@ -358,6 +358,7 @@ export class DuelScene extends Phaser.Scene {
     if (
       step.kind === 'hit' ||
       step.kind === 'status' ||
+      step.kind === 'terrain' ||
       step.kind === 'counter' ||
       step.kind === 'defeat' ||
       step.kind === 'push'
@@ -433,6 +434,34 @@ export class DuelScene extends Phaser.Scene {
             }
           }
 
+        }
+      }
+
+      if (step.kind === 'terrain' && step.targetId) {
+        const target = this.displayUnits.get(step.targetId)
+
+        if (target) {
+          if (step.amount !== undefined && step.valueKind) {
+            target.hp =
+              step.valueKind === 'heal'
+                ? target.hp + step.amount
+                : Math.max(0, target.hp - step.amount)
+          }
+
+          for (const statusChange of step.statusChanges) {
+            const existing = target.statuses.find((status) => status.id === statusChange.statusId)
+
+            if (existing) {
+              existing.stacks = statusChange.stacks
+              existing.duration = statusChange.duration
+            } else {
+              target.statuses.push({
+                id: statusChange.statusId,
+                stacks: statusChange.stacks,
+                duration: statusChange.duration,
+              })
+            }
+          }
         }
       }
 
@@ -564,6 +593,10 @@ export class DuelScene extends Phaser.Scene {
       return 0xffa37d
     }
 
+    if (fxCueId.includes('bridge')) {
+      return 0x92ccff
+    }
+
     return 0xf5d18c
   }
 
@@ -664,6 +697,51 @@ export class DuelScene extends Phaser.Scene {
       this.flashGraphics.fillStyle(color, 0.025 + Math.sin(progress * Math.PI) * 0.05)
       this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
       return
+    }
+
+    if (step.kind === 'terrain' && targetCard) {
+      if (step.terrainReaction === 'forest-kindling') {
+        targetCard.token.setScale(1.02 + Math.sin(progress * Math.PI) * 0.1)
+        this.fxGraphics.fillStyle(color, 0.18 + Math.sin(progress * Math.PI) * 0.12)
+        this.fxGraphics.fillCircle(targetPos.x, targetPos.y, (24 + progress * 22) * impactScale)
+        this.fxGraphics.lineStyle(2, color, 0.82)
+        this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, (34 + progress * 18) * impactScale)
+        for (let index = 0; index < 6; index += 1) {
+          const angle = progress * Math.PI * 2 + index * (Math.PI / 3)
+          this.fxGraphics.fillStyle(0xffd7a0, 0.6)
+          this.fxGraphics.fillCircle(targetPos.x + Math.cos(angle) * 18, targetPos.y + Math.sin(angle) * 14, 3)
+        }
+        this.flashGraphics.fillStyle(color, 0.04 + Math.sin(progress * Math.PI) * 0.08)
+        this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
+        return
+      }
+
+      if (step.terrainReaction === 'ruins-echo') {
+        targetCard.token.setScale(1.01 + Math.sin(progress * Math.PI) * 0.08)
+        targetCard.token.setY(targetCard.tokenBaseY - Math.sin(progress * Math.PI) * 8)
+        this.fxGraphics.lineStyle(3, color, 0.75)
+        this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 28 + progress * 18)
+        this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 44 + progress * 20)
+        this.fxGraphics.lineStyle(2, 0xf5f8ff, 0.55)
+        this.fxGraphics.strokeCircle(targetPos.x, targetPos.y, 18 + progress * 12)
+        this.flashGraphics.fillStyle(color, 0.025 + Math.sin(progress * Math.PI) * 0.05)
+        this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
+        return
+      }
+
+      if (step.terrainReaction === 'bridge-drop') {
+        const drop = Math.sin(progress * Math.PI) * 22
+        targetCard.token.setY(targetCard.tokenBaseY + drop)
+        targetCard.token.setAlpha(0.92 * (1 - progress * 0.45))
+        this.fxGraphics.lineStyle(3, color, 0.8)
+        this.fxGraphics.lineBetween(targetPos.x - 24, targetPos.y + 20, targetPos.x + 24, targetPos.y + 20)
+        this.fxGraphics.strokeEllipse(targetPos.x, targetPos.y + 26, 54 + progress * 24, 18 + progress * 10)
+        this.fxGraphics.fillStyle(color, 0.18)
+        this.fxGraphics.fillEllipse(targetPos.x, targetPos.y + 26, 40 + progress * 18, 12 + progress * 6)
+        this.flashGraphics.fillStyle(color, 0.03 + Math.sin(progress * Math.PI) * 0.05)
+        this.flashGraphics.fillRect(0, 0, this.scale.width, this.scale.height)
+        return
+      }
     }
 
     if (step.kind === 'push' && targetCard) {

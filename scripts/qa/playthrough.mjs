@@ -202,6 +202,12 @@ async function clickTargetUnit(unitId, pauseMs = 150) {
   await clickProjectedTile(page, state, point, pauseMs)
 }
 
+function getUnitState(state, unitId) {
+  const unit = state.telemetry?.units?.find((entry) => entry.id === unitId)
+  assert(unit, `Expected telemetry for unit ${unitId}`)
+  return unit
+}
+
 async function commitTargetedAction(prefix, unitId) {
   const startedAt = Date.now()
   await clickTargetUnit(unitId, 0)
@@ -324,5 +330,59 @@ assert(getUnitPosition(state, 'fordStalker').x === 13 && getUnitPosition(state, 
 assert(getUnitPosition(state, 'roadReaver').x === 12 && getUnitPosition(state, 'roadReaver').y === 10, 'Expected roadReaver reinforcement deployment')
 await saveShot('13-phase-after')
 await saveState('13-phase-after')
+
+await page.evaluate(() => window.__glenmoorDebug.stage('forest-demo'))
+await page.waitForTimeout(120)
+state = await readState()
+assertPresentationTelemetry(state)
+await saveShot('14-forest-before')
+await saveState('14-forest-before')
+
+await selectAction('skill')
+await commitTargetedAction('14-forest', 'brigandCaptain')
+state = await readState()
+assertPresentationTelemetry(state)
+assert(
+  getUnitState(state, 'brigandCaptain').statuses.some((status) => status.id === 'burning' && status.stacks >= 2),
+  'Expected forest demo to leave brigandCaptain with stacked burning',
+)
+assert(state.hud.statusLine.logLabel.includes('Forest Kindling'), 'Expected forest demo battle feed to mention Forest Kindling')
+await saveShot('14-forest-after')
+await saveState('14-forest-after')
+
+await page.evaluate(() => window.__glenmoorDebug.stage('ruins-demo'))
+await page.waitForTimeout(120)
+state = await readState()
+assertPresentationTelemetry(state)
+await saveShot('15-ruins-before')
+await saveState('15-ruins-before')
+
+await selectAction('skill')
+await commitTargetedAction('15-ruins', 'osric')
+state = await readState()
+assertPresentationTelemetry(state)
+assert(
+  getUnitState(state, 'osric').statuses.some((status) => status.id === 'warded' && status.stacks >= 2),
+  'Expected ruins demo to strengthen warded on osric',
+)
+assert(state.hud.statusLine.logLabel.includes('Ruins Echo'), 'Expected ruins demo battle feed to mention Ruins Echo')
+await saveShot('15-ruins-after')
+await saveState('15-ruins-after')
+
+await page.evaluate(() => window.__glenmoorDebug.stage('bridge-demo'))
+await page.waitForTimeout(120)
+state = await readState()
+assertPresentationTelemetry(state)
+await saveShot('16-bridge-before')
+await saveState('16-bridge-before')
+
+await selectAction('skill')
+await commitTargetedAction('16-bridge', 'brigandCaptain')
+state = await readState()
+assertPresentationTelemetry(state)
+assert(getUnitState(state, 'brigandCaptain').defeated === true, 'Expected bridge demo to defeat brigandCaptain with bridge drop')
+assert(state.hud.statusLine.logLabel.includes('Bridge Drop'), 'Expected bridge demo battle feed to mention Bridge Drop')
+await saveShot('16-bridge-after')
+await saveState('16-bridge-after')
 
 await browser.close()

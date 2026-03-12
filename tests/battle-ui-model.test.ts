@@ -233,6 +233,7 @@ describe('battle UI model', () => {
           appliedStatuses: [{ statusId: 'guardBreak', stacks: 1, duration: 2 }],
           targetDefeated: false,
         },
+        terrainReactions: [],
         counter: {
           sourceId: 'cutpurse',
           targetId: 'rowan',
@@ -286,11 +287,79 @@ describe('battle UI model', () => {
         lethal: false,
         counterRisk: 5,
         predictedStatusIds: ['guardBreak'],
+        terrainReactions: [],
         pushOutcome: 'none',
         markerTone: 'counter',
       },
     })
     expect(preview.telegraphSummary.predictedStatusIds).toContain('guardBreak')
+  })
+
+  it('surfaces bridge-drop as a lethal terrain reaction in target previews', () => {
+    const preview = buildTargetPreviewStrings(
+      {
+        action: { actorId: 'rowan', kind: 'skill', skillId: 'shieldBash', targetId: 'brigandCaptain' },
+        actorAfterMove: { x: 7, y: 8 },
+        primary: {
+          sourceId: 'rowan',
+          targetId: 'brigandCaptain',
+          labelKey: 'skill.shieldBash.name',
+          amount: 4,
+          kind: 'damage',
+          flavor: 'power',
+          relation: 'front',
+          heightDelta: 0,
+          terrainBonus: 0,
+          appliedStatuses: [{ statusId: 'guardBreak', stacks: 1, duration: 2 }],
+          targetDefeated: true,
+        },
+        terrainReactions: [
+          {
+            id: 'bridge-drop',
+            unitId: 'brigandCaptain',
+            terrainId: 'bridge',
+            statusChanges: [],
+            defeat: { unitId: 'brigandCaptain' },
+          },
+        ],
+        counter: undefined,
+        startTurnMessages: [],
+        messages: [],
+        state: {} as never,
+      },
+      {
+        t: (key) =>
+          ({
+            'skill.shieldBash.name': 'Shield Bash',
+            'hud.damage': 'Damage',
+            'hud.heal': 'Heal',
+            'hud.counter': 'Counter',
+            'hud.forecast.counterRisk': 'Counter Risk',
+            'hud.forecast.effects': 'Effects',
+            'hud.forecast.lethal': 'Lethal',
+            'terrainReaction.bridgeDrop': 'Bridge Drop',
+            'status.guardBreak': 'Guard Break',
+            'duel.noCounter': 'No counter',
+            'hud.none': 'None',
+            'effect.push': 'Push 1',
+            'effect.pushBlocked': 'Push blocked',
+          })[key] ?? key,
+      },
+    )
+
+    expect(preview.amountLabel).toBe('Damage: -4')
+    expect(preview.effectLabel).toContain('Bridge Drop')
+    expect(preview.verdictChips).toEqual(
+      expect.arrayContaining([
+        { id: 'verdict-lethal', label: 'Lethal', tone: 'accent' },
+        { id: 'verdict-terrain-bridge-drop', label: 'Bridge Drop', tone: 'enemy' },
+      ]),
+    )
+    expect(preview.telegraphSummary).toMatchObject({
+      lethal: true,
+      terrainReactions: ['bridge-drop'],
+      markerTone: 'lethal',
+    })
   })
 
   it('builds Manhattan range tiles for red action overlays', () => {

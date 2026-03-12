@@ -529,6 +529,42 @@ const scenarios = [
     expectedModalObjectiveLabel: '나루에서 예비대의 뿔나팔이 울린다. 포위가 닫히기 전에 베이르 대장을 쓰러뜨려라.',
     modalSettleMs: 340,
   },
+  {
+    id: '11-forest-reaction-target-detail-1600-en',
+    viewport: { width: 1600, height: 900 },
+    locale: 'en',
+    stage: 'forest-demo',
+    command: 'skill',
+    hoverFirstTarget: true,
+    hoverUnitId: 'brigandCaptain',
+    expectedMode: 'skill',
+    expectTargetDetail: true,
+    expectedVerdictChips: ['Forest Kindling'],
+  },
+  {
+    id: '12-ruins-reaction-target-detail-1280-ko',
+    viewport: { width: 1280, height: 720 },
+    locale: 'ko',
+    stage: 'ruins-demo',
+    command: 'skill',
+    hoverFirstTarget: true,
+    hoverUnitId: 'osric',
+    expectedMode: 'skill',
+    expectTargetDetail: true,
+    expectedVerdictChips: ['폐허 공명'],
+  },
+  {
+    id: '13-bridge-reaction-target-detail-1280-en',
+    viewport: { width: 1280, height: 720 },
+    locale: 'en',
+    stage: 'bridge-demo',
+    command: 'skill',
+    hoverFirstTarget: true,
+    hoverUnitId: 'brigandCaptain',
+    expectedMode: 'skill',
+    expectTargetDetail: true,
+    expectedVerdictChips: ['Lethal', 'Bridge Drop'],
+  },
 ]
 
 for (const scenario of scenarios) {
@@ -577,7 +613,12 @@ for (const scenario of scenarios) {
 
   if (scenario.hoverFirstTarget) {
     const preHoverState = await readState(page)
-    const hoverTargets = await listTargetHoverPoints(page, preHoverState)
+    let hoverTargets = await listTargetHoverPoints(page, preHoverState)
+
+    if (scenario.hoverUnitId) {
+      hoverTargets = hoverTargets.filter((hoverTarget) => hoverTarget.unitId === scenario.hoverUnitId)
+    }
+
     assert(hoverTargets.length > 0, `Expected hover targets for ${scenario.id}`)
 
     for (const hoverTarget of hoverTargets) {
@@ -658,6 +699,14 @@ for (const scenario of scenarios) {
       `Expected ${scenario.id} phase announcement body`,
     )
     assertRectInsideViewport(metrics, 'phaseAnnouncement')
+  }
+
+  if (scenario.expectedVerdictChips) {
+    const verdictLabels = state.hud.targetDetail?.verdictChips?.map((chip) => chip.label) ?? []
+
+    for (const label of scenario.expectedVerdictChips) {
+      assert(verdictLabels.includes(label), `Expected ${scenario.id} verdict chips to include ${label}`)
+    }
   }
 
   if (scenario.expectedModalPhaseLabel) {

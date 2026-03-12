@@ -73,6 +73,30 @@ interface PreviewTextContext {
   t: (key: string, params?: Record<string, string | number>) => string
 }
 
+function terrainReactionLabelKey(id: CombatTelegraphSummary['terrainReactions'][number]): string {
+  switch (id) {
+    case 'forest-kindling':
+      return 'terrainReaction.forestKindling'
+    case 'ruins-echo':
+      return 'terrainReaction.ruinsEcho'
+    case 'bridge-drop':
+      return 'terrainReaction.bridgeDrop'
+  }
+}
+
+function terrainReactionChipTone(
+  id: CombatTelegraphSummary['terrainReactions'][number],
+): HudStatusChipViewModel['tone'] {
+  switch (id) {
+    case 'forest-kindling':
+      return 'accent'
+    case 'ruins-echo':
+      return 'ally'
+    case 'bridge-drop':
+      return 'enemy'
+  }
+}
+
 export interface TargetPreviewStrings {
   title: string
   subtitle: string
@@ -207,13 +231,28 @@ function formatEffectSummary(resolution: CombatResolution, context: PreviewTextC
   }
 
   const effects: string[] = []
+  const mergedStatuses = new Map<string, (typeof primary.appliedStatuses)[number]>()
 
   for (const status of primary.appliedStatuses) {
+    mergedStatuses.set(status.statusId, status)
+  }
+
+  for (const reaction of resolution.terrainReactions) {
+    for (const status of reaction.statusChanges) {
+      mergedStatuses.set(status.statusId, status)
+    }
+  }
+
+  for (const status of mergedStatuses.values()) {
     effects.push(`${context.t(`status.${status.statusId}`)} x${status.stacks}`)
   }
 
   if (primary.push?.attempted) {
     effects.push(primary.push.succeeded ? context.t('effect.push') : context.t('effect.pushBlocked'))
+  }
+
+  for (const reaction of resolution.terrainReactions) {
+    effects.push(context.t(terrainReactionLabelKey(reaction.id)))
   }
 
   return effects.length > 0 ? effects.join(', ') : context.t('hud.none')
@@ -227,13 +266,22 @@ export function buildTargetPreviewSummary(resolution: CombatResolution): CombatT
       lethal: false,
       counterRisk: 0,
       predictedStatusIds: [],
+      terrainReactions: [],
       pushOutcome: 'none',
       markerTone: 'effect',
     }
   }
 
-  const predictedStatusIds = primary.appliedStatuses.map((status) => status.statusId)
+  const predictedStatusIds = Array.from(
+    new Set([
+      ...primary.appliedStatuses.map((status) => status.statusId),
+      ...resolution.terrainReactions.flatMap((reaction) =>
+        reaction.statusChanges.map((status) => status.statusId),
+      ),
+    ]),
+  )
   const counterRisk = resolution.counter?.amount ?? 0
+  const terrainReactions = resolution.terrainReactions.map((reaction) => reaction.id)
   const pushOutcome = !primary.push?.attempted ? 'none' : primary.push.succeeded ? 'push' : 'blocked'
   const lethal = primary.kind === 'damage' && primary.targetDefeated
 
@@ -246,7 +294,7 @@ export function buildTargetPreviewSummary(resolution: CombatResolution): CombatT
     markerTone = 'counter'
   } else if (predictedStatusIds.length > 0) {
     markerTone = 'status'
-  } else if (primary.kind !== 'heal' && pushOutcome !== 'none') {
+  } else if (primary.kind !== 'heal' && (pushOutcome !== 'none' || terrainReactions.length > 0)) {
     markerTone = 'effect'
   }
 
@@ -254,6 +302,7 @@ export function buildTargetPreviewSummary(resolution: CombatResolution): CombatT
     lethal,
     counterRisk,
     predictedStatusIds,
+    terrainReactions,
     pushOutcome,
     markerTone,
   }
@@ -281,9 +330,13 @@ export function buildTargetPreviewStrings(
     }
   }
 
+  const terrainAmountDelta = resolution.terrainReactions.reduce(
+    (total, reaction) => total + (reaction.valueKind === primary.kind ? reaction.amount ?? 0 : 0),
+    0,
+  )
   const amountLabel = `${
     primary.kind === 'heal' ? '+' : '-'
-  }${primary.amount}`
+  }${primary.amount + terrainAmountDelta}`
   const verdictChips: HudStatusChipViewModel[] = []
 
   if (telegraphSummary.lethal) {
@@ -321,6 +374,14 @@ export function buildTargetPreviewStrings(
       id: `verdict-status-${statusId}`,
       label: context.t(`status.${statusId}`),
       tone: 'ally',
+    })
+  }
+
+  for (const reactionId of telegraphSummary.terrainReactions) {
+    verdictChips.push({
+      id: `verdict-terrain-${reactionId}`,
+      label: context.t(terrainReactionLabelKey(reactionId)),
+      tone: terrainReactionChipTone(reactionId),
     })
   }
 

@@ -250,6 +250,119 @@ describe('Battle runtime', () => {
     expect(resolution.primary?.push?.blockedReason).toBe('edge')
   })
 
+  it('adds forest kindling bonus damage and burning on forest targets', () => {
+    const runtime = makeRuntime()
+    setActive(runtime, 'maelin')
+    place(runtime, 'maelin', 13, 5)
+    place(runtime, 'brigandCaptain', 13, 2)
+
+    const targetBeforeHp = runtime.getUnit('brigandCaptain')!.hp
+    const resolution = runtime.commitAction({
+      actorId: 'maelin',
+      kind: 'skill',
+      skillId: 'emberSigil',
+      targetId: 'brigandCaptain',
+    })
+
+    const reaction = resolution.terrainReactions.find((entry) => entry.id === 'forest-kindling')
+    const burning = runtime.getUnit('brigandCaptain')?.statuses.find((status) => status.id === 'burning')
+
+    expect(reaction).toMatchObject({
+      id: 'forest-kindling',
+      amount: 2,
+      valueKind: 'damage',
+      statusChanges: [{ statusId: 'burning', stacks: 2, duration: 3 }],
+    })
+    expect(runtime.getUnit('brigandCaptain')?.hp).toBe(targetBeforeHp - (resolution.primary?.amount ?? 0) - 2)
+    expect(burning).toMatchObject({
+      stacks: 2,
+      duration: 3,
+    })
+    expect(resolution.presentation?.steps.some((step) => step.kind === 'terrain' && step.terrainReaction === 'forest-kindling')).toBe(true)
+  })
+
+  it('adds ruins echo healing and warded reinforcement on support skills', () => {
+    const runtime = makeRuntime()
+    setActive(runtime, 'talia')
+    place(runtime, 'talia', 10, 6)
+    place(runtime, 'osric', 10, 3)
+    runtime.getUnit('osric')!.hp = 12
+
+    const targetBeforeHp = runtime.getUnit('osric')!.hp
+    const resolution = runtime.commitAction({
+      actorId: 'talia',
+      kind: 'skill',
+      skillId: 'resolveHymn',
+      targetId: 'osric',
+    })
+
+    const reaction = resolution.terrainReactions.find((entry) => entry.id === 'ruins-echo')
+    const warded = runtime.getUnit('osric')?.statuses.find((status) => status.id === 'warded')
+
+    expect(reaction).toMatchObject({
+      id: 'ruins-echo',
+      amount: 2,
+      valueKind: 'heal',
+      statusChanges: [{ statusId: 'warded', stacks: 2, duration: 3 }],
+    })
+    expect(runtime.getUnit('osric')?.hp).toBe(targetBeforeHp + (resolution.primary?.amount ?? 0) + 2)
+    expect(warded).toMatchObject({
+      stacks: 2,
+      duration: 3,
+    })
+    expect(resolution.presentation?.steps.some((step) => step.kind === 'terrain' && step.terrainReaction === 'ruins-echo')).toBe(true)
+  })
+
+  it('turns bridge pushes into bridge-drop defeats and suppresses counters', () => {
+    const runtime = makeRuntime()
+    setActive(runtime, 'rowan')
+    place(runtime, 'rowan', 7, 8)
+    place(runtime, 'brigandCaptain', 7, 7)
+    runtime.getUnit('brigandCaptain')!.hp = 18
+
+    const resolution = runtime.commitAction({
+      actorId: 'rowan',
+      kind: 'skill',
+      skillId: 'shieldBash',
+      targetId: 'brigandCaptain',
+    })
+
+    expect(resolution.primary?.push).toBeUndefined()
+    expect(resolution.counter).toBeUndefined()
+    expect(resolution.primary?.targetDefeated).toBe(true)
+    expect(runtime.getUnit('brigandCaptain')?.defeated).toBe(true)
+    expect(runtime.getUnit('brigandCaptain')?.hp).toBe(0)
+    expect(resolution.terrainReactions).toContainEqual({
+      id: 'bridge-drop',
+      unitId: 'brigandCaptain',
+      terrainId: 'bridge',
+      statusChanges: [],
+      defeat: { unitId: 'brigandCaptain' },
+    })
+    expect(resolution.presentation?.steps.map((step) => step.kind)).toContain('terrain')
+    expect(
+      resolution.presentation?.steps.some(
+        (step) => step.kind === 'terrain' && step.terrainReaction === 'bridge-drop' && step.defeat?.unitId === 'brigandCaptain',
+      ),
+    ).toBe(true)
+  })
+
+  it('keeps terrain reactions empty when conditions do not match', () => {
+    const runtime = makeRuntime()
+    setActive(runtime, 'maelin')
+    place(runtime, 'maelin', 8, 9)
+    place(runtime, 'brigandCaptain', 8, 7)
+
+    const resolution = runtime.commitAction({
+      actorId: 'maelin',
+      kind: 'skill',
+      skillId: 'emberSigil',
+      targetId: 'brigandCaptain',
+    })
+
+    expect(resolution.terrainReactions).toEqual([])
+  })
+
   it('builds ordered presentation steps for offensive skills with status, push, and counter', () => {
     const runtime = makeRuntime()
     setActive(runtime, 'rowan')

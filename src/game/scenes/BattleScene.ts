@@ -43,6 +43,7 @@ import type {
   ImpactWeight,
   Locale,
   ReachableTile,
+  TerrainReactionId,
   TiledMapData,
   UnitState,
   ViewControlButtonViewModel,
@@ -381,7 +382,49 @@ export class BattleScene extends Phaser.Scene {
       return 0xffa37d
     }
 
+    if (fxCueId.includes('bridge')) {
+      return 0x92ccff
+    }
+
     return 0xf5d18c
+  }
+
+  private resolveTerrainReactionColor(reactionId: TerrainReactionId): number {
+    switch (reactionId) {
+      case 'forest-kindling':
+        return 0xf09046
+      case 'ruins-echo':
+        return 0x8bdcff
+      case 'bridge-drop':
+        return 0x92ccff
+    }
+  }
+
+  private getBridgeDropPreviewPoint(actorPoint: GridPoint, targetPoint: GridPoint): GridPoint | undefined {
+    if (!this.runtime) {
+      return undefined
+    }
+
+    const dx = Phaser.Math.Clamp(targetPoint.x - actorPoint.x, -1, 1)
+    const dy = Phaser.Math.Clamp(targetPoint.y - actorPoint.y, -1, 1)
+
+    if (dx === 0 && dy === 0) {
+      return undefined
+    }
+
+    const targetTile = this.runtime.state.map.tiles[targetPoint.y]?.[targetPoint.x]
+
+    if (!targetTile || targetTile.terrainId !== 'bridge') {
+      return undefined
+    }
+
+    const nextPoint = {
+      x: targetPoint.x + dx,
+      y: targetPoint.y + dy,
+    }
+    const nextTile = this.runtime.state.map.tiles[nextPoint.y]?.[nextPoint.x]
+
+    return nextTile?.terrainId === 'water' ? nextPoint : undefined
   }
 
   private resolveImpactScale(weight: ImpactWeight): number {
@@ -1227,9 +1270,34 @@ export class BattleScene extends Phaser.Scene {
       this.runtime.state.activeUnitId = 'maelin'
     }
 
+    if (stage === 'forest-demo') {
+      this.placeUnit('huntmaster', this.runtime.state.units.huntmaster.position, 0)
+      this.placeUnit('maelin', { x: 13, y: 5 }, 20)
+      this.placeUnit('brigandCaptain', { x: 13, y: 2 }, 14)
+      this.runtime.state.activeUnitId = 'maelin'
+    }
+
+    if (stage === 'ruins-demo') {
+      for (const enemy of ['hexbinder', 'fanatic']) {
+        this.placeUnit(enemy, this.runtime.state.units[enemy].position, 0)
+      }
+      this.placeUnit('talia', { x: 10, y: 6 }, 18)
+      this.placeUnit('osric', { x: 10, y: 3 }, 12)
+      this.runtime.state.activeUnitId = 'talia'
+    }
+
     if (stage === 'push-demo') {
       this.placeUnit('rowan', { x: 0, y: 1 }, 30)
       this.placeUnit('brigandCaptain', { x: 0, y: 0 }, 24)
+      this.runtime.state.activeUnitId = 'rowan'
+    }
+
+    if (stage === 'bridge-demo') {
+      for (const enemy of ['hexbinder', 'shieldbearer', 'cutpurse', 'fanatic']) {
+        this.placeUnit(enemy, this.runtime.state.units[enemy].position, 0)
+      }
+      this.placeUnit('rowan', { x: 7, y: 8 }, 18)
+      this.placeUnit('brigandCaptain', { x: 7, y: 7 }, 10)
       this.runtime.state.activeUnitId = 'rowan'
     }
 
@@ -1818,6 +1886,47 @@ export class BattleScene extends Phaser.Scene {
         this.overlayGraphics.strokeEllipse(world.x, world.y - 8, 42 + targetPulse * 6, 20 + targetPulse * 3)
         for (const statusId of preview.telegraphSummary.predictedStatusIds) {
           telegraphKinds.add(`status-${statusId}`)
+        }
+      }
+
+      if (preview.telegraphSummary.terrainReactions.includes('forest-kindling')) {
+        const world = this.projectTilePoint(unit.position, height)
+        const forestColor = this.resolveTerrainReactionColor('forest-kindling')
+        telegraphKinds.add('terrain-forest-kindling')
+        this.overlayGraphics.lineStyle(2.5, forestColor, 0.86)
+        this.overlayGraphics.strokeEllipse(world.x, world.y - 8, 48 + targetPulse * 8, 24 + targetPulse * 4)
+        this.overlayGraphics.fillStyle(forestColor, 0.1 + targetPulse * 0.08)
+        this.overlayGraphics.fillCircle(world.x, world.y - 8, 10 + targetPulse * 4)
+      }
+
+      if (preview.telegraphSummary.terrainReactions.includes('ruins-echo')) {
+        const world = this.projectTilePoint(unit.position, height)
+        const ruinsColor = this.resolveTerrainReactionColor('ruins-echo')
+        telegraphKinds.add('terrain-ruins-echo')
+        this.overlayGraphics.lineStyle(2, ruinsColor, 0.82)
+        this.overlayGraphics.strokeCircle(world.x, world.y - 8, 20 + targetPulse * 8)
+        this.overlayGraphics.strokeCircle(world.x, world.y - 8, 32 + targetPulse * 10)
+      }
+
+      if (preview.telegraphSummary.terrainReactions.includes('bridge-drop')) {
+        const world = this.projectTilePoint(unit.position, height)
+        const bridgeColor = this.resolveTerrainReactionColor('bridge-drop')
+        const dropPoint = this.getBridgeDropPreviewPoint(active.position, unit.position)
+        telegraphKinds.add('terrain-bridge-drop')
+        this.overlayGraphics.lineStyle(2.5, bridgeColor, 0.9)
+        this.overlayGraphics.strokePoints([...diamond, diamond[0]], true)
+        this.overlayGraphics.strokeEllipse(world.x, world.y + 18, 44 + targetPulse * 8, 16 + targetPulse * 5)
+
+        if (dropPoint) {
+          const dropHeight = this.runtime.state.map.tiles[dropPoint.y][dropPoint.x].height
+          const dropDiamond = this.projectTileDiamond(dropPoint, dropHeight)
+          const dropWorld = this.projectTilePoint(dropPoint, dropHeight)
+          this.overlayGraphics.fillStyle(bridgeColor, 0.12 + targetPulse * 0.08)
+          this.overlayGraphics.fillPoints(dropDiamond, true)
+          this.overlayGraphics.lineStyle(2, bridgeColor, 0.78)
+          this.overlayGraphics.strokePoints([...dropDiamond, dropDiamond[0]], true)
+          this.overlayGraphics.lineBetween(world.x, world.y - 4, dropWorld.x, dropWorld.y - 4)
+          this.overlayGraphics.strokeCircle(dropWorld.x, dropWorld.y - 2, 12 + targetPulse * 6)
         }
       }
     }

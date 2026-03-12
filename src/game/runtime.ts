@@ -6,6 +6,7 @@ import {
   skillDefinitions,
   statusDefinitions,
   terrainDefinitions,
+  terrainReactionDefinitions,
 } from './content'
 import type {
   ActionTarget,
@@ -38,6 +39,7 @@ import type {
   SkillDefinition,
   StatusInstance,
   Team,
+  TerrainReactionResult,
   TiledMapData,
   UnitBlueprint,
   UnitState,
@@ -115,6 +117,10 @@ function getSkillDefinition(unit: UnitState): SkillDefinition {
 
 function getStatusStacks(unit: UnitState, statusId: keyof typeof statusDefinitions): number {
   return unit.statuses.find((status) => status.id === statusId)?.stacks ?? 0
+}
+
+function hasStatus(unit: Pick<UnitStateSnapshot, 'statuses'> | Pick<UnitState, 'statuses'>, statusId: StatusInstance['id']): boolean {
+  return unit.statuses.some((status) => status.id === statusId)
 }
 
 function getEffectiveSpeed(unit: UnitState): number {
@@ -469,6 +475,128 @@ function tickStatuses(unit: UnitState): void {
     .filter((status) => status.duration > 0)
 }
 
+function getBridgeDropDestinationPoint(
+  map: BattleMapData,
+  actorPoint: GridPoint,
+  targetPoint: GridPoint,
+): GridPoint | undefined {
+  const dx = clamp(targetPoint.x - actorPoint.x, -1, 1)
+  const dy = clamp(targetPoint.y - actorPoint.y, -1, 1)
+
+  if (dx === 0 && dy === 0) {
+    return undefined
+  }
+
+  const targetTile = getTerrain(map, targetPoint)
+
+  if (!targetTile || targetTile.terrainId !== 'bridge') {
+    return undefined
+  }
+
+  const nextPoint = {
+    x: targetPoint.x + dx,
+    y: targetPoint.y + dy,
+  }
+  const nextTile = inBounds(map, nextPoint) ? getTerrain(map, nextPoint) : undefined
+
+  return nextTile?.terrainId === 'water' ? nextPoint : undefined
+}
+
+function evaluateForestKindlingReaction(
+  state: BattleState,
+  targetBefore: UnitStateSnapshot,
+  target: UnitState,
+  appliedStatuses: AppliedStatusResult[],
+): TerrainReactionResult | undefined {
+  const targetTile = getTerrain(state.map, target.position)
+  const gainedBurning = appliedStatuses.some((status) => status.statusId === 'burning')
+
+  if (!targetTile || targetTile.terrainId !== 'forest' || target.defeated || (!gainedBurning && !hasStatus(targetBefore, 'burning'))) {
+    return undefined
+  }
+
+  const burning = applyStatus(target, 'burning', 1, 2)
+  const reaction: TerrainReactionResult = {
+    id: 'forest-kindling',
+    unitId: target.id,
+    terrainId: targetTile.terrainId,
+    amount: 2,
+    valueKind: 'damage',
+    statusChanges: [burning],
+  }
+
+  target.hp = Math.max(0, target.hp - 2)
+
+  if (target.hp === 0) {
+    target.defeated = true
+    reaction.defeat = { unitId: target.id }
+  }
+
+  return reaction
+}
+
+function evaluateRuinsEchoReaction(
+  state: BattleState,
+  actor: UnitState,
+  target: UnitState,
+  skill: SkillDefinition | undefined,
+): TerrainReactionResult | undefined {
+  const targetTile = getTerrain(state.map, target.position)
+
+  if (
+    !skill ||
+    !targetTile ||
+    targetTile.terrainId !== 'ruins' ||
+    target.defeated ||
+    (skill.targetType !== 'ally' && skill.targetType !== 'self')
+  ) {
+    return undefined
+  }
+
+  const healing = Math.min(2, getClassDefinition(target).stats.maxHp - target.hp)
+
+  if (healing > 0) {
+    target.hp += healing
+  }
+
+  const warded = applyStatus(target, 'warded', 1, 3)
+
+  return {
+    id: 'ruins-echo',
+    unitId: target.id,
+    terrainId: targetTile.terrainId,
+    amount: healing,
+    valueKind: 'heal',
+    statusChanges: [warded],
+  }
+}
+
+function evaluateBridgeDropReaction(
+  state: BattleState,
+  actor: UnitState,
+  target: UnitState,
+): TerrainReactionResult | undefined {
+  const targetTile = getTerrain(state.map, target.position)
+  const bridgeDropDestination = getBridgeDropDestinationPoint(state.map, actor.position, target.position)
+
+  if (!targetTile || targetTile.terrainId !== 'bridge' || !bridgeDropDestination || target.defeated) {
+    return undefined
+  }
+
+  target.hp = 0
+  target.defeated = true
+
+  return {
+    id: 'bridge-drop',
+    unitId: target.id,
+    terrainId: targetTile.terrainId,
+    statusChanges: [],
+    defeat: {
+      unitId: target.id,
+    },
+  }
+}
+
 function calculateDamage(
   attacker: UnitState,
   defender: UnitState,
@@ -682,6 +810,45 @@ function buildCombatPresentation(
         cameraCue: 'impact-light',
         impulseProfile: buildImpulseProfile(presentation.matterProfile, 'push'),
         durationMs: 280,
+      }),
+    )
+  }
+
+  for (const reaction of resolution.terrainReactions) {
+    const reactionPresentation = terrainReactionDefinitions[reaction.id]
+
+    steps.push(
+      createStep({
+        kind: 'terrain',
+        actorId: resolution.primary.sourceId,
+        targetId: reaction.unitId,
+        labelKey: reactionPresentation.labelKey,
+        fxCueId: reactionPresentation.fxCueId,
+        sfxCueId: reactionPresentation.sfxCueId,
+        impactWeight: reactionPresentation.impactWeight,
+        hitStopMs: reactionPresentation.hitStopMs,
+        sourcePoint,
+        targetPoint: clonePoint(targetAfter.position),
+        amount: reaction.amount,
+        valueKind: reaction.valueKind,
+        cameraCue: reactionPresentation.cameraCue,
+        impulseProfile: buildImpulseProfile(
+          reactionPresentation.matterProfile,
+          reaction.defeat
+            ? 'defeat'
+            : reaction.valueKind === 'heal'
+              ? 'heal'
+              : reaction.valueKind === 'damage'
+                ? 'damage'
+                : 'status',
+        ),
+        statusChanges: reaction.statusChanges.map((statusChange) => ({
+          ...statusChange,
+          unitId: reaction.unitId,
+        })),
+        terrainReaction: reaction.id,
+        defeat: reaction.defeat,
+        durationMs: reactionPresentation.durationMs,
       }),
     )
   }
@@ -1025,7 +1192,7 @@ function simulateAction(
   const startTurnMessages: BattleFeedEntry[] = []
 
   if (!actor || actor.defeated) {
-    return { action, actorAfterMove: { x: 0, y: 0 }, startTurnMessages, messages: [], state }
+    return { action, actorAfterMove: { x: 0, y: 0 }, terrainReactions: [], startTurnMessages, messages: [], state }
   }
 
   const destination = action.destination ? clonePoint(action.destination) : clonePoint(actor.position)
@@ -1039,6 +1206,7 @@ function simulateAction(
   const result: CombatResolution = {
     action,
     actorAfterMove: clonePoint(actor.position),
+    terrainReactions: [],
     startTurnMessages,
     messages: [],
     state,
@@ -1138,19 +1306,40 @@ function simulateAction(
       }
 
       if (effect.type === 'push' && !target.defeated) {
-        const evaluatedPush = evaluatePush(state, actor, target, effect.distance)
-        pushResult = evaluatedPush
+        const bridgeDrop = evaluateBridgeDropReaction(state, actor, target)
 
-        if (evaluatedPush.succeeded && evaluatedPush.destination) {
-          target.position = clonePoint(evaluatedPush.destination)
+        if (bridgeDrop) {
+          result.terrainReactions.push(bridgeDrop)
+        } else {
+          const evaluatedPush = evaluatePush(state, actor, target, effect.distance)
+          pushResult = evaluatedPush
+
+          if (evaluatedPush.succeeded && evaluatedPush.destination) {
+            target.position = clonePoint(evaluatedPush.destination)
+          }
         }
       }
     }
   }
 
   if (result.primary) {
+    const forestKindling = evaluateForestKindlingReaction(state, targetBefore, target, appliedStatuses)
+
+    if (forestKindling) {
+      result.terrainReactions.push(forestKindling)
+    }
+
+    const ruinsEcho = evaluateRuinsEchoReaction(state, actor, target, skill)
+
+    if (ruinsEcho) {
+      result.terrainReactions.push(ruinsEcho)
+    }
+  }
+
+  if (result.primary) {
     result.primary.appliedStatuses = appliedStatuses
     result.primary.push = pushResult
+    result.primary.targetDefeated = target.defeated
   }
 
   const offensive = action.kind === 'attack' || skill?.targetType === 'enemy'
@@ -1358,28 +1547,33 @@ export class BattleRuntime {
     }
 
     const profile = aiProfiles[this.getBlueprint(actor.id).aiProfileId]
+    const threatenedBridgeTiles = actor.team === 'enemies' ? this.getBridgeDropThreatTiles(actor.team) : undefined
     const reachable = getReachableTilesForState(this.state, actor.id)
     const candidateActions: AiScoredAction[] = []
 
     for (const tile of reachable) {
-      candidateActions.push(...this.buildOffensiveCandidates(actor, tile.point, profile))
-      candidateActions.push(...this.buildSupportCandidates(actor, tile.point, profile))
+      candidateActions.push(...this.buildOffensiveCandidates(actor, tile.point, profile, threatenedBridgeTiles))
+      candidateActions.push(...this.buildSupportCandidates(actor, tile.point, profile, threatenedBridgeTiles))
     }
 
     if (candidateActions.length === 0) {
       const idleDestination = reachable
         .slice()
-        .sort((left, right) => this.scorePosition(actor, right.point, profile) - this.scorePosition(actor, left.point, profile))[0]?.point
+        .sort(
+          (left, right) =>
+            this.scorePosition(actor, right.point, profile, threatenedBridgeTiles) -
+            this.scorePosition(actor, left.point, profile, threatenedBridgeTiles),
+        )[0]?.point
 
       return {
         action: { actorId: actor.id, kind: 'wait', destination: idleDestination },
         breakdown: {
-          total: idleDestination ? this.scorePosition(actor, idleDestination, profile) : 0,
+          total: idleDestination ? this.scorePosition(actor, idleDestination, profile, threatenedBridgeTiles) : 0,
           damage: 0,
           healing: 0,
           lethal: 0,
           counterRisk: 0,
-          terrain: idleDestination ? this.scorePosition(actor, idleDestination, profile) : 0,
+          terrain: idleDestination ? this.scorePosition(actor, idleDestination, profile, threatenedBridgeTiles) : 0,
           control: 0,
           facing: 0,
         },
@@ -1394,7 +1588,65 @@ export class BattleRuntime {
     return [...this.definition.allies, ...this.definition.enemies].find((unit) => unit.id === unitId)!
   }
 
-  private buildOffensiveCandidates(actor: UnitState, destination: GridPoint, profile: typeof aiProfiles[string]): AiScoredAction[] {
+  private getPushSkill(unit: UnitState): SkillDefinition | undefined {
+    const skill = getSkillDefinition(unit)
+
+    if (skill.targetType !== 'enemy' || !skill.effects.some((effect) => effect.type === 'push')) {
+      return undefined
+    }
+
+    return skill
+  }
+
+  private getBridgeDropThreatTiles(actorTeam: Team): Set<string> {
+    const threatened = new Set<string>()
+    const opposingPushers = Object.values(this.state.units).filter(
+      (unit) => unit.team !== actorTeam && !unit.defeated && this.getPushSkill(unit),
+    )
+
+    if (opposingPushers.length === 0) {
+      return threatened
+    }
+
+    for (const row of this.state.map.tiles) {
+      for (const tile of row) {
+        if (tile.terrainId !== 'bridge') {
+          continue
+        }
+
+        const threatenedByPusher = opposingPushers.some((unit) => {
+          const skill = this.getPushSkill(unit)
+
+          if (!skill) {
+            return false
+          }
+
+          return getReachableTilesForState(this.state, unit.id).some((reachable) => {
+            const distance = manhattan(reachable.point, tile.point)
+
+            if (distance < skill.rangeMin || distance > skill.rangeMax) {
+              return false
+            }
+
+            return Boolean(getBridgeDropDestinationPoint(this.state.map, reachable.point, tile.point))
+          })
+        })
+
+        if (threatenedByPusher) {
+          threatened.add(pointKey(tile.point))
+        }
+      }
+    }
+
+    return threatened
+  }
+
+  private buildOffensiveCandidates(
+    actor: UnitState,
+    destination: GridPoint,
+    profile: typeof aiProfiles[string],
+    threatenedBridgeTiles?: Set<string>,
+  ): AiScoredAction[] {
     const attackTargets = this.getTargetsForAction({
       actorId: actor.id,
       kind: 'attack',
@@ -1411,16 +1663,24 @@ export class BattleRuntime {
           })
         : []
 
-    const terrainScore = this.scorePosition(actor, destination, profile)
+    const terrainScore = this.scorePosition(actor, destination, profile, threatenedBridgeTiles)
     const attackCandidates = attackTargets.map((target) => {
       const primary = target.forecast.primary
       const targetUnit = this.state.units[target.unitId]
-      const damageScore = (primary?.kind === 'damage' ? primary.amount : 0) * 6 * profile.aggression
+      const terrainDamage = target.forecast.terrainReactions.reduce(
+        (total, reaction) => total + (reaction.valueKind === 'damage' ? reaction.amount ?? 0 : 0),
+        0,
+      )
+      const terrainReactionBonus =
+        (target.forecast.terrainReactions.some((reaction) => reaction.id === 'forest-kindling') ? 12 : 0) +
+        (target.forecast.terrainReactions.some((reaction) => reaction.id === 'ruins-echo') ? 12 : 0)
+      const damageScore = (primary?.kind === 'damage' ? primary.amount + terrainDamage : terrainDamage) * 6 * profile.aggression
       const lethalScore = primary?.targetDefeated ? 120 : 0
       const counterRisk = target.forecast.counter ? target.forecast.counter.amount * 4 * (1 - profile.riskTolerance) : 0
       const controlScore =
         (primary?.appliedStatuses.length ?? 0) * 12 * profile.controlBias +
-        (primary?.push?.succeeded ? 16 * profile.controlBias : 0)
+        (primary?.push?.succeeded ? 16 * profile.controlBias : 0) +
+        terrainReactionBonus
       const facingScore = relationBonus(primary?.relation ?? 'front') * 4
       const total = damageScore + lethalScore + terrainScore + controlScore + facingScore - counterRisk
 
@@ -1449,12 +1709,20 @@ export class BattleRuntime {
         targetId: target.unitId,
       })
       const primary = forecast.primary
-      const damageScore = (primary?.kind === 'damage' ? primary.amount : 0) * 6 * profile.aggression
+      const terrainDamage = forecast.terrainReactions.reduce(
+        (total, reaction) => total + (reaction.valueKind === 'damage' ? reaction.amount ?? 0 : 0),
+        0,
+      )
+      const terrainReactionBonus =
+        (forecast.terrainReactions.some((reaction) => reaction.id === 'forest-kindling') ? 12 : 0) +
+        (forecast.terrainReactions.some((reaction) => reaction.id === 'ruins-echo') ? 12 : 0)
+      const damageScore = (primary?.kind === 'damage' ? primary.amount + terrainDamage : terrainDamage) * 6 * profile.aggression
       const lethalScore = primary?.targetDefeated ? 120 : 0
       const counterRisk = forecast.counter ? forecast.counter.amount * 4 * (1 - profile.riskTolerance) : 0
       const controlScore =
         (primary?.appliedStatuses.length ?? 0) * 12 * profile.controlBias +
-        (primary?.push?.succeeded ? 16 * profile.controlBias : 0)
+        (primary?.push?.succeeded ? 16 * profile.controlBias : 0) +
+        terrainReactionBonus
       const facingScore = relationBonus(primary?.relation ?? 'front') * 4
       const baseline = baselineByTarget.get(target.unitId)
       const weakSkillPenalty =
@@ -1480,7 +1748,12 @@ export class BattleRuntime {
     return [...attackCandidates, ...skillCandidates]
   }
 
-  private buildSupportCandidates(actor: UnitState, destination: GridPoint, profile: typeof aiProfiles[string]): AiScoredAction[] {
+  private buildSupportCandidates(
+    actor: UnitState,
+    destination: GridPoint,
+    profile: typeof aiProfiles[string],
+    threatenedBridgeTiles?: Set<string>,
+  ): AiScoredAction[] {
     const skill = getSkillDefinition(actor)
 
     if (skill.targetType === 'enemy') {
@@ -1503,16 +1776,26 @@ export class BattleRuntime {
       const primary = forecast.primary
       const targetUnit = this.state.units[target.unitId]
       const existingWardedDuration = targetUnit.statuses.find((status) => status.id === 'warded')?.duration ?? 0
-      const addsWarded = primary?.appliedStatuses.some((status) => status.statusId === 'warded') ?? false
+      const addsWarded =
+        (primary?.appliedStatuses.some((status) => status.statusId === 'warded') ?? false) ||
+        forecast.terrainReactions.some((reaction) =>
+          reaction.statusChanges.some((status) => status.statusId === 'warded'),
+        )
+      const terrainHealing = forecast.terrainReactions.reduce(
+        (total, reaction) => total + (reaction.valueKind === 'heal' ? reaction.amount ?? 0 : 0),
+        0,
+      )
+      const totalHealing = (primary?.kind === 'heal' ? primary.amount : 0) + terrainHealing
 
-      if ((primary?.kind === 'heal' ? primary.amount : 0) === 0 && addsWarded && existingWardedDuration >= 2) {
+      if (totalHealing === 0 && addsWarded && existingWardedDuration >= 2) {
         return []
       }
 
-      const healingScore = (primary?.kind === 'heal' ? primary.amount : 0) * 6 * profile.support
-      const controlScore = (primary?.appliedStatuses.length ?? 0) * 10 * profile.support
-      const terrainScore = this.scorePosition(actor, destination, profile)
-      const zeroHealPenalty = (primary?.kind === 'heal' ? primary.amount : 0) === 0 ? 16 : 0
+      const terrainReactionBonus = forecast.terrainReactions.some((reaction) => reaction.id === 'ruins-echo') ? 12 : 0
+      const healingScore = totalHealing * 6 * profile.support
+      const controlScore = (primary?.appliedStatuses.length ?? 0) * 10 * profile.support + terrainReactionBonus
+      const terrainScore = this.scorePosition(actor, destination, profile, threatenedBridgeTiles)
+      const zeroHealPenalty = totalHealing === 0 ? 16 : 0
       const redundantWardedPenalty = addsWarded && existingWardedDuration >= 2 ? 22 : 0
       const total = healingScore + controlScore + terrainScore - zeroHealPenalty - redundantWardedPenalty
 
@@ -1619,7 +1902,12 @@ export class BattleRuntime {
     return Math.max(0, 6 - Math.abs(distance - skill.rangeMax)) * 2 * profile.support
   }
 
-  private scorePosition(actor: UnitState, destination: GridPoint, profile: typeof aiProfiles[string]): number {
+  private scorePosition(
+    actor: UnitState,
+    destination: GridPoint,
+    profile: typeof aiProfiles[string],
+    threatenedBridgeTiles?: Set<string>,
+  ): number {
     const tile = getTerrain(this.state.map, destination)
 
     if (!tile) {
@@ -1630,7 +1918,9 @@ export class BattleRuntime {
     const terrainScore = (terrain.defenseBonus + terrain.resistanceBonus + tile.height) * 8 * profile.terrainBias
     const engagementScore = this.scoreEngagementPosition(actor, destination, profile)
     const supportScore = this.scoreSupportPosition(actor, destination, profile)
+    const bridgeDropRisk =
+      actor.team === 'enemies' && threatenedBridgeTiles?.has(pointKey(destination)) ? 16 : 0
 
-    return terrainScore + engagementScore + supportScore
+    return terrainScore + engagementScore + supportScore - bridgeDropRisk
   }
 }

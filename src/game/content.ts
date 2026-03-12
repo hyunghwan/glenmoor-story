@@ -1,7 +1,12 @@
 import type {
   BattleDefinition,
+  CameraCue,
+  ImpactWeight,
+  MatterProfile,
   PresentationProfile,
+  PresentationTone,
   TerrainDefinition,
+  TerrainReactionId,
 } from './types'
 import aiProfilesData from './data/ai-profiles.json'
 import classDefinitionsData from './data/class-definitions.json'
@@ -39,6 +44,45 @@ function presentation(
     impactMs,
     hitStopMs,
     lingerMs,
+    cameraCue,
+    matterProfile,
+    tone,
+  }
+}
+
+interface TerrainReactionDefinition {
+  id: TerrainReactionId
+  labelKey: string
+  fxCueId: string
+  sfxCueId: string
+  impactWeight: ImpactWeight
+  hitStopMs: number
+  durationMs: number
+  cameraCue: CameraCue
+  matterProfile: MatterProfile
+  tone: PresentationTone
+}
+
+function terrainReaction(
+  id: TerrainReactionId,
+  labelKey: string,
+  fxCueId: string,
+  sfxCueId: string,
+  impactWeight: ImpactWeight,
+  hitStopMs: number,
+  durationMs: number,
+  cameraCue: CameraCue,
+  matterProfile: MatterProfile,
+  tone: PresentationTone,
+): TerrainReactionDefinition {
+  return {
+    id,
+    labelKey,
+    fxCueId,
+    sfxCueId,
+    impactWeight,
+    hitStopMs,
+    durationMs,
     cameraCue,
     matterProfile,
     tone,
@@ -203,6 +247,45 @@ export const attackPresentationDefinitions: Record<string, PresentationProfile> 
     'support-pulse',
     'light-shards',
     'radiant',
+  ),
+}
+
+export const terrainReactionDefinitions: Record<TerrainReactionId, TerrainReactionDefinition> = {
+  'forest-kindling': terrainReaction(
+    'forest-kindling',
+    'terrainReaction.forestKindling',
+    'terrain.forestKindling',
+    'magic-cast',
+    'medium',
+    18,
+    280,
+    'impact-light',
+    'ember-plume',
+    'ember',
+  ),
+  'ruins-echo': terrainReaction(
+    'ruins-echo',
+    'terrainReaction.ruinsEcho',
+    'terrain.ruinsEcho',
+    'heal',
+    'medium',
+    10,
+    280,
+    'support-pulse',
+    'ward-orbit',
+    'ward',
+  ),
+  'bridge-drop': terrainReaction(
+    'bridge-drop',
+    'terrainReaction.bridgeDrop',
+    'terrain.bridgeDrop',
+    'kill-confirm',
+    'finisher',
+    64,
+    360,
+    'defeat-drop',
+    'shock-ring',
+    'hazard',
   ),
 }
 

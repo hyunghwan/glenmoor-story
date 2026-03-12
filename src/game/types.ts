@@ -17,6 +17,8 @@ export type TerrainKey =
 
 export type StatusKey = 'burning' | 'guardBreak' | 'warded' | 'slow'
 
+export type TerrainReactionId = 'forest-kindling' | 'ruins-echo' | 'bridge-drop'
+
 export type ActionKind = 'attack' | 'skill' | 'wait'
 
 export type SkillTargetType = 'enemy' | 'ally' | 'self'
@@ -372,8 +374,20 @@ export interface CombatPresentationStatusChange extends AppliedStatusResult {
   unitId: string
 }
 
+export interface TerrainReactionResult {
+  id: TerrainReactionId
+  unitId: string
+  terrainId: TerrainKey
+  amount?: number
+  valueKind?: 'damage' | 'heal'
+  statusChanges: AppliedStatusResult[]
+  defeat?: {
+    unitId: string
+  }
+}
+
 export interface CombatPresentationStep {
-  kind: 'announce' | 'cast' | 'projectile' | 'hit' | 'status' | 'push' | 'counter' | 'defeat' | 'recover'
+  kind: 'announce' | 'cast' | 'projectile' | 'hit' | 'status' | 'push' | 'terrain' | 'counter' | 'defeat' | 'recover'
   actorId: string
   targetId?: string
   labelKey: string
@@ -388,6 +402,7 @@ export interface CombatPresentationStep {
   cameraCue?: CameraCue
   impulseProfile?: CombatImpulseProfile
   statusChanges: CombatPresentationStatusChange[]
+  terrainReaction?: TerrainReactionId
   push?: PushResult
   defeat?: {
     unitId: string
@@ -431,6 +446,7 @@ export interface CombatResolution {
   action: BattleAction
   actorAfterMove: GridPoint
   primary?: ExchangeOutcome
+  terrainReactions: TerrainReactionResult[]
   counter?: ExchangeOutcome
   startTurnMessages: BattleFeedEntry[]
   messages: BattleFeedEntry[]
@@ -473,6 +489,7 @@ export interface CombatTelegraphSummary {
   lethal: boolean
   counterRisk: number
   predictedStatusIds: StatusKey[]
+  terrainReactions: TerrainReactionId[]
   pushOutcome: 'none' | 'push' | 'blocked'
   markerTone: 'damage' | 'heal' | 'effect' | 'lethal' | 'counter' | 'status'
 }

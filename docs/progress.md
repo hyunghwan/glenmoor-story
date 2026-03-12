@@ -285,3 +285,46 @@ This is the canonical implementation log for `Glenmoor Story`.
 - Terrain, unit, and effect sprites remain the main disposable visual placeholder layer even after this open-source polish pass
 - Glenmoor Pass scenario authoring now lives in `src/game/data/glenmoor-pass.scenario.json`, while `content.ts` only exports the validated loaded definition
 - Class, skill, status, and AI authoring now also live in validated JSON data files, so `content.ts` is down to terrain, attack presentation, and loader wiring
+
+## 2026-03-12
+
+### Completed
+
+- Finished the tactile-feedback polish pass QA refresh:
+  - `scripts/qa/playthrough.mjs` now captures the commit-burst beat and waits for the animated victory modal settle state
+  - `scripts/qa/hud-polish.mjs` now validates the victory modal entrance treatment at `1600x900 EN` and `1280x720 KO`
+  - fresh QA artifacts were regenerated under `output/web-game/playthrough/` and `output/web-game/hud-polish/`
+- Extended the tactics core with a typed terrain-reaction layer:
+  - added `TerrainReactionId` and `TerrainReactionResult`
+  - extended `CombatTelegraphSummary` with `terrainReactions`
+  - added a `terrain` `CombatPresentationStep` kind so battle and duel scenes can consume reaction beats directly
+- Implemented three readable terrain reactions without changing the prototype scope:
+  - `Forest Kindling` adds extra `burning` plus `+2` damage when fire / burning chains land on forest targets
+  - `Ruins Echo` adds `+2` healing plus stronger `warded` support when ally support skills resolve on ruins
+  - `Bridge Drop` turns a bridge-edge push toward water into an immediate defeat and suppresses counterplay
+- Updated battlefield and duel presentation to surface those rules before and during action resolution:
+  - target previews now show terrain-reaction verdict chips and reaction-aware amount / effect summaries
+  - battle telegraphs now add ember, ward, and drop-warning overlays for forest, ruins, and bridge reactions
+  - duel playback now renders dedicated terrain beats for forest flare, ruins echo, and bridge splash / drop finishers
+- Updated tactical readability and authored coverage around the new rules:
+  - AI now treats `bridge-drop` as a lethal line, gives `forest-kindling` and `ruins-echo` positive score weight, and penalizes ending on bridge tiles threatened by enemy pushes
+  - English and Korean localization now include terrain-reaction labels in forecast text and battle feed output
+  - browser QA now includes staged `forest-demo`, `ruins-demo`, and `bridge-demo` scenarios in both playthrough and HUD-polish flows
+
+### Verification
+
+- `npm test`
+- `npm run build`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+- `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+
+### Notes
+
+- The terrain-reaction rules are code-authored for v1 and do not introduce new scenario-schema requirements or persistent tile state
+- The acceptance focus remains readability: players should be able to predict reaction outcomes from HUD chips, overlays, and duel step messaging before confirming an action
+- Representative fresh evidence includes:
+  - `output/web-game/hud-polish/11-forest-reaction-target-detail-1600-en.png`
+  - `output/web-game/hud-polish/12-ruins-reaction-target-detail-1280-ko.png`
+  - `output/web-game/hud-polish/13-bridge-reaction-target-detail-1280-en.png`
+  - `output/web-game/playthrough/16-bridge-duel-mid.png`

@@ -91,4 +91,20 @@ describe('Battle AI', () => {
     expect(choice.action.destination).toBeDefined()
     expect(choice.action.destination?.x).toBeLessThan(14)
   })
+
+  it('treats bridge-drop kills like top-priority lethal actions', () => {
+    const runtime = makeRuntime()
+    setActive(runtime, 'brigandCaptain')
+    place(runtime, 'brigandCaptain', 7, 7)
+    place(runtime, 'rowan', 7, 8)
+    runtime.getUnit('osric')!.defeated = true
+    runtime.getUnit('talia')!.defeated = true
+
+    const choice = runtime.chooseBestAction('brigandCaptain')
+
+    expect(choice.action.kind).toBe('skill')
+    expect(choice.action.skillId).toBe('shieldBash')
+    expect(choice.action.targetId).toBe('rowan')
+    expect(choice.forecast?.terrainReactions.some((reaction) => reaction.id === 'bridge-drop')).toBe(true)
+  })
 })

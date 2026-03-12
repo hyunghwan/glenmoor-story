@@ -85,4 +85,45 @@ describe('Combat text', () => {
     expect(line).toContain('Guard Break')
     expect(line).toContain('Counterattack')
   })
+
+  it('includes terrain reactions in forecast and battle-feed text', () => {
+    const runtime = makeRuntime()
+    const i18n = new I18n('en')
+    setActive(runtime, 'rowan')
+    place(runtime, 'rowan', 7, 8)
+    place(runtime, 'brigandCaptain', 7, 7)
+
+    const forecast = runtime.previewAction({
+      actorId: 'rowan',
+      kind: 'skill',
+      skillId: 'shieldBash',
+      targetId: 'brigandCaptain',
+    })
+    const lines = buildCombatForecastLines(forecast, {
+      t: i18n.t.bind(i18n),
+      getUnitName: (unitId) => i18n.t(runtime.getUnit(unitId)?.nameKey ?? unitId),
+    })
+
+    expect(lines[1]).toContain('Bridge Drop')
+
+    const resolution = runtime.commitAction({
+      actorId: 'rowan',
+      kind: 'skill',
+      skillId: 'shieldBash',
+      targetId: 'brigandCaptain',
+    })
+
+    const line = formatBattleFeedEntry(
+      {
+        kind: 'presentation',
+        presentation: resolution.presentation!,
+      },
+      {
+        t: i18n.t.bind(i18n),
+        getUnitName: (unitId) => i18n.t(runtime.getUnit(unitId)?.nameKey ?? unitId),
+      },
+    )
+
+    expect(line).toContain('Bridge Drop')
+  })
 })
