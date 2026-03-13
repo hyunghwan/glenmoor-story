@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "manifestId": "unit-master-batch-v1",
+  "description": "Machine-readable source of truth for the Glenmoor named-unit master batch workflow.",
+  "checkpointDefault": "sd_xl_base_1.0.safetensors",
+  "outputRoot": "output/comfy/units",
+  "latentSizes": {
+    "reference": [1024, 1536],
+    "portrait": [128, 128],
+    "atlas": [1536, 1024]
+  },
+  "sampling": {
+    "reference": { "steps": 28, "cfg": 7, "sampler": "euler", "scheduler": "normal" },
+    "portrait": { "steps": 24, "cfg": 6.5, "sampler": "euler", "scheduler": "normal" },
+    "atlas": { "steps": 30, "cfg": 7, "sampler": "euler", "scheduler": "normal" }
+  },
+  "qualityPresets": {
+    "pilot": ["rowan", "elira", "hexbinder"],
+    "full": [
+      "rowan",
+      "elira",
+      "sable",
+      "maelin",
+      "osric",
+      "talia",
+      "brigandCaptain",
+      "huntmaster",
+      "hexbinder",
+      "shieldbearer",
+      "cutpurse",
+      "fanatic",
+      "fordStalker",
+      "roadReaver"
+    ]
+  },
+  "atlasLayout": {
+    "canvas": [1536, 1024],
+    "frameSize": [128, 128],
+    "columns": 12,
+    "rows": 8,
+    "directions": ["north", "east", "south", "west"],
+    "animations": {
+      "idle": 2,
+      "move": 6,
+      "attack": 5,
+      "cast": 5,
+      "hit": 2,
+      "defeat": 4
+    },
+    "pivot": [64, 108]
+  },
+  "promptBlocks": {
+    "globalPositive": "moody medieval-fantasy tactical RPG art, painterly SRPG production concept, readable game-ready silhouettes, restrained material realism, overcast glen pass atmosphere, worn steel, weathered leather, muted natural palette, deliberate value grouping, strong silhouette separation, no modern elements, no UI, no text, no watermark",
+    "globalNegative": "anime splash art, glossy skin, chibi proportions, photobash collage, noisy background clutter, extreme fisheye perspective, floating props, extra limbs, duplicate weapons, cropped feet, unreadable silhouette, tiny face, logo, watermark, text, frame, border",
+    "referenceDirective": "full-body named-unit reference sheet, near three-quarter view, feet visible, clean neutral backdrop, readable silhouette, practical grounded costume design, designed for later sprite atlas generation",
+    "portraitDirective": "initiative portrait crop, centered face and upper collar, slight three-quarter view, readable at 32x32, transparent-friendly silhouette, no hands or weapons crossing the face",
+    "atlasDirective": "final battlefield sprite atlas sheet for a tactical RPG named unit, transparent background, exact 12 columns by 8 rows grid, exact canvas 1536 by 1024, each cell 128 by 128, include the same character in north east south west world directions, include idle 2, move 6, attack 5, cast 5, hit 2, defeat 4 frames, no labels, no grid numbers, no extra background scene"
+  },
+  "classTones": {
+    "vanguard": "frontline vanguard silhouette, shield-first stance, practical armor layering, stable sword arm read",
+    "ranger": "field ranger silhouette, longbow read, travel leathers and cloak, agile grounded stance",
+    "arcanist": "battle arcanist silhouette, staff or focus-hand read, layered robes, controlled sigil glow",
+    "warden": "defensive warden silhouette, broad shield massing, heavy grounded posture, fortified material language",
+    "skirmisher": "mobile skirmisher silhouette, light armor, quick duelist posture, clean weapon read",
+    "cleric": "support cleric silhouette, ritual sash or charm, calm posture, readable support-caster profile"
+  },
+  "units": [
+    {
+      "id": "rowan",
+      "displayName": "Rowan",
+      "team": "allies",
+      "classId": "vanguard",
+      "identity": "veteran frontline knight in a worn steel-blue surcoat over mail, with heater shield and straight longsword",
+      "palette": "steel blue, parchment cream, weathered iron, leather brown",
+      "silhouette": "broad shield, disciplined sword arm, square stance",
+      "mood": "calm disciplined battlefield presence",
+      "atlasEmphasis": "shield and sword silhouettes must remain stable across all actions",
+      "seedFamily": 410100
+    },
+    {
+      "id": "elira",
+      "displayName": "Elira",
+      "team": "allies",
+      "classId": "ranger",
+      "identity": "lean field archer in a moss-green cloak and leather travel gear, carrying a yew longbow",
+      "palette": "moss green, ash brown, faded tan, weathered bronze",
+      "silhouette": "longbow arc, light cloak profile, alert archer stance",
+      "mood": "focused and composed forest scout",
+      "atlasEmphasis": "bow shape, off-hand alignment, and face readability must survive all directions",
+      "seedFamily": 410200
+    },
+    {
+      "id": "sable",
+      "displayName": "Sable",
+      "team": "allies",
+      "classId": "skirmisher",
+      "identity": "allied duelist in smoked leather with dark scarf, short curved blade, and agile travel kit",
+      "palette": "smoked leather, charcoal, muted crimson, dark brass",
+      "silhouette": "narrow duelist frame, scarf accent, quick blade-forward stance",
+      "mood": "confident mobile striker",
+      "atlasEmphasis": "fast melee motion must stay readable without turning into motion blur clutter",
+      "seedFamily": 410300
+    },
+    {
+      "id": "maelin",
+      "displayName": "Maelin",
+      "team": "allies",
+      "classId": "arcanist",
+      "identity": "allied battlefield mage in slate and ember-trimmed robes with a brass focus rod",
+      "palette": "slate gray, dim gold, ember orange, ash brown",
+      "silhouette": "focus rod, layered robe hem, open off-hand casting read",
+      "mood": "measured scholarly battle caster",
+      "atlasEmphasis": "cast frames should stay controlled and readable rather than explosive or noisy",
+      "seedFamily": 410400
+    },
+    {
+      "id": "osric",
+      "displayName": "Osric",
+      "team": "allies",
+      "classId": "warden",
+      "identity": "allied shield warden in tempered steel with a broad tower shield and heavy mace",
+      "palette": "tempered steel, slate, muted ivory, worn leather",
+      "silhouette": "broad shield wall shape, heavy grounded frame, compact weapon read",
+      "mood": "reliable defensive bulwark",
+      "atlasEmphasis": "defensive stance and hit reactions should still show clear shield massing",
+      "seedFamily": 410500
+    },
+    {
+      "id": "talia",
+      "displayName": "Talia",
+      "team": "allies",
+      "classId": "cleric",
+      "identity": "allied field cleric in linen and soft gold with prayer sash, ward charm, and short staff",
+      "palette": "linen white, soft gold, desaturated blue-gray, warm parchment",
+      "silhouette": "ritual sash, compact staff, centered support-caster profile",
+      "mood": "steadfast battlefield support",
+      "atlasEmphasis": "support and cast motions must remain distinct from arcanist attack motions",
+      "seedFamily": 410600
+    },
+    {
+      "id": "brigandCaptain",
+      "displayName": "Brigand Captain",
+      "team": "enemies",
+      "classId": "vanguard",
+      "identity": "enemy brigand captain in battered plate scraps with a chipped heater shield and rough broadsword",
+      "palette": "muddy iron, oxblood cloth, worn black leather, dirty brass",
+      "silhouette": "ragged shield edge, heavy sword profile, aggressive stance",
+      "mood": "threatening roadside warlord",
+      "atlasEmphasis": "enemy armor silhouette must stay distinct from Rowan while preserving the same class readability",
+      "seedFamily": 420100
+    },
+    {
+      "id": "huntmaster",
+      "displayName": "Huntmaster",
+      "team": "enemies",
+      "classId": "ranger",
+      "identity": "enemy huntmaster in dark green and fur-trimmed leathers with a hunting bow and trophy cords",
+      "palette": "dark pine, bark brown, weathered bone, blackened bronze",
+      "silhouette": "furred shoulder line, hunting bow, stern field posture",
+      "mood": "predatory ranged hunter",
+      "atlasEmphasis": "enemy ranger should read harsher and more rugged than Elira without losing bow clarity",
+      "seedFamily": 420200
+    },
+    {
+      "id": "hexbinder",
+      "displayName": "Hexbinder",
+      "team": "enemies",
+      "classId": "arcanist",
+      "identity": "hostile ember-sigil caster in charred burgundy and soot-black layered robes with hooked staff",
+      "palette": "charred burgundy, soot black, dim gold, ember orange",
+      "silhouette": "hooked staff, layered robe hem, hostile casting hand read",
+      "mood": "ominous ritual battle mage",
+      "atlasEmphasis": "cast and hit frames must preserve face and hand readability under magical glow",
+      "seedFamily": 420300
+    },
+    {
+      "id": "shieldbearer",
+      "displayName": "Shieldbearer",
+      "team": "enemies",
+      "classId": "warden",
+      "identity": "enemy shieldbearer in slab armor with iron-rimmed wall shield and blunt mace",
+      "palette": "dull iron, smoke gray, dirty ivory, leather black",
+      "silhouette": "massive shield block, compact head silhouette, heavy mace read",
+      "mood": "unyielding defensive brute",
+      "atlasEmphasis": "defeat frames should keep the huge shield readable instead of collapsing into clutter",
+      "seedFamily": 420400
+    },
+    {
+      "id": "cutpurse",
+      "displayName": "Cutpurse",
+      "team": "enemies",
+      "classId": "skirmisher",
+      "identity": "enemy cutpurse in dark travel leathers with knife-forward duelist stance and narrow scarf",
+      "palette": "charcoal, muted plum, dirty red, smoke leather",
+      "silhouette": "knife-forward torso twist, slim frame, scarf accent",
+      "mood": "nervy opportunistic raider",
+      "atlasEmphasis": "attack frames should look quick and nasty without losing full-body readability",
+      "seedFamily": 420500
+    },
+    {
+      "id": "fanatic",
+      "displayName": "Fanatic",
+      "team": "enemies",
+      "classId": "cleric",
+      "identity": "enemy zealot in tattered ritual cloth with censer, hymn scroll, and ward-marked charm",
+      "palette": "dirty ivory, rust red, soot gray, dim brass",
+      "silhouette": "scroll hand, swinging censer, narrow ritual profile",
+      "mood": "fervent unstable support caster",
+      "atlasEmphasis": "cleric support identity should remain clear even with enemy zealot styling",
+      "seedFamily": 420600
+    },
+    {
+      "id": "fordStalker",
+      "displayName": "Ford Stalker",
+      "team": "enemies",
+      "classId": "ranger",
+      "identity": "enemy marsh ambusher in reed-green cloak with recurved bow and damp river gear",
+      "palette": "reed green, wet brown, slate gray, dull iron",
+      "silhouette": "narrow bow read, marsh cloak, ambush-ready stance",
+      "mood": "patient riverbank hunter",
+      "atlasEmphasis": "move and attack frames should keep the bow and cloak readable from all directions",
+      "seedFamily": 420700
+    },
+    {
+      "id": "roadReaver",
+      "displayName": "Road Reaver",
+      "team": "enemies",
+      "classId": "skirmisher",
+      "identity": "enemy highway raider in patched leathers with hooked axe and looted belt gear",
+      "palette": "dust brown, charcoal, faded rust, tarnished steel",
+      "silhouette": "hooked axe head, layered belts, aggressive lean",
+      "mood": "reckless road ambusher",
+      "atlasEmphasis": "weapon hook and body lean must stay recognizable across all four directions",
+      "seedFamily": 420800
+    }
+  ]
+}

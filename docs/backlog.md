@@ -137,7 +137,7 @@ It stays aligned with the GitHub Project `Glenmoor Story` and keeps the scope lo
 - Tasks:
   - Replace the roughest placeholder visuals with curated open-source packs.
   - Add open-source placeholder SFX and music where they materially help readability or atmosphere.
-  - Record source and license details in `docs/asset-replacement-manifest.md`.
+  - Record source and license details in `docs/assets/asset-replacement-manifest.md`.
   - Leave future generated/final asset replacement for a later manual pass.
 - Exit criteria:
   - Visual and audio placeholders are integrated without changing prototype scope.
@@ -146,7 +146,7 @@ It stays aligned with the GitHub Project `Glenmoor Story` and keeps the scope lo
   - The HUD and modal presentation now use Kenney `UI pack: RPG extension` textures for panel framing, inset cards, and the primary CTA button.
   - The app shell and duel scene now use the OpenGameArt `Parchment background` texture as a temporary fantasy backdrop.
   - Menu, battle, and result SFX now use Kenney `Interface Sounds`, and the live battle scene now starts the OpenGameArt `Cynic Battle Loop` music bed.
-  - `docs/asset-replacement-manifest.md` now records local file paths, source URLs, and license details for every integrated placeholder asset.
+  - `docs/assets/asset-replacement-manifest.md` now records local file paths, source URLs, and license details for every integrated placeholder asset.
 
 ### 7. Scenario data extraction
 

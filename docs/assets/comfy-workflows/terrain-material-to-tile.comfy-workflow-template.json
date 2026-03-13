@@ -1,0 +1,37 @@
+{
+  "templateVersion": 1,
+  "templateKind": "comfy-cloud-workflow-template",
+  "templateId": "terrain-material-to-tile-v1",
+  "importableToComfyCloud": false,
+  "description": "Editable run-sheet JSON for terrain material generation before manual 136x112 tile assembly.",
+  "cloudPlan": "standard",
+  "recommendedModel": "Flux Kontext Pro or Flux 1.1 Pro",
+  "goal": "Generate terrain source materials and overlays that can be manually assembled to the runtime tile contract.",
+  "inputs": {
+    "terrainPromptSource": "docs/assets/comfy-pilot-prompt-pack.md#terrain-prompt-templates",
+    "targetTerrainIds": [
+      "grass",
+      "road",
+      "forest",
+      "bridge"
+    ],
+    "finalSpecSource": "docs/assets/prototype-visual-asset-spec.md#battlefield-tile-block-spec"
+  },
+  "defaults": {
+    "width": 1024,
+    "height": 1024,
+    "batchCount": 2,
+    "seedStrategy": "keep one terrain family per seed family to reduce drift between variants"
+  },
+  "operatorChecklist": [
+    "Generate source materials and overlays first, not final tiles.",
+    "Assemble final 136x112 blocks manually on the tile template.",
+    "Protect the 68x34 top-diamond read and 68x22 side-face read.",
+    "Reject any terrain variant that hides the unit occupancy center."
+  ],
+  "outputs": {
+    "directory": "output/comfy/terrain/<terrainId>",
+    "logFile": "output/comfy/terrain/<terrainId>/run-log.template.json",
+    "namingPattern": "<terrainId>_<stage>_<variant>.png"
+  }
+}

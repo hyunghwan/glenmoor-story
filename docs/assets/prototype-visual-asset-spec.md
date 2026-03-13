@@ -1,14 +1,17 @@
 # Prototype Visual Asset Spec
 
 This document is the canonical art-sizing contract for the current `Glenmoor Story` prototype.
-It turns the open placeholder slots listed in `docs/asset-replacement-manifest.md` into implementation-ready requirements for terrain, named-unit battlefield sprites, duel portrait exports, combat VFX sheets, and future HUD icon work.
+It turns the open placeholder slots listed in `docs/assets/asset-replacement-manifest.md` into implementation-ready requirements for terrain, named-unit battlefield sprites, zoom-combat sprite reuse, named-unit head portraits, combat VFX sheets, and future HUD icon work.
 
 The scope is the current single-battle prototype, not a future multi-biome campaign pipeline.
 
 ## Source Of Truth
 
-- Placeholder slots come from `docs/asset-replacement-manifest.md`.
+- Placeholder slots come from `docs/assets/asset-replacement-manifest.md`.
 - Runtime terrain families come from `src/game/content.ts`.
+- Tactical facing directions come from `src/game/types.ts` and `src/game/runtime.ts`:
+  - directions are locked to `north`, `east`, `south`, and `west`
+  - no diagonal facing or diagonal combat bonus exists in the current prototype
 - Battlefield projection comes from `src/game/iso.ts`:
   - `TILE_WIDTH = 68`
   - `TILE_HEIGHT = 34`
@@ -16,14 +19,18 @@ The scope is the current single-battle prototype, not a future multi-biome campa
 - Current battlefield unit placement and click footprint come from `src/game/scenes/BattleScene.ts`:
   - units are drawn at tile world position with `y - 16` offset
   - the current interactive hit area is `44x68`
-- Current duel card slot comes from `src/game/scenes/DuelScene.ts`:
-  - card panel is `270x210`
-  - the current token circle uses a `104px` diameter
+- Current duel layout comes from `src/game/scenes/DuelScene.ts`:
+  - the duel stage band is `width - 120` by `420`
+  - each combatant info card is `270x210`
+  - the current placeholder token anchor is a `104px` circle centered `40px` above each card
+- Current initiative chip portrait slot comes from `src/game/ui.ts` and `src/style.css`:
+  - desktop slot is `38x38`
+  - compact slot is `32x32`
 - Tiled map metadata still reports `64x32` in `public/data/maps/glenmoor-pass.json`, but art sizing for the live game must follow the rendered `68x34` scene projection instead.
 
 ## Format Policy
 
-Engine-ready terrain and character art must use `PNG` or `WebP` with transparency.
+Engine-ready terrain, character, portrait, and VFX art must use `PNG` or `WebP` with transparency.
 Do not generate engine-ready battlefield tiles as `JPG`: the isometric diamond and elevated side faces need transparent corners and padding.
 
 ## Terrain Catalog
@@ -54,7 +61,7 @@ The prototype terrain catalog is fixed to the seven runtime terrain IDs below.
   - `road rut`
   - `bridge plank`
   - `ruins debris`
-- All elevated terrain must share one cliff/side-face language so the fixed `22px` height step reads as one consistent world material rule.
+- All elevated terrain must share one cliff or side-face language so the fixed `22px` height step reads as one consistent world material rule.
 
 ## Battlefield Tile Block Spec
 
@@ -89,7 +96,7 @@ Each terrain block represents one isometric cell plus one visible elevation face
 ## Named Unit Battlefield Sprite Sheet Spec
 
 Unit art is locked to named-unit atlases, not class-only atlases.
-One battlefield atlas is required for each current named unit in the prototype.
+One battlefield atlas, one battlefield manifest, and one head portrait export are required for each current named unit in the prototype.
 
 | Unit ID | Team | Class ID | Notes |
 | --- | --- | --- | --- |
@@ -119,11 +126,11 @@ One battlefield atlas is required for each current named unit in the prototype.
 | visible body safe box | max `72x104` |
 | pivot / foot anchor | `64,108` |
 | runtime color treatment | baked costumes and team colors, no runtime tint expectation |
-| atlas page budget | `2048x2048` max |
+| atlas page budget | `1536x1024` fixed export target |
 
 ### Animation Set
 
-Each named unit atlas must include all eight directions and the full tactical animation set below.
+Each named unit atlas must include four authored directions that map to the world-space tactical directions below.
 
 | Animation | Frames Per Direction |
 | --- | ---: |
@@ -135,8 +142,9 @@ Each named unit atlas must include all eight directions and the full tactical an
 | `defeat` | 4 |
 | total | 24 |
 
-- Direction order is fixed to: `N`, `NE`, `E`, `SE`, `S`, `SW`, `W`, `NW`.
-- Total frame count is fixed to `192` per named unit.
+- Direction order is fixed to: `north`, `east`, `south`, `west`.
+- Total frame count is fixed to `96` per named unit.
+- Camera rotation does not create extra art requirements. The battlefield camera may rotate in `90` degree steps, but art authoring stays at four world directions only.
 - The battlefield sprite should fit inside the current battle placement and interaction envelope:
   - feet must land on the tile center
   - the body mass should stay visually compatible with the current `44x68` click region
@@ -144,10 +152,10 @@ Each named unit atlas must include all eight directions and the full tactical an
 
 ### Atlas Packing Contract
 
-To keep the export under the `2048x2048` budget with no later packing decisions, use this exact layout:
+To keep the export deterministic with no later packing decisions, use this exact layout:
 
-- atlas canvas: `1536x2048`
-- grid: `12 columns x 16 rows`
+- atlas canvas: `1536x1024`
+- grid: `12 columns x 8 rows`
 - each direction occupies `2` consecutive rows
 - each row uses `12` frames
 
@@ -162,8 +170,8 @@ The companion JSON file should expose one record per frame with these fixed fiel
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `frameId` | string | unique frame key such as `unit_rowan_NE_move_03` |
-| `direction` | string | one of `N`, `NE`, `E`, `SE`, `S`, `SW`, `W`, `NW` |
+| `frameId` | string | unique frame key such as `unit_rowan_east_move_03` |
+| `direction` | string | one of `north`, `east`, `south`, `west` |
 | `animation` | string | one of `idle`, `move`, `attack`, `cast`, `hit`, `defeat` |
 | `index` | number | zero-based frame index inside the animation |
 | `x` | number | source x in atlas pixels |
@@ -173,23 +181,44 @@ The companion JSON file should expose one record per frame with these fixed fiel
 | `pivotX` | number | fixed to `64` |
 | `pivotY` | number | fixed to `108` |
 
-## Duel Bust Appendix
+## Zoom Combat Presentation Appendix
 
-The duel scene currently renders a `270x210` card with a `104px` circular token slot.
-Future duel art should replace that token with a transparent bust render that can scale down cleanly.
+The duel scene is a zoomed combat stage, not a separate portrait pipeline.
+It should reuse the named-unit battlefield atlas at larger display scale and reserve the existing `270x210` cards for combat information.
 
-| Asset | Master Size | Export Size | Notes |
-| --- | ---: | ---: | --- |
-| named-unit duel bust | `1024x1024` | `320x320` | transparent background |
-| safe character focus zone | `760x760` | `240x240` | face, shoulders, weapon silhouette |
-| token replacement target | n/a | fits inside current `104px` token region | allow downscaling without losing facial read |
+| Asset / Slot | Source | Display Contract | Notes |
+| --- | --- | --- | --- |
+| zoom combat actor sprite | `unit_<unitId>_battle.webp` + JSON manifest | reuse one `128x128` battle frame inside an approximately `256x256` per-side display envelope | default presentation scale is about `2.0x` |
+| combatant info card | runtime UI panel | `270x210` | holds name, class, HP, and statuses |
+| placeholder token anchor | current duel layout reference | `104px` circle | treat as an overlap or anchor reference only, not as a final crop mask |
 
-### Duel Bust Rules
+### Zoom Combat Rules
 
-- Create one duel bust per named unit ID.
-- Compose busts to face inward toward the opposing card.
-- Keep empty transparent padding around the silhouette so future scene code can slide or pulse the image without clipping.
-- Preserve readable face and shoulder detail after scaling the `320x320` export into a roughly `104px` on-card target.
+- No separate `unit_<unitId>_duel.webp` bust export is required for the current prototype.
+- The same four battlefield directions must service duel playback. Do not author duel-only facings.
+- Compose battlefield sprites so the weapon silhouette, casting pose, and hit reaction still read when the `72x104` safe box is shown at roughly `144x208` in the zoomed view.
+- Leave transparent headroom and side padding within the `128x128` frame so jumps, recoil, and defeat motion can scale cleanly in the duel view.
+- The `270x210` card panels remain the information layer for name, class, HP, and statuses rather than the primary art container.
+- VFX, flashes, and combat motion should carry the spectacle of the zoomed exchange, not a separate bust portrait pipeline.
+
+## Initiative Head Portrait Appendix
+
+The initiative rail currently renders text initials inside `38x38` desktop and `32x32` compact slots.
+Future art should replace those initials with named-unit head crops that stay readable at both sizes.
+
+| Asset | Master Size | Export Size | Runtime Target | Notes |
+| --- | ---: | ---: | --- | --- |
+| named-unit head portrait | `512x512` | `128x128` | `38x38` desktop, `32x32` compact | transparent background |
+| face safe zone | `320x320` | `80x80` | centered inside the slot | eyes, brow, nose, hairline, and major headgear must stay readable |
+
+### Head Portrait Rules
+
+- Create one head portrait per named unit ID.
+- Crop from forehead to collar or helmet line. Prioritize face readability over shoulders or weapon silhouette.
+- Keep the face centered enough that a rounded-square mask or slight active-state zoom will not clip the eyes or chin.
+- Prefer a front or slight three-quarter view that remains legible after downscaling to `32x32`.
+- Export at `128x128` even though the runtime slot is smaller so the same file can support future hover, selected, or active-state enlargement.
+- The same head crop may be reused later for the active-unit crest, but initiative-rail readability is the locking requirement for this prototype.
 
 ## Combat VFX Appendix
 
@@ -221,7 +250,8 @@ HUD replacement is optional for the initial art pass, but if the icon pass start
 
 ## Filename Contract
 
-Use these exact filenames so a future loader pass does not need to invent naming rules.
+The current required named-unit outputs are battlefield atlas, battlefield manifest, and head portrait.
+The `unit_<unitId>_duel.webp` filename is reserved for an optional future duel-only portrait pass and is not required for the current prototype.
 
 | Slot | Filename Pattern | Example |
 | --- | --- | --- |
@@ -229,7 +259,8 @@ Use these exact filenames so a future loader pass does not need to invent naming
 | terrain overlay | `terrain_<terrainId>_<variant>_overlay.webp` | `terrain_forest_canopy_overlay.webp` |
 | battlefield atlas | `unit_<unitId>_battle.webp` | `unit_rowan_battle.webp` |
 | battlefield manifest | `unit_<unitId>_battle.json` | `unit_rowan_battle.json` |
-| duel bust | `unit_<unitId>_duel.webp` | `unit_rowan_duel.webp` |
+| head portrait | `unit_<unitId>_head.webp` | `unit_rowan_head.webp` |
+| duel portrait (optional future) | `unit_<unitId>_duel.webp` | `unit_rowan_duel.webp` |
 | vfx sheet | `vfx_<cueId>_<variant>.webp` | `vfx_ember_burst_a.webp` |
 | hud icon | `hud_<slot>_<variant>.webp` | `hud_initiative_marker_a.webp` |
 
@@ -237,12 +268,14 @@ Use these exact filenames so a future loader pass does not need to invent naming
 
 - This is a doc-only contract. No runtime API or type changes are required in this step.
 - Future terrain assets must map back to the existing runtime terrain IDs exactly.
-- Future battlefield atlases and duel busts must map back to the named unit IDs already authored in `src/game/data/glenmoor-pass.scenario.json`.
+- Future battlefield atlases and head portraits must map back to the named unit IDs already authored in `src/game/data/glenmoor-pass.scenario.json`.
+- No current runtime loader should be expected to require duel-only portrait files.
 - If a future prototype revision adds a new terrain ID or named unit, this document must be updated in the same change.
 
 ## Verification Checklist
 
-- Terrain coverage includes every open battlefield terrain slot from `docs/asset-replacement-manifest.md`.
-- Unit coverage includes the current named roster plus scripted reinforcements.
-- Combat presentation coverage includes duel bust, VFX, and HUD/icon appendices.
+- Terrain coverage includes every open battlefield terrain slot from `docs/assets/asset-replacement-manifest.md`.
+- Unit coverage includes the current named roster plus scripted reinforcements and requires battle atlas plus head portrait outputs.
+- Combat presentation coverage includes zoom combat, head portraits, VFX, and HUD or icon appendices.
+- No legacy diagonal-direction or oversized battlefield-atlas frame-count requirement remains.
 - All locked numbers trace back to current runtime geometry or current UI slot sizes.

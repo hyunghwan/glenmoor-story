@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "manifestId": "terrain-catalog-batch-v1",
+  "description": "Machine-readable source of truth for the Glenmoor terrain batch workflow.",
+  "checkpointDefault": "sd_xl_base_1.0.safetensors",
+  "outputRoot": "output/comfy/terrain",
+  "latentSize": [136, 112],
+  "sampling": { "steps": 24, "cfg": 6.5, "sampler": "euler", "scheduler": "normal" },
+  "qualityPresets": {
+    "pilot": ["grass", "road", "forest", "bridge"],
+    "full": ["grass", "road", "forest", "water", "stone", "bridge", "ruins"]
+  },
+  "promptBlocks": {
+    "globalPositive": "painterly isometric tactical RPG terrain art, transparent background, readable gameplay silhouette, restrained medieval-fantasy material rendering, muted natural palette, clean value grouping, no modern elements, no text, no UI",
+    "globalNegative": "full background scene, photoreal landscape, perspective camera shot, oversized props, busy clutter outside the tile footprint, text, watermark, border, logo, character silhouette",
+    "blockDirective": "single final gameplay terrain block, exact 136 by 112 transparent canvas, one 68 by 34 top diamond and one 68 by 22 side face, center anchored at 68 by 34, readable from an isometric tactics camera",
+    "overlayDirective": "single terrain overlay plate on a transparent 136 by 112 canvas, centered for one tactical tile, readable when layered above a terrain block without hiding unit feet"
+  },
+  "terrains": [
+    {
+      "terrainId": "grass",
+      "label": "Grass",
+      "variants": [
+        { "suffix": "a", "descriptor": "olive turf with subtle damp tufts and smooth worn edges" },
+        { "suffix": "b", "descriptor": "mud-broken grass with darker hoof-worn patches" },
+        { "suffix": "c", "descriptor": "rough grass with sparse stone flecks and slightly cooler moss tones" }
+      ]
+    },
+    {
+      "terrainId": "road",
+      "label": "Road",
+      "variants": [
+        { "suffix": "a", "descriptor": "packed dirt lane with shallow cart-rut wear" },
+        { "suffix": "b", "descriptor": "stony road with compacted mud and pale dust edge" },
+        { "suffix": "c", "descriptor": "cool brown road surface with stronger travel-line readability" }
+      ],
+      "overlay": {
+        "suffix": "rut",
+        "descriptor": "road-rut overlay with subtle track wear and muddy edge breakup"
+      }
+    },
+    {
+      "terrainId": "forest",
+      "label": "Forest",
+      "variants": [
+        { "suffix": "a", "descriptor": "mossy forest floor with root hints and damp soil" },
+        { "suffix": "b", "descriptor": "brushy woodland floor with muted leaf scatter" },
+        { "suffix": "c", "descriptor": "dark forest ground with sparse fern accents and cool shadow tone" }
+      ],
+      "overlay": {
+        "suffix": "canopy",
+        "descriptor": "forest canopy and brush overlay with readable negative space for unit silhouettes"
+      }
+    },
+    {
+      "terrainId": "water",
+      "label": "Water",
+      "variants": [
+        { "suffix": "a", "descriptor": "dark still water with soft ring ripples" },
+        { "suffix": "b", "descriptor": "cold slate water with faint current lines" },
+        { "suffix": "c", "descriptor": "shallow edge water with muted algae tint and gentle breakup" }
+      ],
+      "overlay": {
+        "suffix": "ripple",
+        "descriptor": "water ripple overlay with soft circular current accents"
+      }
+    },
+    {
+      "terrainId": "stone",
+      "label": "Stone",
+      "variants": [
+        { "suffix": "a", "descriptor": "weathered flagstone with light seam cracking" },
+        { "suffix": "b", "descriptor": "masonry slab with chipped edges and subtle grout lines" },
+        { "suffix": "c", "descriptor": "fortified stone surface with cooler slate value grouping" }
+      ]
+    },
+    {
+      "terrainId": "bridge",
+      "label": "Bridge",
+      "variants": [
+        { "suffix": "straight", "descriptor": "straight weathered timber crossing with clean plank direction" },
+        { "suffix": "endcap", "descriptor": "bridge endcap with edge trim and anchoring posts" },
+        { "suffix": "broken", "descriptor": "damaged bridge segment with controlled missing-plank read" },
+        { "suffix": "reinforced", "descriptor": "reinforced timber crossing with iron banding and sturdier trim" }
+      ],
+      "overlay": {
+        "suffix": "plank",
+        "descriptor": "bridge plank overlay with clearer grain direction and board seams"
+      }
+    },
+    {
+      "terrainId": "ruins",
+      "label": "Ruins",
+      "variants": [
+        { "suffix": "a", "descriptor": "fractured ruin ground with broken masonry chips" },
+        { "suffix": "b", "descriptor": "collapsed stone tile with dusty rubble scatter" },
+        { "suffix": "c", "descriptor": "ancient ruin block with cooler cracked slab pattern" }
+      ],
+      "overlay": {
+        "suffix": "debris",
+        "descriptor": "ruins debris overlay with broken fragments kept outside the tile center"
+      }
+    }
+  ]
+}

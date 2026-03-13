@@ -28,8 +28,12 @@ The goal of v1 is not a full game. It is one polished battle: medieval-fantasy t
 - `docs/game-design.md`: prototype GDD
 - `docs/progress.md`: canonical implementation log
 - `docs/qa-inventory.md`: QA coverage list for functional and visual validation
-- `docs/prototype-visual-asset-spec.md`: canonical tile, unit, duel, VFX, and HUD asset sizing contract
-- `docs/asset-replacement-manifest.md`: placeholder asset slots and replacement targets
+- `docs/assets/prototype-visual-asset-spec.md`: canonical tile, unit, duel, VFX, and HUD asset sizing contract
+- `docs/assets/asset-replacement-manifest.md`: placeholder asset slots and replacement targets
+- `docs/assets/comfy-cloud-asset-pipeline.md`: Comfy Cloud production runbook for prototype-grade game assets
+- `docs/assets/comfy-pilot-prompt-pack.md`: pilot prompts for style bible, unit references, terrain, and VFX
+- `docs/assets/comfy-batch/`: machine-readable batch manifests for the master Comfy workflows
+- `docs/assets/comfy-workflows/`: import-ready Comfy UI workflows plus legacy/debug helpers
 - `progress.md`: handoff-friendly agent log required by the web-game workflow
 
 ## Implemented Slice

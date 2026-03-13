@@ -13,7 +13,7 @@ This is the canonical implementation log for `Glenmoor Story`.
   - `docs/game-design.md`
   - `docs/progress.md`
   - `docs/qa-inventory.md`
-  - `docs/asset-replacement-manifest.md`
+  - `docs/assets/asset-replacement-manifest.md`
   - root `progress.md`
 - Created a documented scope guardrail around a single-battle prototype
 - Implemented a Phaser-based playable battle shell with:
@@ -252,7 +252,7 @@ This is the canonical implementation log for `Glenmoor Story`.
   - added the OpenGameArt `Parchment background` texture to the app shell and duel scene as a temporary fantasy backdrop
   - added Kenney `Interface Sounds` for UI confirm / cancel / select, movement confirm, hit / skill cues, and victory / defeat stings
   - added the OpenGameArt `Cynic Battle Loop` as the live battle music bed
-  - recorded exact source URLs, licenses, and local file paths in `docs/asset-replacement-manifest.md` while keeping terrain, unit, and VFX art swaps explicitly disposable for future replacement
+  - recorded exact source URLs, licenses, and local file paths in `docs/assets/asset-replacement-manifest.md` while keeping terrain, unit, and VFX art swaps explicitly disposable for future replacement
 - Completed backlog item `#9` by moving authored scenario content behind a validated data boundary:
   - extracted the full Glenmoor Pass encounter definition into `src/game/data/glenmoor-pass.scenario.json`
   - added `src/game/scenario-loader.ts` to parse external scenario JSON into typed runtime data and to reject malformed structure, duplicate ids, and unknown phase references

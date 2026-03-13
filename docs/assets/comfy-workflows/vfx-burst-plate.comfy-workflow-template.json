@@ -1,0 +1,45 @@
+{
+  "templateVersion": 1,
+  "templateKind": "comfy-cloud-workflow-template",
+  "templateId": "vfx-burst-plate-v1",
+  "importableToComfyCloud": false,
+  "description": "Editable run-sheet JSON for generating VFX burst plates before manual alpha cleanup and 256x256 packing.",
+  "cloudPlan": "standard",
+  "recommendedModel": "Flux Kontext Pro or another effect-friendly partner model",
+  "goal": "Generate clean high-resolution VFX plates for impact, cast, status, and projectile effects.",
+  "inputs": {
+    "promptSource": "docs/assets/comfy-pilot-prompt-pack.md#vfx-prompt-templates",
+    "effectFamilies": [
+      "impact-flash",
+      "cast-burst",
+      "status-pulse",
+      "projectile-burst"
+    ],
+    "toneFamilies": [
+      "steel",
+      "wind",
+      "radiant",
+      "shadow",
+      "ember",
+      "ward",
+      "hazard"
+    ]
+  },
+  "defaults": {
+    "width": 1024,
+    "height": 1024,
+    "background": "dark neutral if true alpha is unreliable",
+    "seedStrategy": "group by tone family so related effects stay visually coherent"
+  },
+  "operatorChecklist": [
+    "Generate isolated effect plates only.",
+    "Keep the main burst centered.",
+    "Manually clean alpha before exporting any 256x256 sheet.",
+    "Reject effects that need gameplay tint to explain their identity."
+  ],
+  "outputs": {
+    "directory": "output/comfy/vfx/<cueId>",
+    "logFile": "output/comfy/vfx/<cueId>/run-log.template.json",
+    "namingPattern": "<cueId>_<tone>_<variant>.png"
+  }
+}

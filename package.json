@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "assets:comfy:generate": "node scripts/assets/generate-comfy-master-workflows.mjs",
+    "assets:comfy:init": "node scripts/assets/generate-comfy-master-workflows.mjs && node scripts/assets/init-comfy-pipeline.mjs",
     "qa:hud": "node scripts/qa/hud-polish.mjs",
     "qa:playthrough": "node scripts/qa/playthrough.mjs",
     "qa:camera": "node scripts/qa/camera-controls.mjs"

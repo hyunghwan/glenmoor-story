@@ -12,11 +12,13 @@ The prototype can ship with rough placeholders, but each placeholder category sh
   - stone or ruins
   - bridge or crossing
 - Unit visuals:
-  - allied roster tokens or sprites
-  - enemy roster tokens or sprites
+  - allied named-unit battlefield sprites
+  - enemy named-unit battlefield sprites
+  - initiative and unit-panel head portraits
   - class differentiation markers
 - Combat presentation:
   - duel backdrop
+  - zoom-combat actor presentation
   - impact flashes
   - skill cast effects
   - damage and status callouts
@@ -107,6 +109,7 @@ The prototype can ship with rough placeholders, but each placeholder category sh
 ## Remaining Placeholder Slots
 
 - Battlefield terrain tiles still use procedural isometric fills and overlays.
-- Unit visuals still use generated team-tinted token glyphs rather than sourced sprite sheets.
+- Unit visuals still use generated team-tinted token glyphs and initials rather than sourced named-unit sprite sheets and head portraits.
 - Combat impact flashes and screen-space VFX still use procedural graphics rather than sourced effect sprites.
-- Initiative markers and small HUD controls still rely on DOM/CSS styling plus Material Symbols rather than a full sourced icon pass.
+- Initiative rail chips and active-unit crests still rely on DOM or CSS initials rather than named-unit head portraits.
+- Initiative markers and small HUD controls still rely on DOM or CSS styling plus Material Symbols rather than a full sourced icon pass.
