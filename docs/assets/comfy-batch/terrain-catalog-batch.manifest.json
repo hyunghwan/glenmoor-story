@@ -4,17 +4,18 @@
   "description": "Machine-readable source of truth for the Glenmoor terrain batch workflow.",
   "checkpointDefault": "sd_xl_base_1.0.safetensors",
   "outputRoot": "output/comfy/terrain",
-  "latentSize": [136, 112],
-  "sampling": { "steps": 24, "cfg": 6.5, "sampler": "euler", "scheduler": "normal" },
+  "sourceSize": [544, 448],
+  "exportSize": [136, 112],
+  "sampling": { "steps": 28, "cfg": 5.6, "sampler": "dpmpp_2m", "scheduler": "karras", "denoise": 1 },
   "qualityPresets": {
     "pilot": ["grass", "road", "forest", "bridge"],
     "full": ["grass", "road", "forest", "water", "stone", "bridge", "ruins"]
   },
   "promptBlocks": {
-    "globalPositive": "painterly isometric tactical RPG terrain art, transparent background, readable gameplay silhouette, restrained medieval-fantasy material rendering, muted natural palette, clean value grouping, no modern elements, no text, no UI",
-    "globalNegative": "full background scene, photoreal landscape, perspective camera shot, oversized props, busy clutter outside the tile footprint, text, watermark, border, logo, character silhouette",
-    "blockDirective": "single final gameplay terrain block, exact 136 by 112 transparent canvas, one 68 by 34 top diamond and one 68 by 22 side face, center anchored at 68 by 34, readable from an isometric tactics camera",
-    "overlayDirective": "single terrain overlay plate on a transparent 136 by 112 canvas, centered for one tactical tile, readable when layered above a terrain block without hiding unit feet"
+    "globalPositive": "painterly isometric tactical RPG terrain art, isolated asset render, readable gameplay silhouette, restrained medieval-fantasy material rendering, muted natural palette, clean value grouping, plain neutral backdrop, no modern elements, no text, no UI",
+    "globalNegative": "full background scene, photoreal landscape, perspective camera shot, oversized props, busy clutter outside the tile footprint, multiple tiles, abstract smear, text, watermark, border, logo, character silhouette",
+    "blockDirective": "single isolated isometric terrain tile block, readable top diamond and short side face, centered composition on a plain backdrop, no surrounding map, no extra tiles, no abstract shapes",
+    "overlayDirective": "single isolated terrain overlay asset for one tactical tile, centered composition on a plain backdrop, readable when layered above a terrain block without hiding unit feet, no surrounding environment"
   },
   "terrains": [
     {

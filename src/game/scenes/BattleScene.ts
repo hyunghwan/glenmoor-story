@@ -32,10 +32,12 @@ import {
 import { I18n } from '../i18n'
 import { formatBattleFeedEntry } from '../combat-text'
 import { BattleRuntime } from '../runtime'
+import { drawBattlefieldUnitIcon } from '../unit-visuals'
 import type {
   ActionTarget,
   BattleAction,
   CombatResolution,
+  CombatRole,
   DuelTelemetry,
   GridPoint,
   HudAnchor,
@@ -45,6 +47,7 @@ import type {
   ReachableTile,
   TerrainReactionId,
   TiledMapData,
+  UnitIconId,
   UnitState,
   ViewControlButtonViewModel,
 } from '../types'
@@ -1646,6 +1649,7 @@ export class BattleScene extends Phaser.Scene {
     )
     const container = this.add.container(world.x, world.y - 16)
     const teamTint = unit.team === 'allies' ? 0x86baf7 : 0xf49274
+    const presentation = this.resolveUnitPresentation(unit)
     const isActive = unit.id === this.runtime?.state.activeUnitId
     const outline = isActive ? 0xf5d18c : unit.id === this.selectedUnitId ? 0xffffff : 0x233341
     const graphic = this.add.graphics()
@@ -1653,9 +1657,11 @@ export class BattleScene extends Phaser.Scene {
 
     graphic.fillStyle(0x061015, 0.55)
     graphic.fillEllipse(0, 24, 38, 14)
-    graphic.fillStyle(teamTint, 1)
+    graphic.fillStyle(unit.team === 'allies' ? 0x112234 : 0x301a19, 0.96)
     graphic.fillRoundedRect(-20, -26, 40, 40, 12)
-    graphic.lineStyle(2, outline, 1)
+    graphic.lineStyle(2, teamTint, 1)
+    graphic.strokeRoundedRect(-20, -26, 40, 40, 12)
+    graphic.lineStyle(1.25, outline, 1)
     graphic.strokeRoundedRect(-20, -26, 40, 40, 12)
     if (isActive) {
       graphic.lineStyle(3, 0xf7e7b0, 0.92)
@@ -1663,13 +1669,21 @@ export class BattleScene extends Phaser.Scene {
       graphic.lineStyle(2, 0xf0b35f, 0.8)
       graphic.strokeEllipse(0, 24, 48, 18)
     }
-    graphic.fillStyle(0x10202c, 0.8)
+    graphic.fillStyle(teamTint, 0.22)
     graphic.fillTriangle(0, -33, 7, -22, -7, -22)
+    drawBattlefieldUnitIcon({
+      graphics: graphic,
+      combatRole: presentation.combatRole,
+      unitIconId: presentation.unitIconId,
+      x: 0,
+      y: -9,
+      size: 18,
+    })
 
-    const initials = this.i18n.t(unit.nameKey).slice(0, 2).toUpperCase()
-    const label = this.add.text(0, -6, initials, {
+    const initials = buildUnitInitials(this.i18n.t(unit.nameKey))
+    const label = this.add.text(0, 7, initials, {
       fontFamily: 'Cinzel',
-      fontSize: '18px',
+      fontSize: '10px',
       color: '#f7f0dd',
       fontStyle: '700',
     }).setOrigin(0.5)
@@ -2014,16 +2028,16 @@ export class BattleScene extends Phaser.Scene {
         label: this.i18n.t('hud.initiative'),
         currentTurnLabel: this.i18n.t('hud.initiative.now'),
         entries: buildInitiativeEntries(
-        this.runtime
-          .getInitiativeOrder(Object.values(this.runtime.state.units).filter((unit) => !unit.defeated).length)
-          .map((unit) => ({
-            id: unit.id,
-            name: this.i18n.t(unit.nameKey),
-            className: this.i18n.t(classDefinitions[unit.classId].nameKey),
-            team: unit.team,
-            active: unit.id === active.id,
-            selected: unit.id === this.selectedUnitId,
-          })),
+          this.runtime
+            .getInitiativeOrder(Object.values(this.runtime.state.units).filter((unit) => !unit.defeated).length)
+            .map((unit) => ({
+              ...this.resolveUnitPresentation(unit),
+              id: unit.id,
+              name: this.i18n.t(unit.nameKey),
+              team: unit.team,
+              active: unit.id === active.id,
+              selected: unit.id === this.selectedUnitId,
+            })),
           this.i18n.t('hud.initiative.now'),
         ),
       },
@@ -2088,9 +2102,9 @@ export class BattleScene extends Phaser.Scene {
       ),
       activeTelegraphKinds: this.activeTelegraphKinds,
       units: Object.values(this.runtime.state.units).map((unit) => ({
+        ...this.resolveUnitPresentation(unit),
         id: unit.id,
         name: this.i18n.t(unit.nameKey),
-        className: this.i18n.t(classDefinitions[unit.classId].nameKey),
         team: unit.team,
         hp: unit.hp,
         maxHp: classDefinitions[unit.classId].stats.maxHp,
@@ -2125,7 +2139,26 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private resolveUnitPresentation(unit: Pick<UnitState, 'classId'>): {
+    className: string
+    combatRole: CombatRole
+    combatRoleLabel: string
+    roleFlavorLabel: string
+    unitIconId: UnitIconId
+  } {
+    const classDefinition = classDefinitions[unit.classId]
+
+    return {
+      className: this.i18n.t(classDefinition.nameKey),
+      combatRole: classDefinition.combatRole,
+      combatRoleLabel: this.i18n.t(`combatRole.${classDefinition.combatRole}`),
+      roleFlavorLabel: this.i18n.t(classDefinition.roleKey),
+      unitIconId: classDefinition.unitIconId,
+    }
+  }
+
   private buildActiveUnitPanel(unit: UnitState): HudViewModel['activeUnitPanel'] {
+    const presentation = this.resolveUnitPresentation(unit)
     const turnState = buildTurnStateSummary({
       hasMoved: unit.hasMovedThisTurn,
       hasActed: unit.hasActedThisTurn,
@@ -2149,10 +2182,14 @@ export class BattleScene extends Phaser.Scene {
     return {
       id: unit.id,
       name: this.i18n.t(unit.nameKey),
-      className: this.i18n.t(classDefinitions[unit.classId].nameKey),
+      className: presentation.className,
+      combatRole: presentation.combatRole,
+      combatRoleLabel: presentation.combatRoleLabel,
+      roleFlavorLabel: presentation.roleFlavorLabel,
       team: unit.team,
       teamLabel: this.i18n.t(`hud.team.${unit.team}`),
       initials: buildUnitInitials(this.i18n.t(unit.nameKey)),
+      unitIconId: presentation.unitIconId,
       hp: unit.hp,
       maxHp: classDefinitions[unit.classId].stats.maxHp,
       hpRatio: unit.hp / classDefinitions[unit.classId].stats.maxHp,
@@ -2298,10 +2335,17 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const preview = buildTargetPreviewStrings(target.forecast, this.createCombatTextContext())
+    const presentation = this.resolveUnitPresentation(hoveredUnit)
 
     return {
       unitId: hoveredUnit.id,
       anchor,
+      unitName: this.i18n.t(hoveredUnit.nameKey),
+      className: presentation.className,
+      combatRole: presentation.combatRole,
+      combatRoleLabel: presentation.combatRoleLabel,
+      teamLabel: this.i18n.t(`hud.team.${hoveredUnit.team}`),
+      unitIconId: presentation.unitIconId,
       title: preview.title,
       subtitle: preview.subtitle,
       amountLabel: preview.amountLabel,

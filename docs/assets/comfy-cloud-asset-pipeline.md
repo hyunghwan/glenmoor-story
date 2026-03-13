@@ -24,14 +24,14 @@ The master workflows are generated from machine-readable batch manifests under `
 
 ## Production Model
 
-Main production uses one queue run per asset family.
+Main production still uses one queue run per asset family, but the graphs no longer jump straight from text prompt to tiny final delivery size.
 
 - Unit master workflow:
-  emits one reference sheet, one head portrait, and one full battle atlas for every named unit
+  generates a wide concept plate, derives a portrait at higher resolution, then uses the concept plate as an identity anchor for the battle-atlas branch before exporting to the locked runtime size
 - Terrain catalog workflow:
-  emits every required terrain block and overlay output
+  generates larger isolated tile source renders, then rescales them to the locked runtime tile size
 - VFX master workflow:
-  emits every required primary VFX sheet
+  generates larger isolated effect plates, then rescales them to the locked runtime sheet size
 
 The style-bible workflow remains as a debug or lookdev tool only.
 
@@ -88,6 +88,13 @@ Use `docs/assets/comfy-workflows/unit-master-batch.ui-workflow.json`.
 4. Choose an available checkpoint in `CheckpointLoaderSimple`.
 5. Queue once to emit reference, portrait, and atlas outputs for the full named roster.
 
+The unit graph now uses:
+
+- text-to-image for the wide concept plate
+- text-to-image for the portrait source
+- reference-anchored img2img for the atlas source
+- final export resize for portrait and atlas delivery files
+
 Expected output prefixes:
 
 - `unit_<unitId>_reference`
@@ -103,6 +110,8 @@ Use `docs/assets/comfy-workflows/terrain-catalog-batch.ui-workflow.json`.
 3. Choose a checkpoint.
 4. Queue once to emit all required block and overlay outputs.
 
+The terrain graph now renders each asset family at a larger source size and scales down to the delivery canvas.
+
 Expected output prefixes follow the runtime filename contract:
 
 - `terrain_<terrainId>_<variant>_block`
@@ -116,6 +125,8 @@ Use `docs/assets/comfy-workflows/vfx-master-batch.ui-workflow.json`.
 2. Confirm all four cue branches are connected.
 3. Choose a checkpoint.
 4. Queue once to emit the required primary VFX sheets.
+
+The VFX graph now renders each cue at a larger source size and scales down to the delivery canvas.
 
 Expected output prefixes:
 
@@ -139,14 +150,19 @@ The master workflows target the live runtime art contract.
 
 The canonical sizing and naming rules remain in `docs/assets/prototype-visual-asset-spec.md`.
 
-## Legacy And Debug Assets
+## Reality Check
 
-These files remain in the repo, but they are no longer the main production path:
+These graphs are designed to improve coherence and small-scale readability, but they still use stock diffusion outputs.
+
+- They are much more reliable than the original direct-to-final-size graphs.
+- They do not guarantee perfect production-ready transparency by themselves.
+- If you need true clean alpha edges for shipping assets, plan on a follow-up knockout or background-removal pass after generation.
+
+## Current Workflow Set
+
+The repo now keeps only the active import-ready UI workflow files:
 
 - `style-bible-lookdev.ui-workflow.json`
-- `style-bible-lookdev.comfy-workflow-template.json`
-- `unit-variant-img2img-controlnet.comfy-workflow-template.json`
-- `terrain-material-to-tile.comfy-workflow-template.json`
-- `vfx-burst-plate.comfy-workflow-template.json`
-
-Use them for debugging, lookdev comparison, or smaller exploratory runs.
+- `unit-master-batch.ui-workflow.json`
+- `terrain-catalog-batch.ui-workflow.json`
+- `vfx-master-batch.ui-workflow.json`

@@ -6,6 +6,10 @@ export type Direction = 'north' | 'east' | 'south' | 'west'
 
 export type FacingRelation = 'front' | 'side' | 'back'
 
+export type CombatRole = 'tank' | 'damage' | 'support' | 'healer'
+
+export type UnitIconId = 'shield' | 'bow' | 'orb' | 'wall' | 'dagger' | 'staff'
+
 export type TerrainKey =
   | 'grass'
   | 'road'
@@ -168,6 +172,8 @@ export interface ClassDefinition {
   id: string
   nameKey: string
   roleKey: string
+  combatRole: CombatRole
+  unitIconId: UnitIconId
   basicAttackNameKey: string
   basicAttackPresentationId: string
   basicAttackFlavor: AttackFlavor
@@ -539,9 +545,13 @@ export interface ActiveUnitPanelViewModel {
   id: string
   name: string
   className: string
+  combatRole: CombatRole
+  combatRoleLabel: string
+  roleFlavorLabel: string
   team: Team
   teamLabel: string
   initials: string
+  unitIconId: UnitIconId
   hp: number
   maxHp: number
   hpRatio: number
@@ -558,8 +568,11 @@ export interface InitiativeRailEntryViewModel {
   id: string
   name: string
   className: string
+  combatRole: CombatRole
+  combatRoleLabel: string
   team: Team
   initials: string
+  unitIconId: UnitIconId
   active: boolean
   selected: boolean
   emphasis: 'active' | 'selected' | 'normal'
@@ -592,6 +605,12 @@ export interface TargetMarkerViewModel {
 export interface TargetDetailPopupViewModel {
   unitId: string
   anchor: HudAnchor
+  unitName: string
+  className: string
+  combatRole: CombatRole
+  combatRoleLabel: string
+  teamLabel: string
+  unitIconId: UnitIconId
   title: string
   subtitle: string
   amountLabel: string

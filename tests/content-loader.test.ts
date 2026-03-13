@@ -32,6 +32,8 @@ describe('Content loader', () => {
     ).not.toThrow()
 
     expect(definitions.classDefinitions.vanguard.signatureSkillId).toBe('shieldBash')
+    expect(definitions.classDefinitions.vanguard.combatRole).toBe('tank')
+    expect(definitions.classDefinitions.cleric.unitIconId).toBe('staff')
     expect(definitions.skillDefinitions.shieldBash.effects).toHaveLength(3)
     expect(definitions.skillDefinitions.shieldBash.presentation.sfxCueId).toBe('melee-heavy')
     expect(definitions.statusDefinitions.burning.presentation.tone).toBe('ember')
@@ -89,5 +91,23 @@ describe('Content loader', () => {
         },
       ),
     ).toThrow(/Unknown basicAttackPresentationId "missing-attack-presentation"/)
+  })
+
+  it('rejects missing combat role metadata on classes', () => {
+    const brokenClasses = structuredClone(classDefinitionsData) as typeof classDefinitionsData
+    delete (brokenClasses[0] as Record<string, unknown>).combatRole
+
+    expect(() => loadClassDefinitions(brokenClasses, 'broken-class-definitions.json')).toThrow(
+      /Expected combat role at broken-class-definitions\.json\[0\]\.combatRole/,
+    )
+  })
+
+  it('rejects invalid unit icon ids on classes', () => {
+    const brokenClasses = structuredClone(classDefinitionsData) as typeof classDefinitionsData
+    ;(brokenClasses[0] as Record<string, unknown>).unitIconId = 'banner'
+
+    expect(() => loadClassDefinitions(brokenClasses, 'broken-class-definitions.json')).toThrow(
+      /Expected unit icon id at broken-class-definitions\.json\[0\]\.unitIconId/,
+    )
   })
 })

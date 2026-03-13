@@ -4,16 +4,17 @@
   "description": "Machine-readable source of truth for the Glenmoor primary combat VFX batch workflow.",
   "checkpointDefault": "sd_xl_base_1.0.safetensors",
   "outputRoot": "output/comfy/vfx",
-  "latentSize": [256, 256],
-  "sampling": { "steps": 22, "cfg": 6.5, "sampler": "euler", "scheduler": "normal" },
+  "sourceSize": [1024, 1024],
+  "exportSize": [256, 256],
+  "sampling": { "steps": 26, "cfg": 5.2, "sampler": "dpmpp_2m", "scheduler": "karras", "denoise": 1 },
   "qualityPresets": {
     "pilot": ["impact-flash", "cast-burst", "status-pulse", "projectile-burst"],
     "full": ["impact-flash", "cast-burst", "status-pulse", "projectile-burst"]
   },
   "promptBlocks": {
-    "globalPositive": "isolated painterly tactical RPG visual effect, transparent background, centered composition, readable silhouette, controlled particles, production-ready game effect plate, no text, no UI",
-    "globalNegative": "background scene, character body, unreadable particle fog, photoreal explosion, text, watermark, border, logo, off-center composition",
-    "sheetDirective": "final combat effect sheet on an exact 256 by 256 transparent canvas, centered burst, readable at gameplay scale"
+    "globalPositive": "isolated painterly tactical RPG visual effect, centered composition, readable silhouette, controlled particles, clean dark neutral backdrop, production-ready game effect plate, no text, no UI",
+    "globalNegative": "background scene, character body, unreadable particle fog, photoreal explosion, muddy glow cloud, off-center composition, text, watermark, border, logo",
+    "sheetDirective": "single centered combat effect plate, clean silhouette, restrained particles, readable at gameplay scale, no environment scene, no character body, no abstract color smear"
   },
   "primarySheets": [
     {

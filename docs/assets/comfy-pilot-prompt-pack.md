@@ -12,13 +12,13 @@ The machine-readable batch source of truth now lives under `docs/assets/comfy-ba
 Use this as the common positive prompt base for debug lookdev and as the conceptual positive base for the master batch manifests.
 
 ```text
-moody medieval-fantasy tactical RPG art, painterly SRPG production concept, readable game-ready silhouettes, restrained material realism, overcast glen pass atmosphere, worn steel, weathered leather, muted natural palette, deliberate value grouping, strong silhouette separation, no modern elements, no UI, no text, no watermark
+moody medieval-fantasy tactical RPG art, painterly SRPG production concept, readable game-ready silhouettes, restrained material realism, overcast glen pass atmosphere, worn steel, weathered leather, muted natural palette, deliberate value grouping, strong silhouette separation, grounded production art, no modern elements, no UI, no text, no watermark
 ```
 
 Use this as the common negative prompt.
 
 ```text
-anime splash art, glossy skin, chibi proportions, photobash collage, noisy background clutter, extreme fisheye perspective, floating props, extra limbs, duplicate weapons, cropped feet, unreadable silhouette, tiny face, logo, watermark, text, frame, border
+anime splash art, glossy skin, chibi proportions, photobash collage, noisy background clutter, extreme fisheye perspective, floating props, extra limbs, duplicate weapons, cropped feet, unreadable silhouette, tiny face, giant portrait closeup, abstract art, color smear, rainbow glitch, logo, watermark, text, frame, border
 ```
 
 ## Unit Master Batch Blocks
@@ -32,19 +32,19 @@ The unit master workflow generates three outputs per named unit:
 ### Reference Directive
 
 ```text
-full-body named-unit reference sheet, near three-quarter view, feet visible, clean neutral backdrop, readable silhouette, practical grounded costume design, designed for later sprite atlas generation
+single named unit concept plate on a wide neutral backdrop, full body fully visible, character centered, practical grounded costume design, clear empty space around the silhouette, designed to anchor portrait and sprite-sheet derivation
 ```
 
 ### Portrait Directive
 
 ```text
-initiative portrait crop, centered face and upper collar, slight three-quarter view, readable at 32x32, transparent-friendly silhouette, no hands or weapons crossing the face
+single character head-and-shoulders portrait illustration, centered face and upper collar, clear facial features, plain neutral backdrop, slight three-quarter view, readable at 32x32, no hands or weapons crossing the face, no abstract shapes, no giant glowing effects hiding the face
 ```
 
 ### Atlas Directive
 
 ```text
-final battlefield sprite atlas sheet for a tactical RPG named unit, transparent background, exact 12 columns by 8 rows grid, exact canvas 1536 by 1024, each cell 128 by 128, include the same character in north east south west world directions, include idle 2, move 6, attack 5, cast 5, hit 2, defeat 4 frames, no labels, no grid numbers, no extra background scene
+sprite-source contact sheet for the same character, many small full-body action poses arranged cleanly on a flat neutral sheet, same costume and weapon in every pose, four world directions north east south west, readable idle move attack cast hit defeat motion, no labels, no grid numbers, no environment scene, no giant portrait, no abstract blocks
 ```
 
 ### Class Tone Blocks
@@ -86,13 +86,13 @@ The terrain master workflow emits final block and overlay candidates directly.
 ### Block Directive
 
 ```text
-single final gameplay terrain block, exact 136 by 112 transparent canvas, one 68 by 34 top diamond and one 68 by 22 side face, center anchored at 68 by 34, readable from an isometric tactics camera
+single isolated isometric terrain tile block, readable top diamond and short side face, centered composition on a plain backdrop, no surrounding map, no extra tiles, no abstract shapes
 ```
 
 ### Overlay Directive
 
 ```text
-single terrain overlay plate on a transparent 136 by 112 canvas, centered for one tactical tile, readable when layered above a terrain block without hiding unit feet
+single isolated terrain overlay asset for one tactical tile, centered composition on a plain backdrop, readable when layered above a terrain block without hiding unit feet, no surrounding environment
 ```
 
 ### Terrain Family Fragments
@@ -120,7 +120,7 @@ The VFX master workflow currently emits four primary sheets.
 ### Effect Sheet Directive
 
 ```text
-final combat effect sheet on an exact 256 by 256 transparent canvas, centered burst, readable at gameplay scale
+single centered combat effect plate, clean silhouette, restrained particles, readable at gameplay scale, no environment scene, no character body, no abstract color smear
 ```
 
 ### Primary Cue Fragments

@@ -95,17 +95,19 @@ describe('Battle runtime', () => {
     const runtime = makeRuntime()
     const tiles = runtime.getReachableTiles('rowan')
 
-    expect(tiles.some((tile) => tile.point.x === 3 && tile.point.y === 10)).toBe(true)
-    expect(tiles.some((tile) => tile.point.x === 7 && tile.point.y === 7)).toBe(false)
+    expect(tiles.some((tile) => tile.point.x === 8 && tile.point.y === 10)).toBe(true)
+    expect(tiles.some((tile) => tile.point.x === 9 && tile.point.y === 8)).toBe(false)
   })
 
   it('applies deployment starting hp overrides for battle-specific balance', () => {
     const runtime = makeRuntime()
 
-    expect(runtime.getUnit('brigandCaptain')?.hp).toBe(27)
-    expect(runtime.getUnit('huntmaster')?.hp).toBe(20)
-    expect(runtime.getUnit('hexbinder')?.hp).toBe(18)
-    expect(runtime.getUnit('cutpurse')?.hp).toBe(21)
+    expect(runtime.getUnit('brigandCaptain')?.hp).toBe(24)
+    expect(runtime.getUnit('huntmaster')?.hp).toBe(18)
+    expect(runtime.getUnit('hexbinder')?.hp).toBe(16)
+    expect(runtime.getUnit('shieldbearer')?.hp).toBe(26)
+    expect(runtime.getUnit('cutpurse')?.hp).toBe(18)
+    expect(runtime.getUnit('fanatic')?.hp).toBe(21)
     expect(runtime.getUnit('rowan')?.hp).toBe(30)
   })
 
@@ -632,13 +634,13 @@ describe('Battle runtime', () => {
       team: 'enemies',
       defeated: false,
       hp: 18,
-      position: { x: 13, y: 9 },
+      position: { x: 14, y: 8 },
     })
     expect(runtime.getUnit('roadReaver')).toMatchObject({
       team: 'enemies',
       defeated: false,
       hp: 19,
-      position: { x: 12, y: 10 },
+      position: { x: 13, y: 10 },
     })
 
     setActive(runtime, 'rowan')
@@ -663,14 +665,20 @@ describe('Battle runtime', () => {
     setActive(runtime, 'rowan')
 
     const originalRange = runtime.getReachableTiles('rowan')
+    const startPoint = runtime.getUnit('rowan')!.position
     const allowedPoints = originalRange.map((tile) => tile.point)
     const originalKeys = new Set(originalRange.map((tile) => pointKey(tile.point.x, tile.point.y)))
-    const firstDestination = originalRange.find((tile) => tile.point.x === 3 && tile.point.y === 10)
+    const candidateDestinations = originalRange
+      .filter((tile) => tile.point.x !== startPoint.x || tile.point.y !== startPoint.y)
+      .sort((left, right) => left.point.x - right.point.x || left.point.y - right.point.y)
+    const firstDestination = candidateDestinations[0]
 
     expect(firstDestination).toBeDefined()
     expect(runtime.repositionActiveUnit(firstDestination!.point, allowedPoints)).toBe(true)
 
-    const secondDestination = originalRange.find((tile) => tile.point.x === 1 && tile.point.y === 11)
+    const secondDestination = candidateDestinations.find(
+      (tile) => tile.point.x !== firstDestination!.point.x || tile.point.y !== firstDestination!.point.y,
+    )
     expect(secondDestination).toBeDefined()
     expect(runtime.repositionActiveUnit(secondDestination!.point, allowedPoints)).toBe(true)
     expect(runtime.getUnit('rowan')?.position).toEqual(secondDestination!.point)

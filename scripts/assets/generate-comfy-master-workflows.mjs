@@ -26,6 +26,22 @@ function boundsFromNodes(nodes, padding = 40) {
   ]
 }
 
+function fitViewport(nodes, viewWidth = 1800, viewHeight = 1000, margin = 80) {
+  const [minX, minY, width, height] = boundsFromNodes(nodes, 0)
+  const safeWidth = Math.max(1, viewWidth - margin * 2)
+  const safeHeight = Math.max(1, viewHeight - margin * 2)
+  const scale = Math.max(0.08, Math.min(1, Math.min(safeWidth / width, safeHeight / height)))
+  const centerX = minX + width / 2
+  const centerY = minY + height / 2
+  return {
+    scale,
+    offset: [
+      viewWidth / 2 - centerX * scale,
+      viewHeight / 2 - centerY * scale,
+    ],
+  }
+}
+
 class WorkflowBuilder {
   constructor(info) {
     this.info = info
@@ -82,6 +98,7 @@ class WorkflowBuilder {
   }
 
   toJSON() {
+    const ds = fitViewport(this.nodes)
     return {
       version: 1,
       state: {
@@ -95,10 +112,7 @@ class WorkflowBuilder {
       groups: this.groups,
       config: {},
       extra: {
-        ds: {
-          scale: 0.62,
-          offset: [1200, 420],
-        },
+        ds,
         info: this.info,
       },
     }
@@ -155,7 +169,24 @@ function latentNode(builder, pos, width, height, batchSize = 1) {
   })
 }
 
-function samplerNode(builder, pos, seed, steps, cfg, samplerName, scheduler) {
+function vaeEncodeNode(builder, pos) {
+  return builder.addNode({
+    type: 'VAEEncode',
+    pos,
+    size: [210, 46],
+    inputs: [
+      { localized_name: 'pixels', name: 'pixels', type: 'IMAGE', link: null },
+      { localized_name: 'vae', name: 'vae', type: 'VAE', link: null },
+    ],
+    outputs: [
+      { localized_name: 'LATENT', name: 'LATENT', type: 'LATENT', slot_index: 0, links: [] },
+    ],
+    properties: { 'Node name for S&R': 'VAEEncode', cnr_id: 'comfy-core', ver: '0.3.64' },
+    widgets_values: [],
+  })
+}
+
+function samplerNode(builder, pos, seed, steps, cfg, samplerName, scheduler, denoise = 1) {
   return builder.addNode({
     type: 'KSampler',
     pos,
@@ -170,7 +201,7 @@ function samplerNode(builder, pos, seed, steps, cfg, samplerName, scheduler) {
       { localized_name: 'LATENT', name: 'LATENT', type: 'LATENT', slot_index: 0, links: [] },
     ],
     properties: { 'Node name for S&R': 'KSampler', cnr_id: 'comfy-core', ver: '0.3.64' },
-    widgets_values: [seed, 'fixed', steps, cfg, samplerName, scheduler, 1],
+    widgets_values: [seed, 'fixed', steps, cfg, samplerName, scheduler, denoise],
   })
 }
 
@@ -188,6 +219,22 @@ function decodeNode(builder, pos) {
     ],
     properties: { 'Node name for S&R': 'VAEDecode', cnr_id: 'comfy-core', ver: '0.3.64' },
     widgets_values: [],
+  })
+}
+
+function imageScaleNode(builder, pos, upscaleMethod, width, height, crop = 'center') {
+  return builder.addNode({
+    type: 'ImageScale',
+    pos,
+    size: [315, 130],
+    inputs: [
+      { localized_name: 'image', name: 'image', type: 'IMAGE', link: null },
+    ],
+    outputs: [
+      { localized_name: 'IMAGE', name: 'IMAGE', type: 'IMAGE', slot_index: 0, links: [] },
+    ],
+    properties: { 'Node name for S&R': 'ImageScale', cnr_id: 'comfy-core', ver: '0.3.64' },
+    widgets_values: [upscaleMethod, width, height, crop],
   })
 }
 
@@ -280,10 +327,9 @@ function buildUnitWorkflow(manifest) {
   const negative = clipTextNode(builder, [-1180, 120], manifest.promptBlocks.globalNegative)
   const referenceLatent = latentNode(builder, [-1650, 420], ...manifest.latentSizes.reference)
   const portraitLatent = latentNode(builder, [-1650, 620], ...manifest.latentSizes.portrait)
-  const atlasLatent = latentNode(builder, [-1650, 820], ...manifest.latentSizes.atlas)
 
   builder.connect(checkpoint, 1, negative, 0, 'CLIP')
-  builder.addGroup('Master Setup', [checkpoint, negative, referenceLatent, portraitLatent, atlasLatent], '#355b74')
+  builder.addGroup('Master Setup', [checkpoint, negative, referenceLatent, portraitLatent], '#355b74')
 
   const teamColors = {
     allies: '#54735c',
@@ -306,6 +352,7 @@ function buildUnitWorkflow(manifest) {
       manifest.sampling.reference.cfg,
       manifest.sampling.reference.sampler,
       manifest.sampling.reference.scheduler,
+      manifest.sampling.reference.denoise,
     )
     const refDecode = decodeNode(builder, [xBase + 840, yBase + 20])
     const refSave = saveNode(builder, [xBase + 1090, yBase], `unit_${unit.id}_reference`)
@@ -328,9 +375,16 @@ function buildUnitWorkflow(manifest) {
       manifest.sampling.portrait.cfg,
       manifest.sampling.portrait.sampler,
       manifest.sampling.portrait.scheduler,
+      manifest.sampling.portrait.denoise,
     )
     const portraitDecode = decodeNode(builder, [xBase + 840, yBase + 300])
-    const portraitSave = saveNode(builder, [xBase + 1090, yBase + 280], `unit_${unit.id}_head`)
+    const portraitScale = imageScaleNode(
+      builder,
+      [xBase + 1080, yBase + 290],
+      'lanczos',
+      ...manifest.exportSizes.portrait,
+    )
+    const portraitSave = saveNode(builder, [xBase + 1340, yBase + 280], `unit_${unit.id}_head`)
 
     builder.connect(checkpoint, 1, portraitClip, 0, 'CLIP')
     builder.connect(checkpoint, 0, portraitSampler, 0, 'MODEL')
@@ -339,29 +393,50 @@ function buildUnitWorkflow(manifest) {
     builder.connect(portraitLatent, 0, portraitSampler, 3, 'LATENT')
     builder.connect(portraitSampler, 0, portraitDecode, 0, 'LATENT')
     builder.connect(checkpoint, 2, portraitDecode, 1, 'VAE')
-    builder.connect(portraitDecode, 0, portraitSave, 0, 'IMAGE')
+    builder.connect(portraitDecode, 0, portraitScale, 0, 'IMAGE')
+    builder.connect(portraitScale, 0, portraitSave, 0, 'IMAGE')
 
-    const atlasClip = clipTextNode(builder, [xBase, yBase + 560], prompts.atlas)
+    const atlasPrepScale = imageScaleNode(
+      builder,
+      [xBase + 1090, yBase + 520],
+      'lanczos',
+      ...manifest.latentSizes.atlasSource,
+      'center',
+    )
+    const atlasEncode = vaeEncodeNode(builder, [xBase + 1440, yBase + 570])
+    const atlasClip = clipTextNode(builder, [xBase, yBase + 600], prompts.atlas)
     const atlasSampler = samplerNode(
       builder,
-      [xBase + 470, yBase + 560],
+      [xBase + 470, yBase + 600],
       unit.seedFamily + 3,
       manifest.sampling.atlas.steps,
       manifest.sampling.atlas.cfg,
       manifest.sampling.atlas.sampler,
       manifest.sampling.atlas.scheduler,
+      manifest.sampling.atlas.denoise,
     )
-    const atlasDecode = decodeNode(builder, [xBase + 840, yBase + 580])
-    const atlasSave = saveNode(builder, [xBase + 1090, yBase + 560], `unit_${unit.id}_battle`)
+    const atlasDecode = decodeNode(builder, [xBase + 840, yBase + 620])
+    const atlasExportScale = imageScaleNode(
+      builder,
+      [xBase + 1090, yBase + 610],
+      'lanczos',
+      ...manifest.exportSizes.atlas,
+      'disabled',
+    )
+    const atlasSave = saveNode(builder, [xBase + 1360, yBase + 600], `unit_${unit.id}_battle`)
 
     builder.connect(checkpoint, 1, atlasClip, 0, 'CLIP')
     builder.connect(checkpoint, 0, atlasSampler, 0, 'MODEL')
     builder.connect(atlasClip, 0, atlasSampler, 1, 'CONDITIONING')
     builder.connect(negative, 0, atlasSampler, 2, 'CONDITIONING')
-    builder.connect(atlasLatent, 0, atlasSampler, 3, 'LATENT')
+    builder.connect(refDecode, 0, atlasPrepScale, 0, 'IMAGE')
+    builder.connect(atlasPrepScale, 0, atlasEncode, 0, 'IMAGE')
+    builder.connect(checkpoint, 2, atlasEncode, 1, 'VAE')
+    builder.connect(atlasEncode, 0, atlasSampler, 3, 'LATENT')
     builder.connect(atlasSampler, 0, atlasDecode, 0, 'LATENT')
     builder.connect(checkpoint, 2, atlasDecode, 1, 'VAE')
-    builder.connect(atlasDecode, 0, atlasSave, 0, 'IMAGE')
+    builder.connect(atlasDecode, 0, atlasExportScale, 0, 'IMAGE')
+    builder.connect(atlasExportScale, 0, atlasSave, 0, 'IMAGE')
 
     builder.addGroup(
       `${unit.displayName} (${unit.team})`,
@@ -373,10 +448,14 @@ function buildUnitWorkflow(manifest) {
         portraitClip,
         portraitSampler,
         portraitDecode,
+        portraitScale,
         portraitSave,
+        atlasPrepScale,
+        atlasEncode,
         atlasClip,
         atlasSampler,
         atlasDecode,
+        atlasExportScale,
         atlasSave,
       ],
       teamColors[unit.team] ?? '#54735c',
@@ -396,7 +475,7 @@ function buildTerrainWorkflow(manifest) {
 
   const checkpoint = checkpointNode(builder, [-1300, 120], manifest.checkpointDefault)
   const negative = clipTextNode(builder, [-830, 120], manifest.promptBlocks.globalNegative)
-  const latent = latentNode(builder, [-1300, 420], ...manifest.latentSize)
+  const latent = latentNode(builder, [-1300, 420], ...manifest.sourceSize)
   builder.connect(checkpoint, 1, negative, 0, 'CLIP')
   builder.addGroup('Master Setup', [checkpoint, negative, latent], '#355b74')
 
@@ -418,9 +497,17 @@ function buildTerrainWorkflow(manifest) {
         manifest.sampling.cfg,
         manifest.sampling.sampler,
         manifest.sampling.scheduler,
+        manifest.sampling.denoise,
       )
       const decode = decodeNode(builder, [xBase + 840, y + 20])
-      const save = saveNode(builder, [xBase + 1090, y], `terrain_${terrain.terrainId}_${variant.suffix}_block`)
+      const scale = imageScaleNode(
+        builder,
+        [xBase + 1090, y + 5],
+        'lanczos',
+        ...manifest.exportSize,
+        'disabled',
+      )
+      const save = saveNode(builder, [xBase + 1360, y], `terrain_${terrain.terrainId}_${variant.suffix}_block`)
 
       builder.connect(checkpoint, 1, clip, 0, 'CLIP')
       builder.connect(checkpoint, 0, sampler, 0, 'MODEL')
@@ -429,8 +516,9 @@ function buildTerrainWorkflow(manifest) {
       builder.connect(latent, 0, sampler, 3, 'LATENT')
       builder.connect(sampler, 0, decode, 0, 'LATENT')
       builder.connect(checkpoint, 2, decode, 1, 'VAE')
-      builder.connect(decode, 0, save, 0, 'IMAGE')
-      groupNodes.push(clip, sampler, decode, save)
+      builder.connect(decode, 0, scale, 0, 'IMAGE')
+      builder.connect(scale, 0, save, 0, 'IMAGE')
+      groupNodes.push(clip, sampler, decode, scale, save)
     })
 
     if (terrain.overlay) {
@@ -444,11 +532,19 @@ function buildTerrainWorkflow(manifest) {
         manifest.sampling.cfg,
         manifest.sampling.sampler,
         manifest.sampling.scheduler,
+        manifest.sampling.denoise,
       )
       const decode = decodeNode(builder, [xBase + 840, y + 20])
+      const scale = imageScaleNode(
+        builder,
+        [xBase + 1090, y + 5],
+        'lanczos',
+        ...manifest.exportSize,
+        'disabled',
+      )
       const save = saveNode(
         builder,
-        [xBase + 1090, y],
+        [xBase + 1360, y],
         `terrain_${terrain.terrainId}_${terrain.overlay.suffix}_overlay`,
       )
 
@@ -459,8 +555,9 @@ function buildTerrainWorkflow(manifest) {
       builder.connect(latent, 0, sampler, 3, 'LATENT')
       builder.connect(sampler, 0, decode, 0, 'LATENT')
       builder.connect(checkpoint, 2, decode, 1, 'VAE')
-      builder.connect(decode, 0, save, 0, 'IMAGE')
-      groupNodes.push(clip, sampler, decode, save)
+      builder.connect(decode, 0, scale, 0, 'IMAGE')
+      builder.connect(scale, 0, save, 0, 'IMAGE')
+      groupNodes.push(clip, sampler, decode, scale, save)
     }
 
     builder.addGroup(`${terrain.label} Terrain Family`, groupNodes, '#5a6c54')
@@ -479,7 +576,7 @@ function buildVfxWorkflow(manifest) {
 
   const checkpoint = checkpointNode(builder, [-1100, 120], manifest.checkpointDefault)
   const negative = clipTextNode(builder, [-650, 120], manifest.promptBlocks.globalNegative)
-  const latent = latentNode(builder, [-1100, 420], ...manifest.latentSize)
+  const latent = latentNode(builder, [-1100, 420], ...manifest.sourceSize)
   builder.connect(checkpoint, 1, negative, 0, 'CLIP')
   builder.addGroup('Master Setup', [checkpoint, negative, latent], '#355b74')
 
@@ -498,9 +595,17 @@ function buildVfxWorkflow(manifest) {
       manifest.sampling.cfg,
       manifest.sampling.sampler,
       manifest.sampling.scheduler,
+      manifest.sampling.denoise,
     )
     const decode = decodeNode(builder, [xBase + 840, yBase + 20])
-    const save = saveNode(builder, [xBase + 1090, yBase], `vfx_${sheet.cueId}_${sheet.tone}_${sheet.variant}`)
+    const scale = imageScaleNode(
+      builder,
+      [xBase + 1090, yBase + 5],
+      'lanczos',
+      ...manifest.exportSize,
+      'disabled',
+    )
+    const save = saveNode(builder, [xBase + 1360, yBase], `vfx_${sheet.cueId}_${sheet.tone}_${sheet.variant}`)
 
     builder.connect(checkpoint, 1, clip, 0, 'CLIP')
     builder.connect(checkpoint, 0, sampler, 0, 'MODEL')
@@ -509,9 +614,10 @@ function buildVfxWorkflow(manifest) {
     builder.connect(latent, 0, sampler, 3, 'LATENT')
     builder.connect(sampler, 0, decode, 0, 'LATENT')
     builder.connect(checkpoint, 2, decode, 1, 'VAE')
-    builder.connect(decode, 0, save, 0, 'IMAGE')
+    builder.connect(decode, 0, scale, 0, 'IMAGE')
+    builder.connect(scale, 0, save, 0, 'IMAGE')
 
-    builder.addGroup(`${sheet.cueId} / ${sheet.tone}`, [clip, sampler, decode, save], '#7a5b54')
+    builder.addGroup(`${sheet.cueId} / ${sheet.tone}`, [clip, sampler, decode, scale, save], '#7a5b54')
   })
 
   return builder.toJSON()

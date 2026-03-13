@@ -11,6 +11,8 @@ describe('Scenario loader', () => {
     expect(definition.mapId).toBe('glenmoor-pass')
     expect(definition.objectivePhases?.map((phase) => phase.id)).toEqual(['break-the-line', 'hunt-the-captain'])
     expect(definition.objectivePhases?.[1]?.announcementCueId).toBe('phase-shift')
+    expect(definition.allies.find((unit) => unit.id === 'rowan')?.position).toEqual({ x: 5, y: 10 })
+    expect(definition.enemies.find((unit) => unit.id === 'shieldbearer')?.position).toEqual({ x: 10, y: 6 })
     expect(definition.events?.[0]).toMatchObject({
       id: 'shieldbearer-falls',
       trigger: {

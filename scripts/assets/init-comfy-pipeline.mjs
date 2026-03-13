@@ -390,13 +390,9 @@ Tracked source docs live under:
 
   const workflowFiles = [
     'style-bible-lookdev.ui-workflow.json',
-    'style-bible-lookdev.comfy-workflow-template.json',
     'unit-master-batch.ui-workflow.json',
     'terrain-catalog-batch.ui-workflow.json',
     'vfx-master-batch.ui-workflow.json',
-    'unit-variant-img2img-controlnet.comfy-workflow-template.json',
-    'terrain-material-to-tile.comfy-workflow-template.json',
-    'vfx-burst-plate.comfy-workflow-template.json',
   ]
 
   for (const fileName of workflowFiles) {

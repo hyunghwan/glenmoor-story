@@ -8,20 +8,20 @@ const bundles: Record<Locale, Bundle> = {
     'battle.glenmoorPass.title': 'Skirmish at Glenmoor Pass',
     'battle.glenmoorPass.objective': 'Rout every enemy on the field.',
     'battle.glenmoorPass.briefing':
-      'Captain Veyr has locked the ridge behind a shield wall while reserve horns wait below Glenmoor Ford. Break the line before he can regroup and seal the pass.',
+      'Captain Veyr has locked the ford crossing behind a shielded guard while reserve horns gather downriver. Break the crossing before he can regroup and seal the pass.',
     'battle.glenmoorPass.victory':
-      'Captain Veyr is down, the reserve horn is broken, and the pass is ours again.',
+      'Captain Veyr is down, the reserve horn is broken, and Glenmoor Ford is ours again.',
     'battle.glenmoorPass.defeat':
-      'The line collapsed under the reserve push. Glenmoor falls silent beneath enemy banners.',
-    'battle.glenmoorPass.phaseBreakLine.objective': 'Break the shield wall at the ridge.',
+      'The crossing collapsed under the reserve push. Glenmoor falls silent beneath enemy banners.',
+    'battle.glenmoorPass.phaseBreakLine.objective': 'Break the crossing guard at Glenmoor Ford.',
     'battle.glenmoorPass.phaseHuntCaptain.objective':
-      'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+      'Reserve horns sound beyond the ford. Strike down Captain Veyr before the crossing closes.',
     'battle.glenmoorPass.phaseHuntCaptain.announcement':
-      'Reserve horns are sounding at the ford. Captain Veyr is exposed.',
+      'Reserve horns are sounding beyond the ford. Captain Veyr is exposed.',
     'battle.glenmoorPass.phaseHuntCaptain.victory':
-      'Veyr fell before the reserve trap could close. Glenmoor breathes again, and the pass stands open.',
+      'Veyr fell before the reserve trap could close. Glenmoor breathes again, and the ford stands open.',
     'battle.glenmoorPass.phaseHuntCaptain.defeat':
-      'The reserve horn closed around the ford, and Glenmoor was crushed in the vice.',
+      'The reserve horn closed around the ford, and Glenmoor was crushed at the crossing.',
     'hud.startBattle': 'Commence Battle',
     'hud.returnToBriefing': 'Review Briefing',
     'hud.playAgain': 'Restart Battle',
@@ -111,6 +111,10 @@ const bundles: Record<Locale, Bundle> = {
     'class.warden': 'Warden',
     'class.skirmisher': 'Skirmisher',
     'class.cleric': 'Cleric',
+    'combatRole.tank': 'Tank',
+    'combatRole.damage': 'Damage',
+    'combatRole.support': 'Support',
+    'combatRole.healer': 'Healer',
     'role.vanguard': 'Frontline breaker',
     'role.ranger': 'Line archer',
     'role.arcanist': 'Battle mage',
@@ -177,20 +181,20 @@ const bundles: Record<Locale, Bundle> = {
     'battle.glenmoorPass.title': '글렌무어 협곡 전투',
     'battle.glenmoorPass.objective': '전장의 적을 모두 섬멸하라.',
     'battle.glenmoorPass.briefing':
-      '베이르 대장이 방패벽으로 능선을 막아섰고, 글렌무어 나루 아래에서는 예비대의 뿔나팔이 대기한다. 그들이 협곡을 봉쇄하기 전에 전열을 찢어라.',
+      '베이르 대장이 방패 부대로 글렌무어 나루의 도하선을 틀어막았고, 하류에서는 예비대의 뿔나팔이 모여든다. 그들이 협곡을 봉쇄하기 전에 도하선을 돌파하라.',
     'battle.glenmoorPass.victory':
-      '베이르 대장이 쓰러지고 예비대의 뿔나팔도 꺾였다. 협곡은 다시 우리의 것이다.',
+      '베이르 대장이 쓰러지고 예비대의 뿔나팔도 꺾였다. 글렌무어 나루는 다시 우리의 것이다.',
     'battle.glenmoorPass.defeat':
-      '예비대의 압박에 전열이 무너졌다. 글렌무어는 적의 깃발 아래 침묵한다.',
-    'battle.glenmoorPass.phaseBreakLine.objective': '능선의 방패벽을 돌파하라.',
+      '예비대의 압박에 도하선이 무너졌다. 글렌무어는 적의 깃발 아래 침묵한다.',
+    'battle.glenmoorPass.phaseBreakLine.objective': '글렌무어 나루의 도하선을 지키는 방패대를 돌파하라.',
     'battle.glenmoorPass.phaseHuntCaptain.objective':
-      '나루에서 예비대의 뿔나팔이 울린다. 포위가 닫히기 전에 베이르 대장을 쓰러뜨려라.',
+      '나루 너머에서 예비대의 뿔나팔이 울린다. 도하선이 닫히기 전에 베이르 대장을 쓰러뜨려라.',
     'battle.glenmoorPass.phaseHuntCaptain.announcement':
-      '나루에서 예비대의 뿔나팔이 울린다. 베이르 대장이 모습을 드러냈다.',
+      '나루 너머에서 예비대의 뿔나팔이 울린다. 베이르 대장이 모습을 드러냈다.',
     'battle.glenmoorPass.phaseHuntCaptain.victory':
-      '예비대의 포위가 닫히기 전에 베이르 대장을 베어냈다. 글렌무어는 다시 숨을 쉬고 협곡은 열렸다.',
+      '예비대의 포위가 닫히기 전에 베이르 대장을 베어냈다. 글렌무어는 다시 숨을 쉬고 도하선은 열렸다.',
     'battle.glenmoorPass.phaseHuntCaptain.defeat':
-      '예비대의 뿔나팔이 나루를 에워쌌고, 글렌무어는 협공 속에 짓눌렸다.',
+      '예비대의 뿔나팔이 나루를 에워쌌고, 글렌무어는 도하선에서 협공에 짓눌렸다.',
     'hud.startBattle': '전투 개시',
     'hud.returnToBriefing': '브리핑 보기',
     'hud.playAgain': '전투 재시작',
@@ -280,6 +284,10 @@ const bundles: Record<Locale, Bundle> = {
     'class.warden': '워든',
     'class.skirmisher': '스커미셔',
     'class.cleric': '클레릭',
+    'combatRole.tank': '탱커',
+    'combatRole.damage': '공격형',
+    'combatRole.support': '서포트',
+    'combatRole.healer': '힐러',
     'role.vanguard': '전열 돌파',
     'role.ranger': '원거리 사격',
     'role.arcanist': '전투 마도사',

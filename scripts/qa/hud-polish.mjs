@@ -5,6 +5,9 @@ import { clickProjectedTile, getUnitPosition, projectTilesToClient } from './pro
 
 const outputDir = path.resolve('output/web-game/hud-polish')
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173'
+const reserveAnnouncement = 'Reserve horns are sounding beyond the ford. Captain Veyr is exposed.'
+const reserveObjectiveEn = 'Reserve horns sound beyond the ford. Strike down Captain Veyr before the crossing closes.'
+const reserveObjectiveKo = '나루 너머에서 예비대의 뿔나팔이 울린다. 도하선이 닫히기 전에 베이르 대장을 쓰러뜨려라.'
 
 fs.rmSync(outputDir, { recursive: true, force: true })
 fs.mkdirSync(outputDir, { recursive: true })
@@ -433,6 +436,33 @@ function assertShortHeightCompaction(metrics, label) {
   )
 }
 
+function assertReadabilityState(state, label, { expectTargetDetail = false } = {}) {
+  const active = state.hud?.activeUnitPanel
+  assert(typeof active?.combatRoleLabel === 'string' && active.combatRoleLabel.length > 0, `Expected active role label for ${label}`)
+  assert(typeof active?.roleFlavorLabel === 'string' && active.roleFlavorLabel.length > 0, `Expected active role flavor label for ${label}`)
+  assert(typeof active?.unitIconId === 'string' && active.unitIconId.length > 0, `Expected active unit icon id for ${label}`)
+
+  const entries = state.hud?.initiativeRail?.entries ?? []
+  assert(entries.length > 0, `Expected initiative entries for ${label}`)
+  for (const entry of entries.slice(0, 4)) {
+    assert(typeof entry.combatRoleLabel === 'string' && entry.combatRoleLabel.length > 0, `Expected initiative role label for ${label}`)
+    assert(typeof entry.unitIconId === 'string' && entry.unitIconId.length > 0, `Expected initiative icon id for ${label}`)
+  }
+
+  const telemetryUnits = state.telemetry?.units ?? []
+  assert(telemetryUnits.length > 0, `Expected telemetry units for ${label}`)
+  for (const unit of telemetryUnits.slice(0, 4)) {
+    assert(typeof unit.combatRole === 'string' && unit.combatRole.length > 0, `Expected telemetry combatRole for ${label}`)
+    assert(typeof unit.combatRoleLabel === 'string' && unit.combatRoleLabel.length > 0, `Expected telemetry combatRoleLabel for ${label}`)
+    assert(typeof unit.unitIconId === 'string' && unit.unitIconId.length > 0, `Expected telemetry unitIconId for ${label}`)
+  }
+
+  if (expectTargetDetail) {
+    assert(typeof state.hud?.targetDetail?.combatRoleLabel === 'string' && state.hud.targetDetail.combatRoleLabel.length > 0, `Expected target detail role label for ${label}`)
+    assert(typeof state.hud?.targetDetail?.unitIconId === 'string' && state.hud.targetDetail.unitIconId.length > 0, `Expected target detail icon id for ${label}`)
+  }
+}
+
 const scenarios = [
   {
     id: '01-battle-start-1600-en',
@@ -501,7 +531,7 @@ const scenarios = [
     resolveTargetUnitId: 'shieldbearer',
     expectedMode: 'move',
     expectedObjectivePhaseLabel: 'Battle Phase 2/2',
-    expectedAnnouncement: 'Reserve horns are sounding at the ford. Captain Veyr is exposed.',
+    expectedAnnouncement: reserveAnnouncement,
   },
   {
     id: '09-victory-modal-1600-en',
@@ -513,7 +543,7 @@ const scenarios = [
     expectedPhase: 'victory',
     expectedModalKind: 'victory',
     expectedModalPhaseLabel: 'Battle Phase 2/2',
-    expectedModalObjectiveLabel: 'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+    expectedModalObjectiveLabel: reserveObjectiveEn,
     modalSettleMs: 340,
   },
   {
@@ -526,7 +556,7 @@ const scenarios = [
     expectedPhase: 'victory',
     expectedModalKind: 'victory',
     expectedModalPhaseLabel: '전투 국면 2/2',
-    expectedModalObjectiveLabel: '나루에서 예비대의 뿔나팔이 울린다. 포위가 닫히기 전에 베이르 대장을 쓰러뜨려라.',
+    expectedModalObjectiveLabel: reserveObjectiveKo,
     modalSettleMs: 340,
   },
   {
@@ -643,6 +673,9 @@ for (const scenario of scenarios) {
       assertNoHits(hoverMetrics.passiveHits, `${scenario.id}/${hoverTarget.unitId} passive tile interceptions`)
       assertNoHits(hoverMetrics.actionMenuHits, `${scenario.id}/${hoverTarget.unitId} action menu interceptions`)
       assertShortHeightCompaction(hoverMetrics, `${scenario.id}/${hoverTarget.unitId}`)
+      assertReadabilityState(hoverState, `${scenario.id}/${hoverTarget.unitId}`, {
+        expectTargetDetail: Boolean(scenario.expectTargetDetail),
+      })
 
       if (scenario.expectTargetDetail) {
         assertRectInsideViewport(hoverMetrics, 'targetDetail')
@@ -679,6 +712,7 @@ for (const scenario of scenarios) {
       assertNoHits(metrics.passiveHits, `${scenario.id} passive tile interceptions`)
       assertNoHits(metrics.actionMenuHits, `${scenario.id} action menu interceptions`)
       assertShortHeightCompaction(metrics, scenario.id)
+      assertReadabilityState(state, scenario.id)
     }
   }
 

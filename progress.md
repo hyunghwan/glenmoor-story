@@ -238,6 +238,24 @@ The canonical implementation log lives in `docs/progress.md`.
   - localized labels and combat-feed text now surface terrain-reaction names in English and Korean
 - Verification completed:
   - `npm test`
+
+## 2026-03-13
+
+- Started the Glenmoor Pass recut and battlefield readability pass
+- Recut the center lane without changing the `16x16` footprint:
+  - reduced the central water mass to a smaller north-side hazard while preserving bridge-drop routes
+  - opened a faster southern crossing lane with new road / stone support tiles
+- Moved the authored Phase 1 front line toward the center and retuned encounter-only enemy starting HP so first contact happens earlier without rewriting class stats
+- Added explicit readability metadata to class definitions:
+  - new `combatRole` and `unitIconId` fields now load through content validation
+  - content tests now fail on missing / invalid role-icon metadata
+- Wired role data into HUD / telemetry contracts:
+  - active card, initiative entries, target detail, and telemetry units now carry role labels plus icon ids
+  - added shared SVG / Phaser placeholder icons so battlefield tokens and HUD use the same role signal set
+- Updated story copy and QA expectations from ridge-focused wording to ford / crossing-focused wording
+- Verification completed:
+  - `npm test`
+  - `npx tsc --noEmit`
   - `npm run build`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`

@@ -1,5 +1,6 @@
 import type {
   BattleState,
+  CombatRole,
   CombatTelegraphSummary,
   CombatResolution,
   GridPoint,
@@ -8,13 +9,17 @@ import type {
   HudViewModel,
   InitiativeRailEntryViewModel,
   Team,
+  UnitIconId,
 } from './types'
 
 export interface InitiativeSourceEntry {
   id: string
   name: string
   className: string
+  combatRole: CombatRole
+  combatRoleLabel: string
   team: Team
+  unitIconId: UnitIconId
   active: boolean
   selected: boolean
 }
@@ -131,8 +136,11 @@ export function buildInitiativeEntries(
     id: entry.id,
     name: entry.name,
     className: entry.className,
+    combatRole: entry.combatRole,
+    combatRoleLabel: entry.combatRoleLabel,
     team: entry.team,
     initials: buildUnitInitials(entry.name),
+    unitIconId: entry.unitIconId,
     active: entry.active,
     selected: entry.selected,
     emphasis: entry.active ? 'active' : entry.selected ? 'selected' : 'normal',

@@ -5,6 +5,9 @@ import { clickProjectedTile, getUnitPosition } from './projection.mjs'
 
 const outputDir = path.resolve('output/web-game/playthrough')
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5173'
+const openingObjective = 'Break the crossing guard at Glenmoor Ford.'
+const reserveObjective = 'Reserve horns sound beyond the ford. Strike down Captain Veyr before the crossing closes.'
+const reserveAnnouncement = 'Reserve horns are sounding beyond the ford. Captain Veyr is exposed.'
 fs.rmSync(outputDir, { recursive: true, force: true })
 fs.mkdirSync(outputDir, { recursive: true })
 
@@ -79,6 +82,33 @@ function assertDuelTelemetry(state, label, { requireStepFields = true } = {}) {
       typeof duel.targetUnitId === 'string' && duel.targetUnitId.length > 0,
       `Expected optional duel targetUnitId for ${label}`,
     )
+  }
+}
+
+function assertReadabilityState(state, label, { requireTargetDetail = false } = {}) {
+  const active = state.hud?.activeUnitPanel
+  assert(typeof active?.combatRoleLabel === 'string' && active.combatRoleLabel.length > 0, `Expected active combat role label for ${label}`)
+  assert(typeof active?.roleFlavorLabel === 'string' && active.roleFlavorLabel.length > 0, `Expected active role flavor label for ${label}`)
+  assert(typeof active?.unitIconId === 'string' && active.unitIconId.length > 0, `Expected active unit icon id for ${label}`)
+
+  const entries = state.hud?.initiativeRail?.entries ?? []
+  assert(entries.length > 0, `Expected initiative entries for ${label}`)
+  for (const entry of entries.slice(0, 4)) {
+    assert(typeof entry.combatRoleLabel === 'string' && entry.combatRoleLabel.length > 0, `Expected initiative role label for ${label}`)
+    assert(typeof entry.unitIconId === 'string' && entry.unitIconId.length > 0, `Expected initiative unit icon id for ${label}`)
+  }
+
+  const telemetryUnits = state.telemetry?.units ?? []
+  assert(telemetryUnits.length > 0, `Expected telemetry units for ${label}`)
+  for (const unit of telemetryUnits.slice(0, 4)) {
+    assert(typeof unit.combatRole === 'string' && unit.combatRole.length > 0, `Expected telemetry combatRole for ${label}`)
+    assert(typeof unit.combatRoleLabel === 'string' && unit.combatRoleLabel.length > 0, `Expected telemetry combatRoleLabel for ${label}`)
+    assert(typeof unit.unitIconId === 'string' && unit.unitIconId.length > 0, `Expected telemetry unitIconId for ${label}`)
+  }
+
+  if (requireTargetDetail) {
+    assert(typeof state.hud?.targetDetail?.combatRoleLabel === 'string' && state.hud.targetDetail.combatRoleLabel.length > 0, `Expected target detail role label for ${label}`)
+    assert(typeof state.hud?.targetDetail?.unitIconId === 'string' && state.hud.targetDetail.unitIconId.length > 0, `Expected target detail unit icon id for ${label}`)
   }
 }
 
@@ -230,7 +260,7 @@ await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud?.m
 
 let state = await readState()
 assert(state.hud.modal?.phaseLabel === 'Battle Phase 1/2', 'Expected briefing modal phase progress label')
-assert(state.hud.modal?.objectiveLabel === 'Break the shield wall at the ridge.', 'Expected briefing modal objective callout')
+assert(state.hud.modal?.objectiveLabel === openingObjective, 'Expected briefing modal objective callout')
 await saveShot('01-briefing-en')
 await saveState('01-briefing-en')
 
@@ -239,10 +269,16 @@ await page.waitForFunction(() => JSON.parse(window.render_game_to_text()).hud.ph
 state = await readState()
 assertPresentationTelemetry(state, ['active-unit', 'move-range'])
 assert(state.hud.statusLine.objectivePhaseLabel === 'Battle Phase 1/2', 'Expected opening HUD phase progress label')
+assert(getUnitPosition(state, 'rowan').x === 5 && getUnitPosition(state, 'rowan').y === 10, 'Expected recut ally frontline deployment')
+assert(getUnitPosition(state, 'shieldbearer').x === 10 && getUnitPosition(state, 'shieldbearer').y === 6, 'Expected recut shieldbearer deployment')
+assert(getUnitPosition(state, 'cutpurse').x === 11 && getUnitPosition(state, 'cutpurse').y === 8, 'Expected recut cutpurse deployment')
+assertReadabilityState(state, 'battle start')
 await saveShot('02-battle-en')
 await saveState('02-battle-en')
 
 await clickLocaleButton('ko')
+state = await readState()
+assertReadabilityState(state, 'battle start ko')
 await saveShot('03-battle-ko')
 await saveState('03-battle-ko')
 
@@ -251,6 +287,7 @@ await page.evaluate(() => window.__glenmoorDebug.stage('engagement'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'engagement before')
 await saveShot('04-engagement-before')
 await saveState('04-engagement-before')
 
@@ -258,6 +295,7 @@ await selectAction('attack')
 await commitTargetedAction('05-engagement', 'brigandCaptain')
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'engagement after')
 await saveShot('06-engagement-after')
 await saveState('06-engagement-after')
 
@@ -265,6 +303,7 @@ await page.evaluate(() => window.__glenmoorDebug.stage('skill-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'skill demo before')
 await saveShot('07-skill-before')
 await selectAction('skill')
 await clickTargetUnit('brigandCaptain')
@@ -272,6 +311,7 @@ await captureDuelSequence('08-skill')
 state = await readState()
 assertPresentationTelemetry(state)
 assert(state.telemetry.activeStatusAuraIds.includes('burning'), 'Expected burning status aura after ember sigil')
+assertReadabilityState(state, 'skill demo after')
 await saveShot('09-skill-after')
 await saveState('09-skill-after')
 
@@ -279,12 +319,14 @@ await page.evaluate(() => window.__glenmoorDebug.stage('push-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'push demo before')
 await selectAction('skill')
 await clickTargetUnit('brigandCaptain')
 await captureDuelSequence('10-push')
 state = await readState()
 assertPresentationTelemetry(state)
 assert(state.telemetry.activeStatusAuraIds.includes('guardBreak'), 'Expected guardBreak status aura after shield bash')
+assertReadabilityState(state, 'push demo after')
 await saveShot('10-push-after')
 await saveState('10-push-after')
 
@@ -292,14 +334,16 @@ await page.evaluate(() => window.__glenmoorDebug.stage('victory-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'victory demo before')
 await selectAction('attack')
 await commitTargetedAction('11-victory', 'brigandCaptain')
 state = await waitForSettledModal('victory')
 assert(state.hud.modal?.phaseLabel === 'Battle Phase 2/2', 'Expected victory wrapper phase progress label')
 assert(
-  state.hud.modal?.objectiveLabel === 'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+  state.hud.modal?.objectiveLabel === reserveObjective,
   'Expected victory wrapper objective callout',
 )
+assertReadabilityState(state, 'victory modal')
 await saveShot('11-victory')
 await saveState('11-victory')
 
@@ -308,6 +352,7 @@ await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
 assert(state.telemetry.objectivePhaseId === 'break-the-line', 'Expected opening objective phase for phase demo')
+assertReadabilityState(state, 'phase demo before')
 await saveShot('12-phase-before')
 await saveState('12-phase-before')
 
@@ -319,15 +364,16 @@ assertPresentationTelemetry(state)
 assert(state.telemetry.objectivePhaseId === 'hunt-the-captain', 'Expected reserve beat to shift objective phase')
 assert(state.hud.statusLine.objectivePhaseLabel === 'Battle Phase 2/2', 'Expected reserve HUD phase progress label')
 assert(
-  state.hud?.statusLine?.objectiveLabel === 'Reserve horns sound at the ford. Strike down Captain Veyr before the trap closes.',
+  state.hud?.statusLine?.objectiveLabel === reserveObjective,
   'Expected reserve-phase objective label after shieldbearer collapse',
 )
 assert(
-  state.hud?.phaseAnnouncement?.body === 'Reserve horns are sounding at the ford. Captain Veyr is exposed.',
+  state.hud?.phaseAnnouncement?.body === reserveAnnouncement,
   'Expected objective update announcement after shieldbearer collapse',
 )
-assert(getUnitPosition(state, 'fordStalker').x === 13 && getUnitPosition(state, 'fordStalker').y === 9, 'Expected fordStalker reinforcement deployment')
-assert(getUnitPosition(state, 'roadReaver').x === 12 && getUnitPosition(state, 'roadReaver').y === 10, 'Expected roadReaver reinforcement deployment')
+assert(getUnitPosition(state, 'fordStalker').x === 14 && getUnitPosition(state, 'fordStalker').y === 8, 'Expected fordStalker reinforcement deployment')
+assert(getUnitPosition(state, 'roadReaver').x === 13 && getUnitPosition(state, 'roadReaver').y === 10, 'Expected roadReaver reinforcement deployment')
+assertReadabilityState(state, 'phase demo after')
 await saveShot('13-phase-after')
 await saveState('13-phase-after')
 
@@ -335,6 +381,7 @@ await page.evaluate(() => window.__glenmoorDebug.stage('forest-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'forest demo before')
 await saveShot('14-forest-before')
 await saveState('14-forest-before')
 
@@ -347,6 +394,7 @@ assert(
   'Expected forest demo to leave brigandCaptain with stacked burning',
 )
 assert(state.hud.statusLine.logLabel.includes('Forest Kindling'), 'Expected forest demo battle feed to mention Forest Kindling')
+assertReadabilityState(state, 'forest demo after')
 await saveShot('14-forest-after')
 await saveState('14-forest-after')
 
@@ -354,6 +402,7 @@ await page.evaluate(() => window.__glenmoorDebug.stage('ruins-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'ruins demo before')
 await saveShot('15-ruins-before')
 await saveState('15-ruins-before')
 
@@ -366,6 +415,7 @@ assert(
   'Expected ruins demo to strengthen warded on osric',
 )
 assert(state.hud.statusLine.logLabel.includes('Ruins Echo'), 'Expected ruins demo battle feed to mention Ruins Echo')
+assertReadabilityState(state, 'ruins demo after')
 await saveShot('15-ruins-after')
 await saveState('15-ruins-after')
 
@@ -373,6 +423,7 @@ await page.evaluate(() => window.__glenmoorDebug.stage('bridge-demo'))
 await page.waitForTimeout(120)
 state = await readState()
 assertPresentationTelemetry(state)
+assertReadabilityState(state, 'bridge demo before')
 await saveShot('16-bridge-before')
 await saveState('16-bridge-before')
 
@@ -382,6 +433,7 @@ state = await readState()
 assertPresentationTelemetry(state)
 assert(getUnitState(state, 'brigandCaptain').defeated === true, 'Expected bridge demo to defeat brigandCaptain with bridge drop')
 assert(state.hud.statusLine.logLabel.includes('Bridge Drop'), 'Expected bridge demo battle feed to mention Bridge Drop')
+assertReadabilityState(state, 'bridge demo after')
 await saveShot('16-bridge-after')
 await saveState('16-bridge-after')
 

@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import type { HudAnchor, HudPlacement, HudViewModel, Locale } from './types'
+import { renderUnitIconSvg } from './unit-visuals'
 
 interface HudResolvedRect {
   left: number
@@ -528,10 +529,13 @@ export class HudController {
                     (entry) => `
                       <div class="hud-initiative-chip is-${entry.team} is-${entry.emphasis}">
                         <span class="hud-initiative-order">${entry.orderLabel}</span>
-                        <span class="hud-initiative-token">${entry.initials}</span>
+                        <span class="hud-initiative-token">
+                          ${renderUnitIconSvg(entry.unitIconId, entry.combatRole, 18)}
+                          <em>${entry.initials}</em>
+                        </span>
                         <div class="hud-initiative-meta">
                           <strong>${entry.name}</strong>
-                          <span>${entry.className}</span>
+                          <span>${entry.className} · ${entry.combatRoleLabel}</span>
                         </div>
                       </div>
                     `,
@@ -587,7 +591,8 @@ export class HudController {
     return `
       <section class="hud-active-card hud-card is-${unit.team}">
         <div class="hud-active-crest">
-          <span>${unit.initials}</span>
+          ${renderUnitIconSvg(unit.unitIconId, unit.combatRole, 28)}
+          <span class="hud-active-initials">${unit.initials}</span>
         </div>
         <div class="hud-active-body">
           <div class="hud-active-head">
@@ -596,8 +601,12 @@ export class HudController {
               <h2>${unit.name}</h2>
             </div>
             <div class="hud-active-role">
-              <strong>${unit.className}</strong>
+              <div class="hud-role-line">
+                <strong>${unit.className}</strong>
+                ${this.renderRoleBadge(unit.combatRoleLabel, unit.combatRole)}
+              </div>
               <span>${unit.teamLabel}</span>
+              <small>${unit.roleFlavorLabel}</small>
             </div>
           </div>
           <div class="hud-hp-row">
@@ -680,6 +689,13 @@ export class HudController {
     `
   }
 
+  private renderRoleBadge(
+    label: string,
+    role: NonNullable<HudViewModel['activeUnitPanel']>['combatRole'],
+  ): string {
+    return `<span class="hud-role-badge is-${role}">${label}</span>`
+  }
+
   private renderTargetMarkers(view: HudViewModel): string {
     return view.targetMarkers
       .map(
@@ -705,6 +721,15 @@ export class HudController {
         class="hud-target-detail hud-anchored"
         ${this.anchorAttributes(view.targetDetail.anchor, 14)}
       >
+        <div class="hud-target-unit">
+          <div class="hud-target-token">
+            ${renderUnitIconSvg(view.targetDetail.unitIconId, view.targetDetail.combatRole, 18)}
+          </div>
+          <div class="hud-target-meta">
+            <strong>${view.targetDetail.unitName}</strong>
+            <span>${view.targetDetail.teamLabel} · ${view.targetDetail.className} · ${view.targetDetail.combatRoleLabel}</span>
+          </div>
+        </div>
         <span class="hud-label">${view.targetDetail.subtitle}</span>
         <h3>${view.targetDetail.title}</h3>
         <p>${view.targetDetail.amountLabel}</p>

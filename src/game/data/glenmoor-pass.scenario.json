@@ -53,8 +53,8 @@
             "classId": "ranger",
             "team": "enemies",
             "position": {
-              "x": 13,
-              "y": 9
+              "x": 14,
+              "y": 8
             },
             "aiProfileId": "artillery",
             "startingHp": 18
@@ -69,7 +69,7 @@
             "classId": "skirmisher",
             "team": "enemies",
             "position": {
-              "x": 12,
+              "x": 13,
               "y": 10
             },
             "aiProfileId": "opportunist",
@@ -87,8 +87,8 @@
       "classId": "vanguard",
       "team": "allies",
       "position": {
-        "x": 2,
-        "y": 11
+        "x": 5,
+        "y": 10
       },
       "aiProfileId": "spearhead"
     },
@@ -98,8 +98,8 @@
       "classId": "ranger",
       "team": "allies",
       "position": {
-        "x": 1,
-        "y": 12
+        "x": 3,
+        "y": 10
       },
       "aiProfileId": "artillery"
     },
@@ -109,8 +109,8 @@
       "classId": "skirmisher",
       "team": "allies",
       "position": {
-        "x": 4,
-        "y": 12
+        "x": 7,
+        "y": 10
       },
       "aiProfileId": "opportunist"
     },
@@ -120,8 +120,8 @@
       "classId": "arcanist",
       "team": "allies",
       "position": {
-        "x": 3,
-        "y": 13
+        "x": 5,
+        "y": 11
       },
       "aiProfileId": "tactician"
     },
@@ -131,8 +131,8 @@
       "classId": "warden",
       "team": "allies",
       "position": {
-        "x": 2,
-        "y": 14
+        "x": 4,
+        "y": 11
       },
       "aiProfileId": "bulwark"
     },
@@ -142,8 +142,8 @@
       "classId": "cleric",
       "team": "allies",
       "position": {
-        "x": 4,
-        "y": 14
+        "x": 6,
+        "y": 12
       },
       "aiProfileId": "cantor"
     }
@@ -155,11 +155,11 @@
       "classId": "vanguard",
       "team": "enemies",
       "position": {
-        "x": 12,
-        "y": 3
+        "x": 8,
+        "y": 7
       },
       "aiProfileId": "spearhead",
-      "startingHp": 27
+      "startingHp": 24
     },
     {
       "id": "huntmaster",
@@ -167,11 +167,11 @@
       "classId": "ranger",
       "team": "enemies",
       "position": {
-        "x": 13,
-        "y": 2
+        "x": 12,
+        "y": 5
       },
       "aiProfileId": "artillery",
-      "startingHp": 20
+      "startingHp": 18
     },
     {
       "id": "hexbinder",
@@ -180,10 +180,10 @@
       "team": "enemies",
       "position": {
         "x": 10,
-        "y": 2
+        "y": 5
       },
       "aiProfileId": "tactician",
-      "startingHp": 18
+      "startingHp": 16
     },
     {
       "id": "shieldbearer",
@@ -191,11 +191,11 @@
       "classId": "warden",
       "team": "enemies",
       "position": {
-        "x": 11,
-        "y": 4
+        "x": 10,
+        "y": 6
       },
       "aiProfileId": "bulwark",
-      "startingHp": 24
+      "startingHp": 26
     },
     {
       "id": "cutpurse",
@@ -203,11 +203,11 @@
       "classId": "skirmisher",
       "team": "enemies",
       "position": {
-        "x": 14,
-        "y": 4
+        "x": 11,
+        "y": 8
       },
       "aiProfileId": "opportunist",
-      "startingHp": 21
+      "startingHp": 18
     },
     {
       "id": "fanatic",
@@ -216,9 +216,10 @@
       "team": "enemies",
       "position": {
         "x": 9,
-        "y": 3
+        "y": 5
       },
-      "aiProfileId": "cantor"
+      "aiProfileId": "cantor",
+      "startingHp": 21
     }
   ]
 }

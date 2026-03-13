@@ -5,14 +5,18 @@
   "checkpointDefault": "sd_xl_base_1.0.safetensors",
   "outputRoot": "output/comfy/units",
   "latentSizes": {
-    "reference": [1024, 1536],
+    "reference": [1536, 1024],
+    "portrait": [768, 768],
+    "atlasSource": [2304, 1536]
+  },
+  "exportSizes": {
     "portrait": [128, 128],
     "atlas": [1536, 1024]
   },
   "sampling": {
-    "reference": { "steps": 28, "cfg": 7, "sampler": "euler", "scheduler": "normal" },
-    "portrait": { "steps": 24, "cfg": 6.5, "sampler": "euler", "scheduler": "normal" },
-    "atlas": { "steps": 30, "cfg": 7, "sampler": "euler", "scheduler": "normal" }
+    "reference": { "steps": 32, "cfg": 5.8, "sampler": "dpmpp_2m", "scheduler": "karras", "denoise": 1 },
+    "portrait": { "steps": 28, "cfg": 5.4, "sampler": "dpmpp_2m", "scheduler": "karras", "denoise": 1 },
+    "atlas": { "steps": 34, "cfg": 5.2, "sampler": "dpmpp_2m", "scheduler": "karras", "denoise": 0.62 }
   },
   "qualityPresets": {
     "pilot": ["rowan", "elira", "hexbinder"],
@@ -50,11 +54,11 @@
     "pivot": [64, 108]
   },
   "promptBlocks": {
-    "globalPositive": "moody medieval-fantasy tactical RPG art, painterly SRPG production concept, readable game-ready silhouettes, restrained material realism, overcast glen pass atmosphere, worn steel, weathered leather, muted natural palette, deliberate value grouping, strong silhouette separation, no modern elements, no UI, no text, no watermark",
-    "globalNegative": "anime splash art, glossy skin, chibi proportions, photobash collage, noisy background clutter, extreme fisheye perspective, floating props, extra limbs, duplicate weapons, cropped feet, unreadable silhouette, tiny face, logo, watermark, text, frame, border",
-    "referenceDirective": "full-body named-unit reference sheet, near three-quarter view, feet visible, clean neutral backdrop, readable silhouette, practical grounded costume design, designed for later sprite atlas generation",
-    "portraitDirective": "initiative portrait crop, centered face and upper collar, slight three-quarter view, readable at 32x32, transparent-friendly silhouette, no hands or weapons crossing the face",
-    "atlasDirective": "final battlefield sprite atlas sheet for a tactical RPG named unit, transparent background, exact 12 columns by 8 rows grid, exact canvas 1536 by 1024, each cell 128 by 128, include the same character in north east south west world directions, include idle 2, move 6, attack 5, cast 5, hit 2, defeat 4 frames, no labels, no grid numbers, no extra background scene"
+    "globalPositive": "moody medieval-fantasy tactical RPG art, painterly SRPG production concept, readable game-ready silhouettes, restrained material realism, overcast glen pass atmosphere, worn steel, weathered leather, muted natural palette, deliberate value grouping, strong silhouette separation, grounded production art, no modern elements, no UI, no text, no watermark",
+    "globalNegative": "anime splash art, glossy skin, chibi proportions, photobash collage, noisy background clutter, extreme fisheye perspective, floating props, extra limbs, duplicate weapons, cropped feet, unreadable silhouette, tiny face, giant portrait closeup, abstract art, color smear, rainbow glitch, logo, watermark, text, frame, border",
+    "referenceDirective": "single named unit concept plate on a wide neutral backdrop, full body fully visible, character centered, practical grounded costume design, clear empty space around the silhouette, designed to anchor portrait and sprite-sheet derivation",
+    "portraitDirective": "single character head-and-shoulders portrait illustration, centered face and upper collar, clear facial features, plain neutral backdrop, slight three-quarter view, readable at 32x32, no hands or weapons crossing the face, no abstract shapes, no giant glowing effects hiding the face",
+    "atlasDirective": "sprite-source contact sheet for the same character, many small full-body action poses arranged cleanly on a flat neutral sheet, same costume and weapon in every pose, four world directions north east south west, readable idle move attack cast hit defeat motion, no labels, no grid numbers, no environment scene, no giant portrait, no abstract blocks"
   },
   "classTones": {
     "vanguard": "frontline vanguard silhouette, shield-first stance, practical armor layering, stable sword arm read",

@@ -3,6 +3,7 @@ import type {
   AttackFlavor,
   CameraCue,
   ClassDefinition,
+  CombatRole,
   ImpactWeight,
   MatterProfile,
   PresentationProfile,
@@ -14,6 +15,7 @@ import type {
   StatusDefinition,
   StatusKey,
   TelegraphStyle,
+  UnitIconId,
 } from './types'
 
 export interface LoadedContentDefinitions {
@@ -85,6 +87,29 @@ function expectSkillTargetType(value: unknown, path: string): SkillTargetType {
   }
 
   throw new Error(`Expected skill target type at ${path}`)
+}
+
+function expectCombatRole(value: unknown, path: string): CombatRole {
+  if (value === 'tank' || value === 'damage' || value === 'support' || value === 'healer') {
+    return value
+  }
+
+  throw new Error(`Expected combat role at ${path}`)
+}
+
+function expectUnitIconId(value: unknown, path: string): UnitIconId {
+  if (
+    value === 'shield' ||
+    value === 'bow' ||
+    value === 'orb' ||
+    value === 'wall' ||
+    value === 'dagger' ||
+    value === 'staff'
+  ) {
+    return value
+  }
+
+  throw new Error(`Expected unit icon id at ${path}`)
 }
 
 function expectTelegraphStyle(value: unknown, path: string): TelegraphStyle {
@@ -262,6 +287,8 @@ function parseClassDefinition(value: unknown, path: string): ClassDefinition {
     id: expectString(record.id, `${path}.id`),
     nameKey: expectString(record.nameKey, `${path}.nameKey`),
     roleKey: expectString(record.roleKey, `${path}.roleKey`),
+    combatRole: expectCombatRole(record.combatRole, `${path}.combatRole`),
+    unitIconId: expectUnitIconId(record.unitIconId, `${path}.unitIconId`),
     basicAttackNameKey: expectString(record.basicAttackNameKey, `${path}.basicAttackNameKey`),
     basicAttackPresentationId: expectString(record.basicAttackPresentationId, `${path}.basicAttackPresentationId`),
     basicAttackFlavor: expectAttackFlavor(record.basicAttackFlavor, `${path}.basicAttackFlavor`),
