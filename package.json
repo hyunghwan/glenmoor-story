@@ -16,6 +16,7 @@
     "qa:camera": "node scripts/qa/camera-controls.mjs"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
