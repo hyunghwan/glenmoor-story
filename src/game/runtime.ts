@@ -537,7 +537,6 @@ function evaluateForestKindlingReaction(
 
 function evaluateRuinsEchoReaction(
   state: BattleState,
-  actor: UnitState,
   target: UnitState,
   skill: SkillDefinition | undefined,
 ): TerrainReactionResult | undefined {
@@ -1329,7 +1328,7 @@ function simulateAction(
       result.terrainReactions.push(forestKindling)
     }
 
-    const ruinsEcho = evaluateRuinsEchoReaction(state, actor, target, skill)
+    const ruinsEcho = evaluateRuinsEchoReaction(state, target, skill)
 
     if (ruinsEcho) {
       result.terrainReactions.push(ruinsEcho)
