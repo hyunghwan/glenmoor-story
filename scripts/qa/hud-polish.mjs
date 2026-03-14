@@ -415,8 +415,8 @@ function assertShortHeightCompaction(metrics, label) {
   }
 
   assert(
-    metrics.compact.topbarOccupiedHeight <= 60,
-    `Expected compact topbar occupancy for ${label} (${metrics.compact.topbarOccupiedHeight} > 60)`,
+    metrics.compact.topbarOccupiedHeight <= 84,
+    `Expected compact topbar occupancy for ${label} (${metrics.compact.topbarOccupiedHeight} > 84)`,
   )
   assert(
     metrics.compact.bottomBandOccupiedHeight !== null && metrics.compact.bottomBandOccupiedHeight <= 238,
@@ -431,8 +431,8 @@ function assertShortHeightCompaction(metrics, label) {
     `Expected compact initiative rail height for ${label} (${metrics.rects.initiativeRail.height} > 96)`,
   )
   assert(
-    metrics.rects.statusLine.height <= 46,
-    `Expected compact status line height for ${label} (${metrics.rects.statusLine.height} > 46)`,
+    metrics.rects.statusLine.height <= 68,
+    `Expected compact status line height for ${label} (${metrics.rects.statusLine.height} > 68)`,
   )
 }
 

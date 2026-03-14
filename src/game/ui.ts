@@ -18,6 +18,9 @@ export class HudController {
   private readonly bus: Phaser.Events.EventEmitter
   private currentView?: HudViewModel
   private suppressNextClick = false
+  private mobileInfoExpanded = false
+  private accessibilityPanelOpen = false
+  private accessibilitySettingsOpen = false
 
   private extractOrigin(event: Event): Element | undefined {
     return event.target instanceof Element
@@ -27,6 +30,21 @@ export class HudController {
 
   private emitActionFromEvent(event: Event): boolean {
     const origin = this.extractOrigin(event)
+    const uiToggle = origin?.closest<HTMLButtonElement>('[data-ui-toggle]')?.dataset.uiToggle
+
+    if (uiToggle) {
+      if (uiToggle === 'mobile-info') {
+        this.mobileInfoExpanded = !this.mobileInfoExpanded
+      } else if (uiToggle === 'accessible-panel') {
+        this.accessibilityPanelOpen = !this.accessibilityPanelOpen
+      } else if (uiToggle === 'accessible-settings') {
+        this.accessibilitySettingsOpen = !this.accessibilitySettingsOpen
+      }
+
+      this.render()
+      return true
+    }
+
     const command = origin?.closest<HTMLButtonElement>('[data-command]')?.dataset.command
 
     if (command) {
@@ -73,12 +91,27 @@ export class HudController {
     this.root.addEventListener('click', this.handleRootClick)
     this.bus.on('hud:update', (view: HudViewModel) => {
       this.currentView = view
+      if (view.layoutMode === 'desktop') {
+        this.mobileInfoExpanded = false
+      }
       this.render()
     })
   }
 
   getCurrentView(): HudViewModel | undefined {
     return this.currentView
+  }
+
+  getUiState(): {
+    mobileInfoExpanded: boolean
+    accessibilityPanelOpen: boolean
+    accessibilitySettingsOpen: boolean
+  } {
+    return {
+      mobileInfoExpanded: this.mobileInfoExpanded,
+      accessibilityPanelOpen: this.accessibilityPanelOpen,
+      accessibilitySettingsOpen: this.accessibilitySettingsOpen,
+    }
   }
 
   private syncAnchoredElements(): void {
@@ -441,6 +474,7 @@ export class HudController {
       return
     }
 
+    const isMobile = view.layoutMode !== 'desktop'
     const statusItems = [
       view.statusLine.objectiveLabel,
       view.statusLine.modeLabel,
@@ -448,9 +482,10 @@ export class HudController {
     ].filter((item, index, items) => item && items.indexOf(item) === index)
 
     this.root.innerHTML = `
-      <div class="hud-overlay ${view.mode === 'busy' ? 'is-busy' : ''}">
+      <div class="hud-overlay ${view.mode === 'busy' ? 'is-busy' : ''} is-${view.layoutMode}">
+        <div class="hud-live-region" aria-live="polite" aria-atomic="true">${view.accessiblePanel.liveMessage}</div>
         <div class="hud-topbar">
-          <section class="hud-view-cluster hud-card" aria-label="${view.viewControls.label}">
+          <section class="hud-view-cluster" aria-label="${view.viewControls.label}">
             <div class="hud-view-actions">
               ${view.viewControls.buttons
                 .map(
@@ -469,6 +504,28 @@ export class HudController {
                 .join('')}
             </div>
           </section>
+
+          ${
+            isMobile
+              ? `
+                <div class="hud-mobile-tools">
+                  <button class="hud-icon-button" data-ui-toggle="mobile-info" aria-label="${this.getUiLabel(view.locale, 'details')}">
+                    <span class="material-symbols-outlined" aria-hidden="true">bottom_panel_open</span>
+                  </button>
+                  <button class="hud-icon-button" data-ui-toggle="accessible-panel" aria-label="${this.getUiLabel(view.locale, 'assistive')}">
+                    <span class="material-symbols-outlined" aria-hidden="true">keyboard_command_key</span>
+                  </button>
+                  <button class="hud-icon-button" data-ui-toggle="accessible-settings" aria-label="${this.getUiLabel(view.locale, 'settings')}">
+                    <span class="material-symbols-outlined" aria-hidden="true">accessibility_new</span>
+                  </button>
+                  <div class="hud-locales is-mobile">
+                    ${this.renderLocaleButton('en', view.locale)}
+                    ${this.renderLocaleButton('ko', view.locale)}
+                  </div>
+                </div>
+              `
+              : ''
+          }
 
           <div class="hud-status-stack">
             <div class="hud-status-line hud-card">
@@ -503,48 +560,15 @@ export class HudController {
             }
           </div>
 
-          <div class="hud-locales">
-            ${this.renderLocaleButton('en', view.locale)}
-            ${this.renderLocaleButton('ko', view.locale)}
-          </div>
+          ${!isMobile ? `<div class="hud-locales">${this.renderLocaleButton('en', view.locale)}${this.renderLocaleButton('ko', view.locale)}</div>` : ''}
         </div>
 
         ${this.renderActionMenu(view)}
         ${this.renderTargetDetail(view)}
         ${this.renderTargetMarkers(view)}
-
-        <div class="hud-bottom-shell">
-          <div class="hud-bottom-band">
-            <div class="hud-left-stack">
-              ${view.activeUnitPanel ? this.renderActiveUnitPanel(view.activeUnitPanel) : ''}
-            </div>
-            <section class="hud-initiative-rail hud-card">
-              <div class="hud-initiative-head">
-                <span class="hud-label">${view.initiativeRail.label}</span>
-                <span class="hud-initiative-now">${view.initiativeRail.currentTurnLabel}</span>
-              </div>
-              <div class="hud-initiative-strip">
-                ${view.initiativeRail.entries
-                  .map(
-                    (entry) => `
-                      <div class="hud-initiative-chip is-${entry.team} is-${entry.emphasis}">
-                        <span class="hud-initiative-order">${entry.orderLabel}</span>
-                        <span class="hud-initiative-token">
-                          ${renderUnitIconSvg(entry.unitIconId, entry.combatRole, 18)}
-                          <em>${entry.initials}</em>
-                        </span>
-                        <div class="hud-initiative-meta">
-                          <strong>${entry.name}</strong>
-                          <span>${entry.className} · ${entry.combatRoleLabel}</span>
-                        </div>
-                      </div>
-                    `,
-                  )
-                  .join('')}
-              </div>
-            </section>
-          </div>
-        </div>
+        ${isMobile ? this.renderMobileShell(view) : this.renderDesktopShell(view)}
+        ${this.renderAccessiblePanel(view)}
+        ${this.renderAccessibilitySettings(view)}
 
         ${
           view.modal
@@ -573,9 +597,261 @@ export class HudController {
     this.syncAnchoredElements()
   }
 
+  private renderDesktopShell(view: HudViewModel): string {
+    return `
+      <div class="hud-bottom-shell">
+        <div class="hud-bottom-band">
+          <div class="hud-left-stack">
+            ${view.activeUnitPanel ? this.renderActiveUnitPanel(view.activeUnitPanel) : ''}
+          </div>
+          ${this.renderInitiativeRail(view)}
+        </div>
+      </div>
+    `
+  }
+
+  private renderMobileShell(view: HudViewModel): string {
+    if (view.modal) {
+      return ''
+    }
+
+    const activeUnit = view.activeUnitPanel
+
+    return `
+      <div class="hud-bottom-shell is-mobile">
+        <div class="hud-mobile-band">
+          <div class="hud-mobile-band-primary">
+            ${activeUnit ? this.renderActiveUnitPanel(activeUnit) : ''}
+          </div>
+          <div class="hud-mobile-band-secondary">
+            ${this.renderInitiativeRail(view)}
+          </div>
+        </div>
+        ${this.renderMobileInfoSheet(view)}
+        ${view.actionMenu?.presentation === 'dock' ? this.renderDockActionMenu(view) : ''}
+      </div>
+    `
+  }
+
+  private renderMobileInfoSheet(view: HudViewModel): string {
+    const activeUnit = view.activeUnitPanel
+    const detailTitle =
+      view.targetDetail?.presentation === 'sheet'
+        ? view.targetDetail.unitName
+        : activeUnit?.name ?? this.getUiLabel(view.locale, 'details')
+    const detailSubtitle =
+      view.targetDetail?.presentation === 'sheet'
+        ? `${view.targetDetail.subtitle} · ${view.targetDetail.title}`
+        : [view.statusLine.objectiveLabel, view.statusLine.modeLabel, view.statusLine.logLabel]
+            .filter(Boolean)
+            .join(' · ')
+
+    return `
+      <section class="hud-mobile-sheet hud-card ${this.mobileInfoExpanded ? 'is-expanded' : ''}">
+        <button class="hud-mobile-summary" data-ui-toggle="mobile-info" aria-expanded="${this.mobileInfoExpanded}">
+          <div class="hud-mobile-summary-copy">
+            <strong>${detailTitle}</strong>
+            <span>${detailSubtitle}</span>
+          </div>
+          <span class="material-symbols-outlined" aria-hidden="true">${this.mobileInfoExpanded ? 'expand_more' : 'expand_less'}</span>
+        </button>
+        <div class="hud-mobile-sheet-body">
+          ${
+            view.targetDetail?.presentation === 'sheet'
+              ? this.renderTargetDetailCard(view.targetDetail)
+              : this.renderMobileInfoSummary(view)
+          }
+        </div>
+      </section>
+    `
+  }
+
+  private renderMobileInfoSummary(view: HudViewModel): string {
+    const summaryLines = [view.statusLine.objectiveLabel, view.statusLine.modeLabel, view.statusLine.logLabel].filter(Boolean)
+
+    return `
+      <div class="hud-mobile-snapshot">
+        ${summaryLines.map((line) => `<p>${line}</p>`).join('')}
+      </div>
+    `
+  }
+
+  private renderInitiativeRail(view: HudViewModel): string {
+    return `
+      <section class="hud-initiative-rail hud-card">
+        <div class="hud-initiative-head">
+          <span class="hud-label">${view.initiativeRail.label}</span>
+          <span class="hud-initiative-now">${view.initiativeRail.currentTurnLabel}</span>
+        </div>
+        <div class="hud-initiative-strip">
+          ${view.initiativeRail.entries
+            .map(
+              (entry) => `
+                <div class="hud-initiative-chip is-${entry.team} is-${entry.emphasis}">
+                  <span class="hud-initiative-order">${entry.orderLabel}</span>
+                  <span class="hud-initiative-token">
+                    ${renderUnitIconSvg(entry.unitIconId, entry.combatRole, 18)}
+                    <em>${entry.initials}</em>
+                  </span>
+                  <div class="hud-initiative-meta">
+                    <strong>${entry.name}</strong>
+                    <span>${entry.className} · ${entry.combatRoleLabel}</span>
+                  </div>
+                </div>
+              `,
+            )
+            .join('')}
+        </div>
+      </section>
+    `
+  }
+
+  private renderDockActionMenu(view: HudViewModel): string {
+    const actionMenu = view.actionMenu
+
+    if (!actionMenu) {
+      return ''
+    }
+
+    return `
+      <section class="hud-action-dock hud-card" aria-label="${actionMenu.label}">
+        <div class="hud-action-buttons is-dock">
+          ${actionMenu.buttons
+            .map(
+              (button) => `
+                <button
+                  class="hud-command-button ${button.active ? 'is-active' : ''}"
+                  data-command="${button.id}"
+                  ${button.disabled ? 'disabled' : ''}
+                >
+                  ${button.label}
+                </button>
+              `,
+            )
+            .join('')}
+        </div>
+      </section>
+    `
+  }
+
+  private renderAccessiblePanel(view: HudViewModel): string {
+    if (!this.accessibilityPanelOpen) {
+      return ''
+    }
+
+    return `
+      <section class="hud-access-panel hud-card" aria-label="${view.accessiblePanel.label}">
+        <div class="hud-access-section">
+          <span class="hud-label">${view.accessiblePanel.summaryHeading}</span>
+          <p>${view.accessiblePanel.summary}</p>
+        </div>
+        <div class="hud-access-section">
+          <span class="hud-label">${view.accessiblePanel.commandsHeading}</span>
+          <div class="hud-access-grid">
+            ${view.accessiblePanel.commandButtons
+              .map(
+                (button) => `
+                  <button class="hud-button hud-access-button" data-command="${button.id}">
+                    ${button.label}
+                  </button>
+                `,
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="hud-access-section">
+          <span class="hud-label">${view.accessiblePanel.optionsHeading}</span>
+          <div class="hud-access-list">
+            ${
+              view.accessiblePanel.options.length > 0
+                ? view.accessiblePanel.options
+                    .map(
+                      (option) => `
+                        <button class="hud-access-option" data-command="${option.command}">
+                          <strong>${option.label}</strong>
+                          ${option.detail ? `<span>${option.detail}</span>` : ''}
+                        </button>
+                      `,
+                    )
+                    .join('')
+                : `<p class="hud-access-empty">${this.getUiLabel(view.locale, 'noOptions')}</p>`
+            }
+          </div>
+        </div>
+      </section>
+    `
+  }
+
+  private renderAccessibilitySettings(view: HudViewModel): string {
+    if (!this.accessibilitySettingsOpen) {
+      return ''
+    }
+
+    return `
+      <section class="hud-access-settings hud-card" aria-label="${this.getUiLabel(view.locale, 'settings')}">
+        <div class="hud-access-section">
+          <span class="hud-label">${this.getUiLabel(view.locale, 'textScale')}</span>
+          <div class="hud-access-grid">
+            ${[100, 115, 130]
+              .map(
+                (scale) => `
+                  <button
+                    class="hud-button ${view.accessibilityState.textScale === scale ? 'is-active' : ''}"
+                    data-command="accessibility:text-scale:${scale}"
+                  >
+                    ${scale}%
+                  </button>
+                `,
+              )
+              .join('')}
+          </div>
+        </div>
+        <div class="hud-access-section">
+          <div class="hud-access-grid">
+            <button class="hud-button" data-command="accessibility:toggle-high-contrast">
+              ${this.getUiLabel(view.locale, 'highContrast')}: ${view.accessibilityState.highContrast ? this.getUiLabel(view.locale, 'on') : this.getUiLabel(view.locale, 'off')}
+            </button>
+            <button class="hud-button" data-command="accessibility:toggle-reduced-motion">
+              ${this.getUiLabel(view.locale, 'reducedMotion')}: ${view.accessibilityState.reducedMotion ? this.getUiLabel(view.locale, 'on') : this.getUiLabel(view.locale, 'off')}
+            </button>
+          </div>
+        </div>
+      </section>
+    `
+  }
+
+  private getUiLabel(locale: Locale, key: 'assistive' | 'details' | 'settings' | 'textScale' | 'highContrast' | 'reducedMotion' | 'on' | 'off' | 'noOptions'): string {
+    const labels = {
+      en: {
+        assistive: 'Assistive Controls',
+        details: 'Battle Details',
+        settings: 'Accessibility',
+        textScale: 'Text Scale',
+        highContrast: 'High Contrast',
+        reducedMotion: 'Reduced Motion',
+        on: 'On',
+        off: 'Off',
+        noOptions: 'No options available.',
+      },
+      ko: {
+        assistive: '보조기기 조작',
+        details: '전투 상세',
+        settings: '접근성',
+        textScale: '글자 크기',
+        highContrast: '고대비',
+        reducedMotion: '모션 축소',
+        on: '켜짐',
+        off: '꺼짐',
+        noOptions: '현재 사용할 수 있는 항목이 없습니다.',
+      },
+    }
+
+    return labels[locale][key]
+  }
+
   private renderLocaleButton(locale: Locale, activeLocale: Locale): string {
     return `
-      <button class="hud-locale ${locale === activeLocale ? 'is-active' : ''}" data-locale="${locale}">
+      <button class="hud-locale ${locale === activeLocale ? 'is-active' : ''}" data-locale="${locale}" aria-label="${locale === 'en' ? 'English' : 'Korean'}">
         ${locale.toUpperCase()}
       </button>
     `
@@ -643,7 +919,7 @@ export class HudController {
   }
 
   private renderActionMenu(view: HudViewModel): string {
-    if (!view.actionMenu) {
+    if (!view.actionMenu || view.actionMenu.presentation !== 'anchored' || !view.actionMenu.anchor) {
       return ''
     }
 
@@ -712,7 +988,7 @@ export class HudController {
   }
 
   private renderTargetDetail(view: HudViewModel): string {
-    if (!view.targetDetail) {
+    if (!view.targetDetail || view.targetDetail.presentation !== 'anchored' || !view.targetDetail.anchor) {
       return ''
     }
 
@@ -721,26 +997,34 @@ export class HudController {
         class="hud-target-detail hud-anchored"
         ${this.anchorAttributes(view.targetDetail.anchor, 14)}
       >
+        ${this.renderTargetDetailCard(view.targetDetail)}
+      </section>
+    `
+  }
+
+  private renderTargetDetailCard(targetDetail: NonNullable<HudViewModel['targetDetail']>): string {
+    return `
+      <div class="hud-target-detail-card">
         <div class="hud-target-unit">
           <div class="hud-target-token">
-            ${renderUnitIconSvg(view.targetDetail.unitIconId, view.targetDetail.combatRole, 18)}
+            ${renderUnitIconSvg(targetDetail.unitIconId, targetDetail.combatRole, 18)}
           </div>
           <div class="hud-target-meta">
-            <strong>${view.targetDetail.unitName}</strong>
-            <span>${view.targetDetail.teamLabel} · ${view.targetDetail.className} · ${view.targetDetail.combatRoleLabel}</span>
+            <strong>${targetDetail.unitName}</strong>
+            <span>${targetDetail.teamLabel} · ${targetDetail.className} · ${targetDetail.combatRoleLabel}</span>
           </div>
         </div>
-        <span class="hud-label">${view.targetDetail.subtitle}</span>
-        <h3>${view.targetDetail.title}</h3>
-        <p>${view.targetDetail.amountLabel}</p>
-        <p>${view.targetDetail.counterLabel}</p>
-        <p>${view.targetDetail.effectLabel}</p>
+        <span class="hud-label">${targetDetail.subtitle}</span>
+        <h3>${targetDetail.title}</h3>
+        <p>${targetDetail.amountLabel}</p>
+        <p>${targetDetail.counterLabel}</p>
+        <p>${targetDetail.effectLabel}</p>
         <div class="hud-target-verdict">
-          ${view.targetDetail.verdictChips
+          ${targetDetail.verdictChips
             .map((chip) => this.renderStatusChip(chip.label, chip.stacks, chip.tone))
             .join('')}
         </div>
-      </section>
+      </div>
     `
   }
 

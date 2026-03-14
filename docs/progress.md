@@ -328,3 +328,40 @@ This is the canonical implementation log for `Glenmoor Story`.
   - `output/web-game/hud-polish/12-ruins-reaction-target-detail-1280-ko.png`
   - `output/web-game/hud-polish/13-bridge-reaction-target-detail-1280-en.png`
   - `output/web-game/playthrough/16-bridge-duel-mid.png`
+
+## 2026-03-14
+
+### Completed
+
+- Implemented a mobile-first presentation layer on top of the existing tactics prototype:
+  - `src/main.ts` now drives a responsive battlefield shell that resizes Phaser to the real gameplay region instead of letterboxing a fixed `1280x720` canvas
+  - added `desktop`, `mobile-portrait`, and `mobile-landscape` layout modes plus portrait battlefield height budgeting
+  - added viewport-aware projection origin and default zoom helpers so tile scale remains touch-readable on phones
+- Reworked the battle HUD for mobile and assistive access:
+  - action menus can now render as desktop anchored popups or mobile bottom docks
+  - target detail can now render as a desktop popup or a mobile sheet card
+  - mobile now uses a collapsible info sheet instead of permanently showing the full active-unit and initiative stack
+  - added a DOM-based accessible battle panel that exposes commands, reachable tiles, and targetable units without requiring canvas interaction
+- Added persisted accessibility preferences and browser-surface integration:
+  - text scale (`100/115/130`), high contrast, and reduced motion now persist in local storage
+  - locale changes now also update document language
+  - live battle messaging is mirrored into an aria-live region
+- Updated duel presentation and QA:
+  - duel staging now compacts for portrait and landscape mobile layouts
+  - reduced-motion preference now suppresses duel camera shake / flash cues
+  - added `tests/responsive.test.ts` and `scripts/qa/mobile-accessibility.mjs`
+  - extended package scripts with `npm run qa:mobile`
+
+### Verification
+
+- `npm test`
+- `npm run build`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:mobile`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+
+### Notes
+
+- Mobile portrait now reserves more than half of the viewport height for the battlefield and keeps quick controls at or above the `48px` touch target floor in automated QA.
+- The accessible DOM control path is intentionally layered on top of the same tactics commands rather than duplicating game rules in a separate controller.

@@ -3,10 +3,12 @@ import { buildCombatStepLines } from '../combat-text'
 import { classDefinitions } from '../content'
 import { I18n } from '../i18n'
 import type {
+  AccessibilityPreferences,
   CombatPresentation,
   CombatPresentationUnitSnapshot,
   CombatResolution,
   StatusInstance,
+  ViewportProfile,
 } from '../types'
 
 interface DisplayUnitState {
@@ -36,6 +38,10 @@ export class DuelScene extends Phaser.Scene {
   private presentation?: CombatPresentation
   private readonly i18n: I18n
   private readonly uiBus: Phaser.Events.EventEmitter
+  private readonly getViewportProfile: () => ViewportProfile
+  private readonly getAccessibilityPreferences: () => AccessibilityPreferences
+  private viewportProfile: ViewportProfile
+  private accessibilityPreferences: AccessibilityPreferences
   private stepIndex = 0
   private stepElapsedMs = 0
   private hitStopRemainingMs = 0
@@ -56,13 +62,24 @@ export class DuelScene extends Phaser.Scene {
     return unit?.team === 'enemies' ? '#ff8d73' : '#8fc1ff'
   }
 
-  constructor(uiBus: Phaser.Events.EventEmitter, i18n: I18n) {
+  constructor(
+    uiBus: Phaser.Events.EventEmitter,
+    i18n: I18n,
+    getViewportProfile: () => ViewportProfile,
+    getAccessibilityPreferences: () => AccessibilityPreferences,
+  ) {
     super('duel')
     this.uiBus = uiBus
     this.i18n = i18n
+    this.getViewportProfile = getViewportProfile
+    this.getAccessibilityPreferences = getAccessibilityPreferences
+    this.viewportProfile = getViewportProfile()
+    this.accessibilityPreferences = getAccessibilityPreferences()
   }
 
   init(data: { resolution: CombatResolution }): void {
+    this.viewportProfile = this.getViewportProfile()
+    this.accessibilityPreferences = this.getAccessibilityPreferences()
     this.resolution = data.resolution
     this.presentation = data.resolution.presentation
     this.stepIndex = 0
@@ -80,86 +97,96 @@ export class DuelScene extends Phaser.Scene {
     }
 
     const { width, height } = this.scale
-    const panelY = height / 2
+    const isMobile = this.viewportProfile.layoutMode !== 'desktop'
+    const isPortraitMobile = this.viewportProfile.layoutMode === 'mobile-portrait'
+    const safeTop = this.viewportProfile.safeArea.top
+    const safeBottom = this.viewportProfile.safeArea.bottom
+    const panelY = isPortraitMobile ? height / 2 + 24 : height / 2
+    const frameWidth = width - (isMobile ? 28 : 120)
+    const frameHeight = isPortraitMobile ? height - safeTop - safeBottom - 168 : 420
+    const headerWidth = width - (isMobile ? 72 : 280)
+    const detailWidth = width - (isMobile ? 72 : 360)
 
     if (this.textures.exists('duel:backdrop')) {
       this.add.image(width / 2, height / 2, 'duel:backdrop').setDisplaySize(width, height).setAlpha(0.22)
     }
     this.add.rectangle(width / 2, height / 2, width, height, 0x071018, 0.96)
-    this.add.rectangle(width / 2, panelY, width - 120, 420, 0x13202b, 0.96).setStrokeStyle(2, 0xd8c08a)
-    this.add.rectangle(width / 2, 128, width - 280, 86, 0x0d171f, 0.88).setStrokeStyle(1, 0x4d6578)
-    this.add.rectangle(width / 2, 330, width - 360, 110, 0x0c141a, 0.92).setStrokeStyle(1, 0x3a5568)
+    this.add.rectangle(width / 2, panelY, frameWidth, frameHeight, 0x13202b, 0.96).setStrokeStyle(2, 0xd8c08a)
+    this.add.rectangle(width / 2, safeTop + 104, headerWidth, isPortraitMobile ? 96 : 86, 0x0d171f, 0.88).setStrokeStyle(1, 0x4d6578)
+    this.add.rectangle(width / 2, isPortraitMobile ? safeTop + 250 : 330, detailWidth, isPortraitMobile ? 128 : 110, 0x0c141a, 0.92).setStrokeStyle(1, 0x3a5568)
 
-    this.add.text(width / 2, 78, this.i18n.t('duel.vs'), {
+    this.add.text(width / 2, safeTop + 44, this.i18n.t('duel.vs'), {
       fontFamily: 'Cinzel',
-      fontSize: '18px',
+      fontSize: isMobile ? '16px' : '18px',
       color: '#d6c189',
       letterSpacing: 6,
     }).setOrigin(0.5)
 
-    this.stepText = this.add.text(width / 2, 108, '', {
+    this.stepText = this.add.text(width / 2, safeTop + 82, '', {
       fontFamily: 'Outfit',
-      fontSize: '15px',
+      fontSize: isMobile ? '14px' : '15px',
       color: '#b8c8d6',
       fontStyle: '600',
     }).setOrigin(0.5)
 
-    this.actionText = this.add.text(width / 2, 162, '', {
+    this.actionText = this.add.text(width / 2, safeTop + 142, '', {
       fontFamily: 'Outfit',
-      fontSize: '34px',
+      fontSize: isPortraitMobile ? '26px' : isMobile ? '30px' : '34px',
       color: '#f4efe3',
       fontStyle: '700',
     }).setOrigin(0.5)
 
-    this.subtitleText = this.add.text(width / 2, 214, '', {
+    this.subtitleText = this.add.text(width / 2, safeTop + 192, '', {
       fontFamily: 'Outfit',
-      fontSize: '20px',
+      fontSize: isPortraitMobile ? '17px' : isMobile ? '18px' : '20px',
       color: '#b8c8d6',
       align: 'center',
     }).setOrigin(0.5)
 
-    this.detailText = this.add.text(width / 2, 330, '', {
+    this.detailText = this.add.text(width / 2, isPortraitMobile ? safeTop + 250 : 330, '', {
       fontFamily: 'Outfit',
-      fontSize: '23px',
+      fontSize: isPortraitMobile ? '17px' : isMobile ? '20px' : '23px',
       color: '#edf4fb',
       align: 'center',
       lineSpacing: 8,
-      wordWrap: { width: width - 460 },
+      wordWrap: { width: width - (isMobile ? 120 : 460) },
     }).setOrigin(0.5)
 
     const [leftUnit, rightUnit] = this.presentation.units
-    const leftX = 300
-    const rightX = width - 300
+    const leftX = isPortraitMobile ? width / 2 : Math.max(160, width * 0.24)
+    const rightX = isPortraitMobile ? width / 2 : width - Math.max(160, width * 0.24)
+    const leftY = isPortraitMobile ? height * 0.44 : panelY + 34
+    const rightY = isPortraitMobile ? height * 0.76 : panelY + 34
 
     if (leftUnit) {
       this.cards.set(
         leftUnit.unitId,
-        this.createCombatantCard(leftUnit, leftX, panelY + 34, this.resolveUnitAccent(leftUnit.unitId)),
+        this.createCombatantCard(leftUnit, leftX, leftY, this.resolveUnitAccent(leftUnit.unitId)),
       )
     }
 
     if (rightUnit) {
       this.cards.set(
         rightUnit.unitId,
-        this.createCombatantCard(rightUnit, rightX, panelY + 34, this.resolveUnitAccent(rightUnit.unitId)),
+        this.createCombatantCard(rightUnit, rightX, rightY, this.resolveUnitAccent(rightUnit.unitId)),
       )
     }
 
     this.fxGraphics = this.add.graphics()
     this.flashGraphics = this.add.graphics().setBlendMode(Phaser.BlendModes.SCREEN)
 
-    const skip = this.add.text(width - 140, height - 68, this.i18n.t('duel.skip'), {
+    const skip = this.add.text(width - 120, height - safeBottom - 50, this.i18n.t('duel.skip'), {
       fontFamily: 'Outfit',
-      fontSize: '18px',
+      fontSize: isMobile ? '16px' : '18px',
       color: '#f9f2dc',
       backgroundColor: '#203445',
       padding: { x: 14, y: 8 },
     })
     skip.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.finish())
 
-    const fast = this.add.text(width - 260, height - 68, this.i18n.t('duel.fast'), {
+    const fast = this.add.text(width - 232, height - safeBottom - 50, this.i18n.t('duel.fast'), {
       fontFamily: 'Outfit',
-      fontSize: '18px',
+      fontSize: isMobile ? '16px' : '18px',
       color: '#f9f2dc',
       backgroundColor: '#3d2b24',
       padding: { x: 14, y: 8 },
@@ -295,20 +322,22 @@ export class DuelScene extends Phaser.Scene {
       card.panel.setAlpha(display.defeated ? 0.68 : 1)
     }
 
-    if (step.cameraCue === 'impact-heavy') {
-      this.cameras.main.shake(110, 0.0035)
-      this.cameras.main.flash(80, 255, 244, 214, false)
-    } else if (step.cameraCue === 'impact-light') {
-      this.cameras.main.shake(70, 0.002)
-      this.cameras.main.flash(55, 210, 230, 255, false)
-    } else if (step.cameraCue === 'support-pulse') {
-      this.cameras.main.flash(75, 196, 255, 236, false)
-    } else if (step.cameraCue === 'counter-jolt') {
-      this.cameras.main.shake(90, 0.0028)
-      this.cameras.main.flash(60, 255, 222, 210, false)
-    } else if (step.cameraCue === 'defeat-drop') {
-      this.cameras.main.shake(130, 0.0038)
-      this.cameras.main.flash(95, 255, 232, 188, false)
+    if (!this.accessibilityPreferences.reducedMotion) {
+      if (step.cameraCue === 'impact-heavy') {
+        this.cameras.main.shake(110, 0.0035)
+        this.cameras.main.flash(80, 255, 244, 214, false)
+      } else if (step.cameraCue === 'impact-light') {
+        this.cameras.main.shake(70, 0.002)
+        this.cameras.main.flash(55, 210, 230, 255, false)
+      } else if (step.cameraCue === 'support-pulse') {
+        this.cameras.main.flash(75, 196, 255, 236, false)
+      } else if (step.cameraCue === 'counter-jolt') {
+        this.cameras.main.shake(90, 0.0028)
+        this.cameras.main.flash(60, 255, 222, 210, false)
+      } else if (step.cameraCue === 'defeat-drop') {
+        this.cameras.main.shake(130, 0.0038)
+        this.cameras.main.flash(95, 255, 232, 188, false)
+      }
     }
 
     this.playStepSfx(step)

@@ -2,6 +2,37 @@ export type Locale = 'en' | 'ko'
 
 export type Team = 'allies' | 'enemies'
 
+export type BattleLayoutMode = 'desktop' | 'mobile-portrait' | 'mobile-landscape'
+
+export interface SafeAreaInsets {
+  top: number
+  right: number
+  bottom: number
+  left: number
+}
+
+export interface AccessibilityPreferences {
+  textScale: 100 | 115 | 130
+  highContrast: boolean
+  reducedMotion: boolean
+}
+
+export interface ViewportProfile {
+  layoutMode: BattleLayoutMode
+  width: number
+  height: number
+  coarsePointer: boolean
+  orientation: 'portrait' | 'landscape'
+  safeArea: SafeAreaInsets
+}
+
+export interface BattlefieldRect {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
 export type Direction = 'north' | 'east' | 'south' | 'west'
 
 export type FacingRelation = 'front' | 'side' | 'back'
@@ -587,7 +618,8 @@ export interface InitiativeRailViewModel {
 
 export interface ActionMenuViewModel {
   label: string
-  anchor: HudAnchor
+  presentation: 'anchored' | 'dock'
+  anchor?: HudAnchor
   buttons: HudActionButton[]
   avoidClientPoints: HudClientPoint[]
 }
@@ -604,7 +636,8 @@ export interface TargetMarkerViewModel {
 
 export interface TargetDetailPopupViewModel {
   unitId: string
-  anchor: HudAnchor
+  presentation: 'anchored' | 'sheet'
+  anchor?: HudAnchor
   unitName: string
   className: string
   combatRole: CombatRole
@@ -620,17 +653,6 @@ export interface TargetDetailPopupViewModel {
   telegraphSummary: CombatTelegraphSummary
 }
 
-export interface DuelTelemetry {
-  active: boolean
-  stepIndex: number
-  stepCount: number
-  actionLabel: string
-  fastMode: boolean
-  stepKind?: CombatPresentationStep['kind']
-  fxCueId?: string
-  targetUnitId?: string
-}
-
 export interface ViewControlButtonViewModel {
   id: string
   label: string
@@ -642,6 +664,25 @@ export interface ViewControlButtonViewModel {
 export interface ViewControlsViewModel {
   label: string
   buttons: ViewControlButtonViewModel[]
+}
+
+export interface AccessibleBattleOptionViewModel {
+  id: string
+  label: string
+  detail?: string
+  command: string
+  kind: 'tile' | 'target' | 'state'
+}
+
+export interface AccessibleBattlePanelViewModel {
+  label: string
+  summaryHeading: string
+  summary: string
+  commandsHeading: string
+  commandButtons: HudActionButton[]
+  optionsHeading: string
+  options: AccessibleBattleOptionViewModel[]
+  liveMessage: string
 }
 
 export interface BottomStatusLineViewModel {
@@ -656,6 +697,9 @@ export interface HudViewModel {
   locale: Locale
   phase: BattleState['phase']
   mode: 'idle' | 'move' | 'attack' | 'skill' | 'busy'
+  layoutMode: BattleLayoutMode
+  viewportProfile: ViewportProfile
+  accessibilityState: AccessibilityPreferences
   activeUnitPanel?: ActiveUnitPanelViewModel
   actionMenu?: ActionMenuViewModel
   initiativeRail: InitiativeRailViewModel
@@ -663,6 +707,7 @@ export interface HudViewModel {
   targetDetail?: TargetDetailPopupViewModel
   viewControls: ViewControlsViewModel
   statusLine: BottomStatusLineViewModel
+  accessiblePanel: AccessibleBattlePanelViewModel
   phaseAnnouncement?: {
     label: string
     body: string

@@ -70,3 +70,45 @@ export function tileDiamond(
     { x: center.x - TILE_WIDTH / 2, y: center.y },
   ]
 }
+
+export function resolveBoardOrigin(args: {
+  viewportWidth: number
+  viewportHeight: number
+  rotationQuarterTurns: number
+  mapWidth: number
+  mapHeight: number
+  heights: number[][]
+}): { x: number; y: number } {
+  let minX = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+
+  for (let y = 0; y < args.mapHeight; y += 1) {
+    for (let x = 0; x < args.mapWidth; x += 1) {
+      const height = args.heights[y]?.[x] ?? 0
+      const diamond = tileDiamond(
+        { x, y },
+        height,
+        {
+          origin: { x: 0, y: 0 },
+          mapWidth: args.mapWidth,
+          mapHeight: args.mapHeight,
+          rotationQuarterTurns: args.rotationQuarterTurns,
+        },
+      )
+
+      for (const point of diamond) {
+        minX = Math.min(minX, point.x)
+        maxX = Math.max(maxX, point.x)
+        minY = Math.min(minY, point.y)
+        maxY = Math.max(maxY, point.y + HEIGHT_STEP)
+      }
+    }
+  }
+
+  return {
+    x: Math.round(args.viewportWidth / 2 - (minX + maxX) / 2),
+    y: Math.round(args.viewportHeight / 2 - (minY + maxY) / 2),
+  }
+}

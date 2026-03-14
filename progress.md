@@ -260,3 +260,28 @@ The canonical implementation log lives in `docs/progress.md`.
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
   - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
+
+## 2026-03-14
+
+- Implemented the mobile-first and accessibility overhaul without changing tactics rules:
+  - replaced the fixed `1280x720` FIT presentation with a viewport-driven shell that resizes the Phaser battlefield to the actual play region
+  - added `desktop`, `mobile-portrait`, and `mobile-landscape` layout modes plus dynamic battlefield height budgeting for portrait phones
+  - replaced the fixed board origin with viewport-aware projection origin resolution and mobile-default camera zoom / recenter behavior
+- Reworked battle HUD presentation for mobile:
+  - mobile now uses a bottom action dock plus collapsible info sheet instead of forcing the full desktop HUD on screen at once
+  - action menus can render as anchored desktop popups or mobile docks; target detail can render as an anchored popup or a sheet card
+  - mobile touch targets now meet the `48px` minimum in automated QA
+- Added a dedicated accessibility layer:
+  - persisted text scale, high-contrast, and reduced-motion preferences through local storage
+  - exposed a DOM-based accessible battle panel with command buttons, reachable tile options, and target options so a turn can be played without canvas clicks
+  - added live-region battle messaging plus document `lang` updates on locale changes
+- Updated duel presentation and QA coverage:
+  - duel layout now compacts for mobile portrait / landscape and respects reduced-motion preferences
+  - added `tests/responsive.test.ts` plus `scripts/qa/mobile-accessibility.mjs`
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:mobile`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`

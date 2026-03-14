@@ -1,9 +1,9 @@
 import Phaser from 'phaser'
 import {
   BATTLE_DRAG_THRESHOLD_PX,
-  DEFAULT_BATTLE_ZOOM,
   MAX_BATTLE_ZOOM,
   MIN_BATTLE_ZOOM,
+  clampBattleZoom,
   rotateQuarterTurns,
   stepBattleZoom,
   type RotationQuarterTurns,
@@ -21,7 +21,6 @@ import {
 } from '../battle-ui-model'
 import { classDefinitions, skillDefinitions, statusDefinitions, terrainDefinitions } from '../content'
 import {
-  BOARD_ORIGIN,
   HEIGHT_STEP,
   TILE_HEIGHT,
   TILE_WIDTH,
@@ -31,10 +30,12 @@ import {
 } from '../iso'
 import { I18n } from '../i18n'
 import { formatBattleFeedEntry } from '../combat-text'
+import { resolveDefaultZoom, resolveDynamicBoardOrigin } from '../responsive'
 import { BattleRuntime } from '../runtime'
 import { drawBattlefieldUnitIcon } from '../unit-visuals'
 import type {
   ActionTarget,
+  AccessibilityPreferences,
   BattleAction,
   CombatResolution,
   CombatRole,
@@ -49,6 +50,7 @@ import type {
   TiledMapData,
   UnitIconId,
   UnitState,
+  ViewportProfile,
   ViewControlButtonViewModel,
 } from '../types'
 
@@ -108,9 +110,16 @@ interface PhaseSequenceState {
   focusScrollY: number
 }
 
+interface PinchState {
+  startDistance: number
+  startZoom: number
+}
+
 export class BattleScene extends Phaser.Scene {
   private readonly uiBus: Phaser.Events.EventEmitter
   private readonly i18n: I18n
+  private readonly getViewportProfile: () => ViewportProfile
+  private readonly getAccessibilityPreferences: () => AccessibilityPreferences
   private runtime?: BattleRuntime
   private battlefieldZone?: Phaser.GameObjects.Zone
   private mapGraphics?: Phaser.GameObjects.Graphics
@@ -139,6 +148,7 @@ export class BattleScene extends Phaser.Scene {
   private phaseAnnouncementKey?: string
   private phaseAnnouncementCueId?: string
   private phaseAnnouncementMs = 0
+  private lastCameraFocusUnitId?: string
   private currentModal?: HudViewModel['modal']
   private battleMusic?: Phaser.Sound.BaseSound
   private actionFeedback?: ActionFeedbackState
@@ -157,27 +167,43 @@ export class BattleScene extends Phaser.Scene {
   private mapData?: TiledMapData
   private cameraBounds?: Phaser.Geom.Rectangle
   private pointerState?: BattlefieldPointerState
+  private pinchState?: PinchState
+  private projectionOrigin = { x: 0, y: 0 }
+  private viewportProfile: ViewportProfile
+  private accessibilityPreferences: AccessibilityPreferences
   private viewState: {
     rotationQuarterTurns: RotationQuarterTurns
     zoom: number
     panModeActive: boolean
   } = {
     rotationQuarterTurns: 0,
-    zoom: DEFAULT_BATTLE_ZOOM,
+    zoom: 1,
     panModeActive: false,
   }
 
-  constructor(uiBus: Phaser.Events.EventEmitter, i18n: I18n) {
+  constructor(
+    uiBus: Phaser.Events.EventEmitter,
+    i18n: I18n,
+    getViewportProfile: () => ViewportProfile,
+    getAccessibilityPreferences: () => AccessibilityPreferences,
+  ) {
     super('battle')
     this.uiBus = uiBus
     this.i18n = i18n
+    this.getViewportProfile = getViewportProfile
+    this.getAccessibilityPreferences = getAccessibilityPreferences
+    this.viewportProfile = getViewportProfile()
+    this.accessibilityPreferences = getAccessibilityPreferences()
   }
 
   create(): void {
+    this.viewportProfile = this.getViewportProfile()
+    this.accessibilityPreferences = this.getAccessibilityPreferences()
     this.mapData = this.cache.json.get('map:glenmoor-pass') as TiledMapData
     this.runtime = new BattleRuntime(this.mapData)
     this.resetViewState()
     this.registerBattlefieldInput()
+    this.input.addPointer(2)
     this.createBattlefieldZone()
     this.mapGraphics = this.add.graphics()
     this.overlayGraphics = this.add.graphics()
@@ -206,6 +232,8 @@ export class BattleScene extends Phaser.Scene {
     this.uiBus.on('debug:advance', this.handleDebugAdvance, this)
     this.uiBus.on('debug:tile-click', this.handleDebugTileClick, this)
     this.uiBus.on('debug:stage', this.handleDebugStage, this)
+    this.uiBus.on('presentation:viewport', this.handleViewportProfileUpdate, this)
+    this.uiBus.on('presentation:accessibility', this.handleAccessibilityPreferencesUpdate, this)
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.battleMusic?.stop()
@@ -218,6 +246,8 @@ export class BattleScene extends Phaser.Scene {
       this.uiBus.off('debug:advance', this.handleDebugAdvance, this)
       this.uiBus.off('debug:tile-click', this.handleDebugTileClick, this)
       this.uiBus.off('debug:stage', this.handleDebugStage, this)
+      this.uiBus.off('presentation:viewport', this.handleViewportProfileUpdate, this)
+      this.uiBus.off('presentation:accessibility', this.handleAccessibilityPreferencesUpdate, this)
       this.scale.off(Phaser.Scale.Events.RESIZE, this.handleScaleResize, this)
       this.input.off('pointermove', this.handlePointerMove, this)
       this.input.off('pointerup', this.handlePointerUp, this)
@@ -287,10 +317,12 @@ export class BattleScene extends Phaser.Scene {
   private resetViewState(): void {
     this.viewState = {
       rotationQuarterTurns: 0,
-      zoom: DEFAULT_BATTLE_ZOOM,
+      zoom: resolveDefaultZoom(this.viewportProfile),
       panModeActive: false,
     }
     this.pointerState = undefined
+    this.pinchState = undefined
+    this.lastCameraFocusUnitId = undefined
   }
 
   private registerBattlefieldInput(): void {
@@ -305,12 +337,24 @@ export class BattleScene extends Phaser.Scene {
     this.refreshPresentation()
   }
 
+  private handleViewportProfileUpdate(profile: ViewportProfile): void {
+    this.viewportProfile = profile
+    this.viewState.zoom = resolveDefaultZoom(profile)
+    this.applyCameraView(true)
+    this.refreshPresentation()
+  }
+
+  private handleAccessibilityPreferencesUpdate(preferences: AccessibilityPreferences): void {
+    this.accessibilityPreferences = preferences
+    this.refreshPresentation()
+  }
+
   private getProjectionOptions(): ProjectionOptions {
     return {
       rotationQuarterTurns: this.viewState.rotationQuarterTurns,
       mapWidth: this.runtime?.state.map.width,
       mapHeight: this.runtime?.state.map.height,
-      origin: BOARD_ORIGIN,
+      origin: this.projectionOrigin,
     }
   }
 
@@ -863,30 +907,83 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private getActiveTouchPointers(): Phaser.Input.Pointer[] {
+    return this.input.manager.pointers.filter((pointer) => pointer.isDown)
+  }
+
+  private resolveDragThresholdPx(): number {
+    return this.viewportProfile.coarsePointer ? Math.max(6, BATTLE_DRAG_THRESHOLD_PX - 2) : BATTLE_DRAG_THRESHOLD_PX
+  }
+
+  private panCameraFromGesture(deltaX: number, deltaY: number, startScrollX: number, startScrollY: number): void {
+    const camera = this.cameras.main
+    camera.setScroll(
+      startScrollX - deltaX / camera.zoom,
+      startScrollY - deltaY / camera.zoom,
+    )
+    this.clampCameraScroll()
+    this.hoveredPoint = undefined
+    this.drawOverlays()
+    this.publishHud()
+  }
+
+  private updatePinchGesture(): boolean {
+    if (!this.viewportProfile.coarsePointer) {
+      this.pinchState = undefined
+      return false
+    }
+
+    const activePointers = this.getActiveTouchPointers()
+
+    if (activePointers.length < 2) {
+      this.pinchState = undefined
+      return false
+    }
+
+    const [first, second] = activePointers
+    const distance = Math.hypot(first.x - second.x, first.y - second.y)
+
+    if (!this.pinchState) {
+      this.pinchState = {
+        startDistance: distance,
+        startZoom: this.viewState.zoom,
+      }
+      this.pointerState = undefined
+      return true
+    }
+
+    if (this.pinchState.startDistance <= 0) {
+      return true
+    }
+
+    this.pointerState = undefined
+    this.hoveredPoint = undefined
+    this.viewState.zoom = clampBattleZoom(this.pinchState.startZoom * (distance / this.pinchState.startDistance))
+    this.applyCameraView(false)
+    this.publishHud()
+    return true
+  }
+
   private handlePointerMove(pointer: Phaser.Input.Pointer): void {
+    if (this.updatePinchGesture()) {
+      return
+    }
+
     if (!this.pointerState || pointer.id !== this.pointerState.pointerId) {
       return
     }
 
-    const camera = this.cameras.main
     const dx = pointer.x - this.pointerState.startX
     const dy = pointer.y - this.pointerState.startY
     const distance = Math.hypot(dx, dy)
-    const shouldPan = this.viewState.panModeActive || distance >= BATTLE_DRAG_THRESHOLD_PX
+    const shouldPan = this.viewState.panModeActive || distance >= this.resolveDragThresholdPx()
 
     if (!shouldPan) {
       return
     }
 
     this.pointerState.isDragging = true
-    camera.setScroll(
-      this.pointerState.startScrollX - dx / camera.zoom,
-      this.pointerState.startScrollY - dy / camera.zoom,
-    )
-    this.clampCameraScroll()
-    this.hoveredPoint = undefined
-    this.drawOverlays()
-    this.publishHud()
+    this.panCameraFromGesture(dx, dy, this.pointerState.startScrollX, this.pointerState.startScrollY)
     this.updateBattlefieldCursor(true)
   }
 
@@ -896,6 +993,7 @@ export class BattleScene extends Phaser.Scene {
 
   private handlePointerCancel(): void {
     this.pointerState = undefined
+    this.pinchState = undefined
     this.updateBattlefieldCursor(false)
     this.emitTelemetry()
   }
@@ -908,6 +1006,17 @@ export class BattleScene extends Phaser.Scene {
     const state = this.pointerState
     this.pointerState = undefined
     this.updateBattlefieldCursor(false)
+    const dx = pointer.x - state.startX
+    const dy = pointer.y - state.startY
+    const gestureDistance = Math.hypot(dx, dy)
+    const didDrag = state.isDragging || gestureDistance >= this.resolveDragThresholdPx()
+
+    if (this.pinchState) {
+      this.pinchState = undefined
+      this.emitTelemetry()
+      return
+    }
+
     this.lastDebugInput = {
       source: 'finish-pointer-gesture',
       pointerId: pointer.id,
@@ -916,11 +1025,16 @@ export class BattleScene extends Phaser.Scene {
       y: pointer.y,
       tilePoint: state.tilePoint,
       unitId: state.unitId,
-      isDragging: state.isDragging,
+      isDragging: didDrag,
+      gestureDistance: Math.round(gestureDistance * 100) / 100,
       panModeActive: this.viewState.panModeActive,
     }
 
-    if (state.isDragging || cancelled) {
+    if (didDrag && !cancelled) {
+      this.panCameraFromGesture(dx, dy, state.startScrollX, state.startScrollY)
+    }
+
+    if (didDrag || cancelled) {
       this.emitTelemetry()
       return
     }
@@ -971,11 +1085,29 @@ export class BattleScene extends Phaser.Scene {
 
   private applyCameraView(recenter: boolean): void {
     const camera = this.cameras.main
+    this.updateProjectionOrigin()
     camera.setZoom(this.viewState.zoom)
     this.syncTileInputs()
     this.updateCameraBounds(recenter)
     this.updateBattlefieldCursor(false)
     this.emitTelemetry()
+  }
+
+  private updateProjectionOrigin(): void {
+    if (!this.runtime) {
+      return
+    }
+
+    const heights = this.runtime.state.map.tiles.map((row) => row.map((tile) => tile.height))
+
+    this.projectionOrigin = resolveDynamicBoardOrigin({
+      viewportWidth: this.scale.width,
+      viewportHeight: this.scale.height,
+      rotationQuarterTurns: this.viewState.rotationQuarterTurns,
+      mapWidth: this.runtime.state.map.width,
+      mapHeight: this.runtime.state.map.height,
+      heights,
+    })
   }
 
   private updateCameraBounds(recenter: boolean): void {
@@ -1018,10 +1150,14 @@ export class BattleScene extends Phaser.Scene {
     )
 
     if (recenter) {
-      camera.centerOn(
-        this.cameraBounds.x + this.cameraBounds.width / 2,
-        this.cameraBounds.y + this.cameraBounds.height / 2,
-      )
+      if (this.viewportProfile.layoutMode !== 'desktop') {
+        this.focusCameraOnPoint(this.runtime.getActiveUnit().position)
+      } else {
+        camera.centerOn(
+          this.cameraBounds.x + this.cameraBounds.width / 2,
+          this.cameraBounds.y + this.cameraBounds.height / 2,
+        )
+      }
       return
     }
 
@@ -1053,8 +1189,22 @@ export class BattleScene extends Phaser.Scene {
     this.publishHud()
   }
 
+  private focusCameraOnPoint(point: GridPoint): void {
+    const focusScroll = this.computeCameraFocusScroll(point)
+
+    if (!focusScroll) {
+      return
+    }
+
+    this.cameras.main.setScroll(focusScroll.x, focusScroll.y)
+  }
+
   private handleHudCommand(command: string): void {
     if (!this.runtime) {
+      return
+    }
+
+    if (this.handleAccessibleCommand(command)) {
       return
     }
 
@@ -1138,11 +1288,38 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private handleAccessibleCommand(command: string): boolean {
+    if (command.startsWith('accessible:tile:')) {
+      const [, , xRaw, yRaw] = command.split(':')
+      const x = Number(xRaw)
+      const y = Number(yRaw)
+
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        this.handleTileClick({ x, y })
+      }
+
+      return true
+    }
+
+    if (command.startsWith('accessible:target:')) {
+      const unitId = command.split(':')[2]
+      const unit = unitId ? this.runtime?.getUnit(unitId) : undefined
+
+      if (unit && !unit.defeated) {
+        this.handleTargetUnitClick(unit)
+      }
+
+      return true
+    }
+
+    return false
+  }
+
   private handleViewCommand(command: string): void {
     if (command === 'view-rotate-left') {
       this.viewState.rotationQuarterTurns = rotateQuarterTurns(this.viewState.rotationQuarterTurns, -1)
       this.pointerState = undefined
-      this.applyCameraView(false)
+      this.applyCameraView(this.viewportProfile.layoutMode !== 'desktop')
       this.refreshPresentation()
       return
     }
@@ -1150,7 +1327,7 @@ export class BattleScene extends Phaser.Scene {
     if (command === 'view-rotate-right') {
       this.viewState.rotationQuarterTurns = rotateQuarterTurns(this.viewState.rotationQuarterTurns, 1)
       this.pointerState = undefined
-      this.applyCameraView(false)
+      this.applyCameraView(this.viewportProfile.layoutMode !== 'desktop')
       this.refreshPresentation()
       return
     }
@@ -1171,6 +1348,13 @@ export class BattleScene extends Phaser.Scene {
       this.hoveredPoint = undefined
       this.syncTileInputs()
       this.refreshPresentation()
+      return
+    }
+
+    if (command === 'view-recenter') {
+      this.focusCameraOnPoint(this.runtime!.getActiveUnit().position)
+      this.publishHud()
+      this.emitTelemetry()
     }
   }
 
@@ -1254,6 +1438,7 @@ export class BattleScene extends Phaser.Scene {
     this.currentModal = undefined
     this.pendingObjectivePhaseId = undefined
     this.pendingReinforcementIds = []
+    this.lastCameraFocusUnitId = undefined
     this.phaseAnnouncementKey = undefined
     this.phaseAnnouncementCueId = undefined
     this.phaseAnnouncementMs = 0
@@ -1326,6 +1511,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.lastActiveUnitId = undefined
     this.pendingAiDelayMs = 0
+    this.lastCameraFocusUnitId = undefined
     this.syncPresentationFromActiveUnit(true)
   }
 
@@ -1368,6 +1554,7 @@ export class BattleScene extends Phaser.Scene {
     this.pendingDuelLaunch = undefined
     this.actionFeedback = undefined
     this.phaseSequence = undefined
+    this.lastCameraFocusUnitId = undefined
     this.applyCameraView(true)
     this.syncUnits()
     this.syncPresentationFromActiveUnit(false)
@@ -1439,7 +1626,12 @@ export class BattleScene extends Phaser.Scene {
 
     for (const row of this.runtime.state.map.tiles) {
       for (const tile of row) {
-        const zone = this.add.zone(0, 0, TILE_WIDTH * 0.72, TILE_HEIGHT * 0.78)
+        const zone = this.add.zone(
+          0,
+          0,
+          TILE_WIDTH * (this.viewportProfile.coarsePointer ? 1.08 : 0.72),
+          TILE_HEIGHT * (this.viewportProfile.coarsePointer ? 1.18 : 0.78),
+        )
         zone.name = `tile:${tile.point.x},${tile.point.y}`
         zone.setInteractive({ cursor: 'pointer' })
         zone.on('pointerover', () => {
@@ -1509,6 +1701,10 @@ export class BattleScene extends Phaser.Scene {
 
         const world = this.projectTilePoint(tile.point, tile.height)
         zone.setPosition(world.x, world.y)
+        zone.setSize(
+          TILE_WIDTH * (this.viewportProfile.coarsePointer ? 1.08 : 0.72),
+          TILE_HEIGHT * (this.viewportProfile.coarsePointer ? 1.18 : 0.78),
+        )
 
         if (zone.input) {
           zone.input.cursor = this.viewState.panModeActive ? 'grab' : 'pointer'
@@ -1715,7 +1911,9 @@ export class BattleScene extends Phaser.Scene {
 
     if (!this.viewState.panModeActive && this.mode !== 'move') {
       graphic.setInteractive({
-        hitArea: new Phaser.Geom.Rectangle(-22, -34, 44, 68),
+        hitArea: this.viewportProfile.coarsePointer
+          ? new Phaser.Geom.Rectangle(-30, -42, 60, 86)
+          : new Phaser.Geom.Rectangle(-22, -34, 44, 68),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         cursor: 'pointer',
       })
@@ -2022,6 +2220,9 @@ export class BattleScene extends Phaser.Scene {
       locale: this.i18n.getLocale(),
       phase: this.runtime.state.phase,
       mode: this.mode,
+      layoutMode: this.viewportProfile.layoutMode,
+      viewportProfile: this.viewportProfile,
+      accessibilityState: this.accessibilityPreferences,
       activeUnitPanel: this.buildActiveUnitPanel(active),
       actionMenu: this.buildActionMenu(active),
       initiativeRail: {
@@ -2044,6 +2245,7 @@ export class BattleScene extends Phaser.Scene {
       targetMarkers: this.buildTargetMarkers(),
       targetDetail: this.buildTargetDetail(),
       viewControls: this.buildViewControls(),
+      accessiblePanel: this.buildAccessiblePanel(active, latestMessage),
       statusLine: {
         objectivePhaseLabel: this.buildObjectivePhaseProgressLabel(),
         objectiveLabel: this.i18n.t(this.runtime.state.objectiveKey),
@@ -2079,7 +2281,7 @@ export class BattleScene extends Phaser.Scene {
     this.uiBus.emit('telemetry:update', {
       mapId: this.runtime.definition.mapId,
       boardProjection: {
-        origin: { x: BOARD_ORIGIN.x, y: BOARD_ORIGIN.y },
+        origin: { x: this.projectionOrigin.x, y: this.projectionOrigin.y },
         tileWidth: TILE_WIDTH,
         tileHeight: TILE_HEIGHT,
         heightStep: HEIGHT_STEP,
@@ -2126,6 +2328,9 @@ export class BattleScene extends Phaser.Scene {
         scrollY: Math.round(camera.scrollY * 100) / 100,
       },
       duel: this.duelTelemetry,
+      layoutMode: this.viewportProfile.layoutMode,
+      viewportProfile: this.viewportProfile,
+      accessibilityState: this.accessibilityPreferences,
     })
   }
 
@@ -2220,17 +2425,20 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const anchor = this.buildUnitAnchor(unit, 'above-right', { x: 0, y: -46 })
+    const presentation = this.viewportProfile.layoutMode === 'desktop' ? 'anchored' : 'dock'
+    const anchor =
+      presentation === 'anchored' ? this.buildUnitAnchor(unit, 'above-right', { x: 0, y: -46 }) : undefined
 
-    if (!anchor) {
+    if (presentation === 'anchored' && !anchor) {
       return undefined
     }
 
     return {
       label: this.i18n.t('hud.commands'),
+      presentation,
       anchor,
       buttons: this.buildCommandButtons(),
-      avoidClientPoints: this.buildActionMenuAvoidPoints(),
+      avoidClientPoints: presentation === 'anchored' ? this.buildActionMenuAvoidPoints() : [],
     }
   }
 
@@ -2324,28 +2532,33 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const anchor = this.buildUnitAnchor(
-      hoveredUnit,
-      this.resolveTargetDetailPlacement(active.position, hoveredUnit.position),
-      { x: 0, y: -42 },
-    )
+    const presentation = this.viewportProfile.layoutMode === 'mobile-portrait' ? 'sheet' : 'anchored'
+    const anchor =
+      presentation === 'anchored'
+        ? this.buildUnitAnchor(
+            hoveredUnit,
+            this.resolveTargetDetailPlacement(active.position, hoveredUnit.position),
+            { x: 0, y: -42 },
+          )
+        : undefined
 
-    if (!anchor) {
+    if (presentation === 'anchored' && !anchor) {
       return undefined
     }
 
     const preview = buildTargetPreviewStrings(target.forecast, this.createCombatTextContext())
-    const presentation = this.resolveUnitPresentation(hoveredUnit)
+    const unitPresentation = this.resolveUnitPresentation(hoveredUnit)
 
     return {
       unitId: hoveredUnit.id,
+      presentation,
       anchor,
       unitName: this.i18n.t(hoveredUnit.nameKey),
-      className: presentation.className,
-      combatRole: presentation.combatRole,
-      combatRoleLabel: presentation.combatRoleLabel,
+      className: unitPresentation.className,
+      combatRole: unitPresentation.combatRole,
+      combatRoleLabel: unitPresentation.combatRoleLabel,
       teamLabel: this.i18n.t(`hud.team.${hoveredUnit.team}`),
-      unitIconId: presentation.unitIconId,
+      unitIconId: unitPresentation.unitIconId,
       title: preview.title,
       subtitle: preview.subtitle,
       amountLabel: preview.amountLabel,
@@ -2434,13 +2647,23 @@ export class BattleScene extends Phaser.Scene {
         active: false,
       },
       {
+        id: 'view-recenter',
+        label: this.i18n.t('hud.action.recenter'),
+        icon: 'my_location',
+        disabled: false,
+        active: false,
+      },
+    ]
+
+    if (this.viewportProfile.layoutMode === 'desktop') {
+      buttons.push({
         id: 'view-pan-toggle',
         label: this.i18n.t('hud.action.pan'),
         icon: 'open_with',
         disabled: false,
         active: this.viewState.panModeActive,
-      },
-    ]
+      })
+    }
 
     if (this.runtime?.state.phase === 'active') {
       buttons.push({
@@ -2456,6 +2679,79 @@ export class BattleScene extends Phaser.Scene {
       label: this.i18n.t('hud.view'),
       buttons,
     }
+  }
+
+  private buildAccessiblePanel(
+    active: UnitState,
+    latestMessage: string,
+  ): HudViewModel['accessiblePanel'] {
+    const options = this.buildAccessibleOptions()
+    const summary = [
+      `${this.i18n.t('hud.activeUnit')}: ${this.i18n.t(active.nameKey)}`,
+      `${this.i18n.t('hud.team.' + active.team)} · ${this.i18n.t(classDefinitions[active.classId].nameKey)}`,
+      `HP ${active.hp}/${classDefinitions[active.classId].stats.maxHp}`,
+      `${this.i18n.t('hud.objective')}: ${this.i18n.t(this.runtime?.state.objectiveKey ?? 'battle.glenmoorPass.objective')}`,
+    ].join(' • ')
+
+    const liveMessage = this.currentModal
+      ? `${this.currentModal.title}. ${this.currentModal.objectiveLabel}`
+      : this.phaseAnnouncementKey
+        ? this.i18n.t(this.phaseAnnouncementKey)
+        : latestMessage
+
+    return {
+      label: this.i18n.t('a11y.panel'),
+      summaryHeading: this.i18n.t('a11y.summary'),
+      summary,
+      commandsHeading: this.i18n.t('a11y.commands'),
+      commandButtons: this.buildCommandButtons().filter((button) => !button.disabled),
+      optionsHeading:
+        this.mode === 'move'
+          ? this.i18n.t('a11y.reachableTiles')
+          : this.mode === 'attack' || this.mode === 'skill'
+            ? this.i18n.t('a11y.targets')
+            : this.i18n.t('a11y.noOptions'),
+      options,
+      liveMessage,
+    }
+  }
+
+  private buildAccessibleOptions(): HudViewModel['accessiblePanel']['options'] {
+    if (!this.runtime) {
+      return []
+    }
+
+    if (this.mode === 'move') {
+      return this.reachableTiles.map((tile) => {
+        const mapTile = this.runtime?.state.map.tiles[tile.point.y]?.[tile.point.x]
+        const terrainLabel = mapTile ? this.i18n.t(terrainDefinitions[mapTile.terrainId].labelKey) : this.i18n.t('hud.none')
+
+        return {
+          id: `tile-${tile.point.x}-${tile.point.y}`,
+          label: `${this.i18n.t('a11y.tile')} ${tile.point.x}, ${tile.point.y}`,
+          detail: `${terrainLabel} · ${this.i18n.t('a11y.cost')} ${tile.cost}`,
+          command: `accessible:tile:${tile.point.x}:${tile.point.y}`,
+          kind: 'tile',
+        }
+      })
+    }
+
+    if (this.mode === 'attack' || this.mode === 'skill') {
+      return this.targetOptions.map((option) => {
+        const unit = this.runtime?.state.units[option.unitId]
+        const preview = buildTargetPreviewStrings(option.forecast, this.createCombatTextContext())
+
+        return {
+          id: `target-${option.unitId}`,
+          label: unit ? this.i18n.t(unit.nameKey) : option.unitId,
+          detail: [preview.amountLabel, preview.counterLabel, preview.effectLabel].filter(Boolean).join(' · '),
+          command: `accessible:target:${option.unitId}`,
+          kind: 'target',
+        }
+      })
+    }
+
+    return []
   }
 
   private buildUnitAnchor(
@@ -2851,6 +3147,10 @@ export class BattleScene extends Phaser.Scene {
         })
       : 'idle'
     this.reachableTiles = this.mode === 'move' ? this.moveRangeTiles : []
+    if (this.viewportProfile.layoutMode !== 'desktop' && this.lastCameraFocusUnitId !== active.id) {
+      this.focusCameraOnPoint(active.position)
+      this.lastCameraFocusUnitId = active.id
+    }
     this.refreshPresentation()
   }
 
