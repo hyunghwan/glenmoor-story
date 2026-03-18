@@ -117,9 +117,11 @@ function buildUnitBrief(unit, classDef, skillDef) {
 - Gameplay role:
   max HP ${classDef.stats.maxHp}, move ${classDef.stats.move}, speed ${classDef.stats.speed}
 - Production order:
+  approved reference -> Gemini lookdev proofs -> Gemini sprite batch atlas -> fixed JSON manifest
+- Legacy alternate path:
   master workflow reference -> portrait -> battle atlas -> fixed JSON manifest
 - QA reminders:
-  keep feet readable in the atlas, keep portrait eyes and brow readable at 32x32, keep weapon design stable across all directions
+  keep feet readable in the atlas, keep portrait eyes and brow readable at 32x32, keep weapon design stable across all directions, and reject any Gemini atlas whose foot anchor or direction read drifts
 `
 }
 
@@ -130,11 +132,20 @@ function buildUnitRunLog(unit) {
       pilotSlice: pilotUnits.has(unit.id),
       workflow: 'docs/assets/comfy-workflows/unit-master-batch.ui-workflow.json',
       batchManifest: 'docs/assets/comfy-batch/unit-master-batch.manifest.json',
+      geminiWorkflows: {
+        lookdev: 'docs/assets/comfy-workflows/unit-gemini-sprite-lookdev.ui-workflow.json',
+        spriteBatch: 'docs/assets/comfy-workflows/unit-gemini-sprite-batch.ui-workflow.json',
+      },
+      approvalOrder: unit.id === 'rowan' ? 1 : unit.id === 'elira' ? 2 : 3,
       expectedOutputs: {
         reference: `unit_${unit.id}_reference_00001_.png`,
         portrait: `unit_${unit.id}_head_00001_.png`,
         battleAtlas: `unit_${unit.id}_battle_00001_.png`,
         battleManifest: `output/comfy/manifests/battle-json/unit_${unit.id}_battle.json`,
+        geminiLookdevStyle: `unit_${unit.id}_proof_style_00001_.png`,
+        geminiLookdevDirection: `unit_${unit.id}_proof_direction_00001_.png`,
+        geminiLookdevAction: `unit_${unit.id}_proof_action_00001_.png`,
+        geminiBattleProofSouthMove: `unit_${unit.id}_proof_south_move_00001_.png`,
       },
       reviewNotes: [],
     },
@@ -189,6 +200,7 @@ Use \`docs/assets/comfy-pilot-prompt-pack.md\` for the debug lookdev prompts.
 - zoom combat mood B
 
 This is the optional debug lookdev path. Main production now starts from the three master batch workflows.
+The Gemini sprite route should lock style with Rowan first and Elira second before roster rollout.
 `
 }
 
@@ -304,8 +316,9 @@ This directory is the local working area for Comfy Cloud asset generation.
 - Character review lives in \`units/<unitId>/\`
 - Terrain review lives in \`terrain/<terrainId>/\`
 - VFX review lives in \`vfx/<cueId>/\`
-- Import-ready workflows are copied into \`workflows/\`
+- Import-ready generated and hand-authored workflows are copied into \`workflows/\`
 - Batch manifests and generated battle JSON files live in \`manifests/\`
+- Gemini sprite batch atlases still pair with the fixed battle JSON files under \`manifests/battle-json/\`
 
 Tracked source docs live under:
 
@@ -390,6 +403,8 @@ Tracked source docs live under:
 
   const workflowFiles = [
     'style-bible-lookdev.ui-workflow.json',
+    'unit-gemini-sprite-lookdev.ui-workflow.json',
+    'unit-gemini-sprite-batch.ui-workflow.json',
     'unit-master-batch.ui-workflow.json',
     'terrain-catalog-batch.ui-workflow.json',
     'vfx-master-batch.ui-workflow.json',

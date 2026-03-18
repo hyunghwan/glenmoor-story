@@ -1,0 +1,371 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: GAW
+      - generic [ref=e7]:
+        - strong [ref=e8]: Glenmoor Asset Workbench
+        - paragraph [ref=e9]: Creative-tool workspace for Glenmoor sprite sheets, portraits, tiles, and VFX.
+    - generic [ref=e10]:
+      - button "Try Demo Workspace" [active] [ref=e11] [cursor=pointer]
+      - button "Open Folder" [ref=e12] [cursor=pointer]
+      - button "Rescan" [ref=e13] [cursor=pointer]
+      - generic [ref=e14]: Saved
+      - generic [ref=e15]:
+        - generic [ref=e16]: Demo Workspace
+        - generic [ref=e17]: demo
+        - generic [ref=e18]: 16 assets
+        - generic [ref=e19]: 0 fail
+        - generic [ref=e20]: 14 warn
+  - generic [ref=e81]:
+    - generic [ref=e82]:
+      - strong [ref=e83]: Demo Workspace Tour
+      - paragraph [ref=e84]: Start with Rowan for pass examples, then jump to Sable for warning-softened purchased candidates. Demo reviews persist in browser local storage.
+    - generic [ref=e85]:
+      - button "Pass sample Open Rowan first to see a contract-clean atlas, linked reference, and duel-ready preview." [ref=e86] [cursor=pointer]:
+        - strong [ref=e87]: Pass sample
+        - paragraph [ref=e88]: Open Rowan first to see a contract-clean atlas, linked reference, and duel-ready preview.
+      - button "Portrait readability Switch to the Rowan portrait to check 128, 38, and 32 pixel readability at a glance." [ref=e89] [cursor=pointer]:
+        - strong [ref=e90]: Portrait readability
+        - paragraph [ref=e91]: Switch to the Rowan portrait to check 128, 38, and 32 pixel readability at a glance.
+      - button "Purchased candidate Jump to the Sable portrait to see size failures softened into warnings for adaptable purchased art." [ref=e92] [cursor=pointer]:
+        - strong [ref=e93]: Purchased candidate
+        - paragraph [ref=e94]: Jump to the Sable portrait to see size failures softened into warnings for adaptable purchased art.
+      - button "Review persistence Edit status or notes and refresh. Demo reviews persist in browser local storage instead of .asset-workbench/workspace.json." [ref=e95] [cursor=pointer]:
+        - strong [ref=e96]: Review persistence
+        - paragraph [ref=e97]: Edit status or notes and refresh. Demo reviews persist in browser local storage instead of .asset-workbench/workspace.json.
+    - button "Hide Tour" [ref=e98] [cursor=pointer]
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - generic [ref=e23]:
+        - strong [ref=e24]: Asset Browser
+        - generic [ref=e25]: 16 visible
+      - generic [ref=e26]:
+        - textbox "Search assets" [ref=e27]:
+          - /placeholder: Search path, unit, terrain, cue
+        - generic [ref=e28]:
+          - button "All" [ref=e29] [cursor=pointer]
+          - button "unitAtlas" [ref=e30] [cursor=pointer]
+          - button "unitManifest" [ref=e31] [cursor=pointer]
+          - button "portrait" [ref=e32] [cursor=pointer]
+          - button "terrainBlock" [ref=e33] [cursor=pointer]
+          - button "terrainOverlay" [ref=e34] [cursor=pointer]
+          - button "vfxSheet" [ref=e35] [cursor=pointer]
+          - button "referenceImage" [ref=e36] [cursor=pointer]
+          - button "unknown" [ref=e37] [cursor=pointer]
+      - generic [ref=e38]:
+        - button "unit_rowan_battle.png demo/generated-pass/unit_rowan_battle.png unitAtlas PASS" [ref=e99] [cursor=pointer]:
+          - generic [ref=e101]:
+            - strong [ref=e102]: unit_rowan_battle.png
+            - generic [ref=e103]: demo/generated-pass/unit_rowan_battle.png
+          - generic [ref=e104]:
+            - emphasis [ref=e105]: unitAtlas
+            - generic [ref=e106]: PASS
+        - button "unit_sable_battle.png demo/purchased-candidate/unit_sable_battle.png unitAtlas WARN" [ref=e107] [cursor=pointer]:
+          - generic [ref=e109]:
+            - strong [ref=e110]: unit_sable_battle.png
+            - generic [ref=e111]: demo/purchased-candidate/unit_sable_battle.png
+          - generic [ref=e112]:
+            - emphasis [ref=e113]: unitAtlas
+            - generic [ref=e114]: WARN
+        - button "unit_rowan_battle.json demo/generated-pass/unit_rowan_battle.json unitManifest PASS" [ref=e115] [cursor=pointer]:
+          - generic [ref=e117]:
+            - strong [ref=e118]: unit_rowan_battle.json
+            - generic [ref=e119]: demo/generated-pass/unit_rowan_battle.json
+          - generic [ref=e120]:
+            - emphasis [ref=e121]: unitManifest
+            - generic [ref=e122]: PASS
+        - button "unit_rowan_head.png demo/generated-pass/unit_rowan_head.png portrait PASS" [ref=e123] [cursor=pointer]:
+          - generic [ref=e125]:
+            - strong [ref=e126]: unit_rowan_head.png
+            - generic [ref=e127]: demo/generated-pass/unit_rowan_head.png
+          - generic [ref=e128]:
+            - emphasis [ref=e129]: portrait
+            - generic [ref=e130]: PASS
+        - button "unit_sable_head.png demo/purchased-candidate/unit_sable_head.png portrait WARN" [ref=e131] [cursor=pointer]:
+          - generic [ref=e133]:
+            - strong [ref=e134]: unit_sable_head.png
+            - generic [ref=e135]: demo/purchased-candidate/unit_sable_head.png
+          - generic [ref=e136]:
+            - emphasis [ref=e137]: portrait
+            - generic [ref=e138]: WARN
+        - button "terrain_grass_moss_block.png demo/generated-pass/terrain_grass_moss_block.png terrainBlock WARN" [ref=e139] [cursor=pointer]:
+          - generic [ref=e141]:
+            - strong [ref=e142]: terrain_grass_moss_block.png
+            - generic [ref=e143]: demo/generated-pass/terrain_grass_moss_block.png
+          - generic [ref=e144]:
+            - emphasis [ref=e145]: terrainBlock
+            - generic [ref=e146]: WARN
+        - button "terrain_ruins_cracked_block.png demo/purchased-candidate/terrain_ruins_cracked_block.png terrainBlock WARN" [ref=e147] [cursor=pointer]:
+          - generic [ref=e149]:
+            - strong [ref=e150]: terrain_ruins_cracked_block.png
+            - generic [ref=e151]: demo/purchased-candidate/terrain_ruins_cracked_block.png
+          - generic [ref=e152]:
+            - emphasis [ref=e153]: terrainBlock
+            - generic [ref=e154]: WARN
+        - button "terrain_grass_moss_overlay.png demo/generated-pass/terrain_grass_moss_overlay.png terrainOverlay WARN" [ref=e155] [cursor=pointer]:
+          - generic [ref=e157]:
+            - strong [ref=e158]: terrain_grass_moss_overlay.png
+            - generic [ref=e159]: demo/generated-pass/terrain_grass_moss_overlay.png
+          - generic [ref=e160]:
+            - emphasis [ref=e161]: terrainOverlay
+            - generic [ref=e162]: WARN
+        - button "terrain_ruins_cracked_overlay.png demo/purchased-candidate/terrain_ruins_cracked_overlay.png terrainOverlay PASS" [ref=e163] [cursor=pointer]:
+          - generic [ref=e165]:
+            - strong [ref=e166]: terrain_ruins_cracked_overlay.png
+            - generic [ref=e167]: demo/purchased-candidate/terrain_ruins_cracked_overlay.png
+          - generic [ref=e168]:
+            - emphasis [ref=e169]: terrainOverlay
+            - generic [ref=e170]: PASS
+        - button "vfx_cast-burst_arc_a.png demo/generated-pass/vfx_cast-burst_arc_a.png vfxSheet PASS" [ref=e171] [cursor=pointer]:
+          - generic [ref=e173]:
+            - strong [ref=e174]: vfx_cast-burst_arc_a.png
+            - generic [ref=e175]: demo/generated-pass/vfx_cast-burst_arc_a.png
+          - generic [ref=e176]:
+            - emphasis [ref=e177]: vfxSheet
+            - generic [ref=e178]: PASS
+        - button "vfx_status-pulse_neon_a.png demo/purchased-candidate/vfx_status-pulse_neon_a.png vfxSheet WARN" [ref=e179] [cursor=pointer]:
+          - generic [ref=e181]:
+            - strong [ref=e182]: vfx_status-pulse_neon_a.png
+            - generic [ref=e183]: demo/purchased-candidate/vfx_status-pulse_neon_a.png
+          - generic [ref=e184]:
+            - emphasis [ref=e185]: vfxSheet
+            - generic [ref=e186]: WARN
+        - button "terrain_grass_moss_block_reference.png demo/generated-pass/references/terrain_grass_moss_block_reference.png referenceImage PASS" [ref=e187] [cursor=pointer]:
+          - generic [ref=e189]:
+            - strong [ref=e190]: terrain_grass_moss_block_reference.png
+            - generic [ref=e191]: demo/generated-pass/references/terrain_grass_moss_block_reference.png
+          - generic [ref=e192]:
+            - emphasis [ref=e193]: referenceImage
+            - generic [ref=e194]: PASS
+        - button "unit_rowan_battle_reference.png demo/generated-pass/references/unit_rowan_battle_reference.png referenceImage PASS" [ref=e195] [cursor=pointer]:
+          - generic [ref=e197]:
+            - strong [ref=e198]: unit_rowan_battle_reference.png
+            - generic [ref=e199]: demo/generated-pass/references/unit_rowan_battle_reference.png
+          - generic [ref=e200]:
+            - emphasis [ref=e201]: referenceImage
+            - generic [ref=e202]: PASS
+        - button "unit_rowan_head_reference.png demo/generated-pass/references/unit_rowan_head_reference.png referenceImage PASS" [ref=e203] [cursor=pointer]:
+          - generic [ref=e205]:
+            - strong [ref=e206]: unit_rowan_head_reference.png
+            - generic [ref=e207]: demo/generated-pass/references/unit_rowan_head_reference.png
+          - generic [ref=e208]:
+            - emphasis [ref=e209]: referenceImage
+            - generic [ref=e210]: PASS
+        - button "vfx_cast-burst_reference.png demo/generated-pass/references/vfx_cast-burst_reference.png referenceImage PASS" [ref=e211] [cursor=pointer]:
+          - generic [ref=e213]:
+            - strong [ref=e214]: vfx_cast-burst_reference.png
+            - generic [ref=e215]: demo/generated-pass/references/vfx_cast-burst_reference.png
+          - generic [ref=e216]:
+            - emphasis [ref=e217]: referenceImage
+            - generic [ref=e218]: PASS
+        - button "unit_sable_head_reference.png demo/purchased-candidate/references/unit_sable_head_reference.png referenceImage PASS" [ref=e219] [cursor=pointer]:
+          - generic [ref=e221]:
+            - strong [ref=e222]: unit_sable_head_reference.png
+            - generic [ref=e223]: demo/purchased-candidate/references/unit_sable_head_reference.png
+          - generic [ref=e224]:
+            - emphasis [ref=e225]: referenceImage
+            - generic [ref=e226]: PASS
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - strong [ref=e46]: Stage
+          - generic [ref=e47]: demo/generated-pass/unit_rowan_battle.png
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - generic [ref=e229]:
+              - strong [ref=e230]: Sheet Overview
+              - generic [ref=e231]: south / idle / 1
+            - img "unit_rowan_battle.png" [ref=e234]
+          - generic [ref=e236]:
+            - strong [ref=e237]: Live Frame
+            - generic [ref=e238]: Pivot and duel scale check
+          - generic [ref=e242]:
+            - strong [ref=e243]: Reference Compare
+            - generic [ref=e244]:
+              - img "unit_rowan_battle_reference.png" [ref=e245]
+              - generic [ref=e246]:
+                - generic [ref=e247]: Portrait chip
+                - img "unit_rowan_head.png" [ref=e249]
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - strong [ref=e71]: Filmstrip / Compare Dock
+          - generic [ref=e72]: unitAtlas
+        - generic [ref=e74]:
+          - generic [ref=e250]:
+            - generic [ref=e251]:
+              - button "Sheet" [ref=e252] [cursor=pointer]
+              - button "Frame" [ref=e253] [cursor=pointer]
+              - button "Duel 2x" [ref=e254] [cursor=pointer]
+            - generic [ref=e255]:
+              - generic [ref=e256]: Direction
+              - combobox "Direction" [ref=e257]:
+                - option "north"
+                - option "east"
+                - option "south" [selected]
+                - option "west"
+            - generic [ref=e258]:
+              - generic [ref=e259]: Animation
+              - combobox "Animation" [ref=e260]:
+                - option "idle" [selected]
+                - option "move"
+                - option "attack"
+                - option "cast"
+                - option "hit"
+                - option "defeat"
+            - button "Pause" [ref=e261] [cursor=pointer]
+            - button "Flip X" [ref=e262] [cursor=pointer]
+          - generic [ref=e263]:
+            - button "0" [ref=e264] [cursor=pointer]:
+              - emphasis [ref=e266]: "0"
+            - button "1" [ref=e267] [cursor=pointer]:
+              - emphasis [ref=e269]: "1"
+    - complementary [ref=e76]:
+      - generic [ref=e77]:
+        - strong [ref=e78]: Inspector
+        - generic [ref=e79]: PASS
+      - generic [ref=e80]:
+        - generic [ref=e270]:
+          - generic [ref=e271]:
+            - strong [ref=e272]: unit_rowan_battle.png
+            - paragraph [ref=e273]: demo/generated-pass/unit_rowan_battle.png
+          - generic [ref=e274]: pass
+        - generic [ref=e275]:
+          - heading "Metadata" [level=3] [ref=e276]
+          - generic [ref=e277]:
+            - generic [ref=e278]:
+              - term [ref=e279]: Kind
+              - definition [ref=e280]: unitAtlas
+            - generic [ref=e281]:
+              - term [ref=e282]: Source
+              - definition [ref=e283]: generated
+            - generic [ref=e284]:
+              - term [ref=e285]: Storage
+              - definition [ref=e286]: Browser localStorage
+            - generic [ref=e287]:
+              - term [ref=e288]: File Size
+              - definition [ref=e289]: 129.1 KB
+            - generic [ref=e290]:
+              - term [ref=e291]: Dimensions
+              - definition [ref=e292]: 1536 x 1024
+            - generic [ref=e293]:
+              - term [ref=e294]: Unit / Terrain / Cue
+              - definition [ref=e295]: rowan
+            - generic [ref=e296]:
+              - term [ref=e297]: Linked Ref
+              - definition [ref=e298]: unit_rowan_battle_reference.png
+            - generic [ref=e299]:
+              - term [ref=e300]: Companion Atlas
+              - definition [ref=e301]: manifest linked
+        - generic [ref=e302]:
+          - heading "Review Controls" [level=3] [ref=e303]
+          - generic [ref=e304]:
+            - generic [ref=e305]: Source Type
+            - combobox "Source Type" [ref=e306]:
+              - option "generated" [selected]
+              - option "purchased"
+          - generic [ref=e307]:
+            - generic [ref=e308]: Review Status
+            - combobox "Review Status" [ref=e309]:
+              - option "unreviewed"
+              - option "approved" [selected]
+              - option "hold"
+              - option "rejected"
+          - generic [ref=e310]:
+            - generic [ref=e311]: Reference Asset
+            - combobox "Reference Asset" [ref=e312]:
+              - option "None"
+              - option "unit_sable_battle.png"
+              - option "unit_rowan_head.png"
+              - option "unit_sable_head.png"
+              - option "terrain_grass_moss_block.png"
+              - option "terrain_ruins_cracked_block.png"
+              - option "terrain_grass_moss_overlay.png"
+              - option "terrain_ruins_cracked_overlay.png"
+              - option "vfx_cast-burst_arc_a.png"
+              - option "vfx_status-pulse_neon_a.png"
+              - option "terrain_grass_moss_block_reference.png"
+              - option "unit_rowan_battle_reference.png" [selected]
+              - option "unit_rowan_head_reference.png"
+              - option "vfx_cast-burst_reference.png"
+              - option "unit_sable_head_reference.png"
+          - generic [ref=e313]:
+            - generic [ref=e314]: Notes
+            - textbox "Notes" [ref=e315]: Contract-clean demo atlas. Use this first to see sheet, frame, and duel views with a linked reference.
+        - generic [ref=e316]:
+          - heading "Checklist" [level=3] [ref=e317]
+          - generic [ref=e318]:
+            - generic [ref=e319]:
+              - checkbox "Direction readability North, east, south, and west read clearly at gameplay scale." [checked] [ref=e320]
+              - generic [ref=e321]:
+                - strong [ref=e322]: Direction readability
+                - emphasis [ref=e323]: North, east, south, and west read clearly at gameplay scale.
+            - generic [ref=e324]:
+              - checkbox "Weapon identity stability Weapon and silhouette stay consistent across all frames." [checked] [ref=e325]
+              - generic [ref=e326]:
+                - strong [ref=e327]: Weapon identity stability
+                - emphasis [ref=e328]: Weapon and silhouette stay consistent across all frames.
+            - generic [ref=e329]:
+              - checkbox "Foot anchor consistency Feet stay planted around the intended pivot with no drifting." [checked] [ref=e330]
+              - generic [ref=e331]:
+                - strong [ref=e332]: Foot anchor consistency
+                - emphasis [ref=e333]: Feet stay planted around the intended pivot with no drifting.
+            - generic [ref=e334]:
+              - checkbox "Duel 2x readability The frame remains readable in the zoomed duel presentation." [checked] [ref=e335]
+              - generic [ref=e336]:
+                - strong [ref=e337]: Duel 2x readability
+                - emphasis [ref=e338]: The frame remains readable in the zoomed duel presentation.
+        - generic [ref=e339]:
+          - heading "Findings" [level=3] [ref=e340]
+          - generic [ref=e341]:
+            - article [ref=e342]:
+              - generic [ref=e343]:
+                - strong [ref=e344]: Transparency present
+                - generic [ref=e345]: pass
+              - paragraph [ref=e346]: Transparent padding is present, which matches the runtime art policy.
+            - article [ref=e347]:
+              - generic [ref=e348]:
+                - strong [ref=e349]: Atlas size matches
+                - generic [ref=e350]: pass
+              - paragraph [ref=e351]: Atlas matches the 1536x1024 contract.
+        - generic [ref=e352]:
+          - heading "Reference Drift" [level=3] [ref=e353]
+          - generic [ref=e354]:
+            - generic [ref=e355]:
+              - term [ref=e356]: Palette Drift
+              - definition [ref=e357]: "0.08"
+            - generic [ref=e358]:
+              - term [ref=e359]: Luminance Drift
+              - definition [ref=e360]: "0.08"
+            - generic [ref=e361]:
+              - term [ref=e362]: Saturation Drift
+              - definition [ref=e363]: "0.00"
+            - generic [ref=e364]:
+              - term [ref=e365]: Mass Difference
+              - definition [ref=e366]: "0.05"
+            - generic [ref=e367]:
+              - term [ref=e368]: Color Overlap
+              - definition [ref=e369]: "0.52"
+            - generic [ref=e370]:
+              - term [ref=e371]: Center Drift
+              - definition [ref=e372]: "0.00"
+        - generic [ref=e373]:
+          - heading "Color / Mass" [level=3] [ref=e374]
+          - generic [ref=e375]:
+            - emphasis [ref=e378]: "#204060"
+            - emphasis [ref=e381]: "#202020"
+            - emphasis [ref=e384]: "#000020"
+            - emphasis [ref=e387]: "#000000"
+            - emphasis [ref=e390]: "#e0e0c0"
+          - generic [ref=e391]:
+            - generic [ref=e392]:
+              - term [ref=e393]: Luminance
+              - definition [ref=e394]: 27%
+            - generic [ref=e395]:
+              - term [ref=e396]: Saturation
+              - definition [ref=e397]: 47%
+            - generic [ref=e398]:
+              - term [ref=e399]: Transparent
+              - definition [ref=e400]: 73%
+            - generic [ref=e401]:
+              - term [ref=e402]: Center Drift
+              - definition [ref=e403]: "0.00"

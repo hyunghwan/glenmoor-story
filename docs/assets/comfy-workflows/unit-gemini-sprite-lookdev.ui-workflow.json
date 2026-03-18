@@ -1,0 +1,567 @@
+{
+  "version": 1,
+  "state": {
+    "lastNodeId": 9,
+    "lastLinkId": 8,
+    "lastGroupid": 2,
+    "lastRerouteId": 0
+  },
+  "nodes": [
+    {
+      "id": 1,
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.5.1",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        "approved-unit-reference.png",
+        "image"
+      ],
+      "type": "LoadImage",
+      "pos": [
+        -1420,
+        -240
+      ],
+      "size": [
+        360,
+        310
+      ],
+      "title": "Load Approved Unit Reference",
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 2,
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            2
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.5.1",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        "style-anchor.png",
+        "image"
+      ],
+      "type": "LoadImage",
+      "pos": [
+        -1420,
+        160
+      ],
+      "size": [
+        360,
+        310
+      ],
+      "title": "Load Style Anchor Or Same Reference",
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 3,
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "image0",
+          "name": "images.image0",
+          "type": "IMAGE",
+          "link": 1
+        },
+        {
+          "label": "image1",
+          "name": "images.image1",
+          "type": "IMAGE",
+          "link": 2
+        },
+        {
+          "label": "image2",
+          "name": "images.image2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            3,
+            4,
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "BatchImagesNode",
+        "cnr_id": "comfy-core",
+        "ver": "0.12.2"
+      },
+      "widgets_values": [],
+      "type": "BatchImagesNode",
+      "pos": [
+        -930,
+        10
+      ],
+      "size": [
+        210,
+        96
+      ],
+      "title": "Reference Batch",
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 4,
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 3
+        },
+        {
+          "name": "files",
+          "shape": 7,
+          "type": "GEMINI_INPUT_FILES",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            6
+          ]
+        },
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GeminiImage2Node",
+        "cnr_id": "comfy-core",
+        "ver": "0.11.0"
+      },
+      "widgets_values": [
+        "Create a painterly isometric tactical RPG sprite-source proof sheet for this exact character, hybrid Final Fantasy Tactics tone with a softer and friendlier edge, slightly cute adult proportions around a 1 to 4.75 head to body ratio, soft facial planes, readable hands, readable weapon silhouette, grounded medieval-fantasy materials, not super-deformed, not hyper-grim, no gore, no photoreal skin, no modern elements, use a flat solid chroma magenta background using exact #FF00FF with zero gradients and keep that exact color out of the subject, keep the full body and both feet visible in every panel, keep the same centered foot anchor and overall scale in every panel, no labels, no text, no watermark, no borders, no environment scene, arrange the sheet as a 2 by 2 grid with equal full-body panels, panel 1 top-left: neutral ready pose, panel 2 top-right: weapon-ready combat pose, panel 3 bottom-left: first step of a walk or advance with stable foot anchor, panel 4 bottom-right: cast-ready or skill-ready pose depending on the character weapon type, prioritize silhouette approval, costume stability, palette stability, and approachable but not childish tone",
+        "gemini-3-pro-image-preview",
+        910101,
+        "fixed",
+        "4:3",
+        "2K",
+        "IMAGE+TEXT",
+        "You are an expert image-generation engine. You must ALWAYS produce an image. Follow panel order literally. Preserve the exact same character identity, costume, palette, weapon, proportions, and foot anchor across every panel. Treat every provided reference image as binding identity input. Never add labels, captions, borders, numbers, UI, or watermarks.",
+        ""
+      ],
+      "type": "GeminiImage2Node",
+      "pos": [
+        -360,
+        -520
+      ],
+      "size": [
+        460,
+        610
+      ],
+      "title": "Style Approval Sheet",
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 5,
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 4
+        },
+        {
+          "name": "files",
+          "shape": 7,
+          "type": "GEMINI_INPUT_FILES",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            7
+          ]
+        },
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GeminiImage2Node",
+        "cnr_id": "comfy-core",
+        "ver": "0.11.0"
+      },
+      "widgets_values": [
+        "Create a painterly isometric tactical RPG sprite-source proof sheet for this exact character, hybrid Final Fantasy Tactics tone with a softer and friendlier edge, slightly cute adult proportions around a 1 to 4.75 head to body ratio, soft facial planes, readable hands, readable weapon silhouette, grounded medieval-fantasy materials, not super-deformed, not hyper-grim, no gore, no photoreal skin, no modern elements, use a flat solid chroma magenta background using exact #FF00FF with zero gradients and keep that exact color out of the subject, keep the full body and both feet visible in every panel, keep the same centered foot anchor and overall scale in every panel, no labels, no text, no watermark, no borders, no environment scene, arrange the sheet as a 2 by 2 grid with equal full-body panels, panel order must be top-left south neutral idle, top-right east neutral idle, bottom-left west neutral idle, bottom-right north neutral idle, south is a near-front three-quarter isometric battle view, east is a right-facing three-quarter isometric battle view, west is a left-facing three-quarter isometric battle view, north is a rear three-quarter isometric battle view, keep costume, weapon size, head size, and foot anchor identical across every direction",
+        "gemini-3-pro-image-preview",
+        910102,
+        "fixed",
+        "4:3",
+        "2K",
+        "IMAGE+TEXT",
+        "You are an expert image-generation engine. You must ALWAYS produce an image. Follow panel order literally. Preserve the exact same character identity, costume, palette, weapon, proportions, and foot anchor across every panel. Treat every provided reference image as binding identity input. Never add labels, captions, borders, numbers, UI, or watermarks.",
+        ""
+      ],
+      "type": "GeminiImage2Node",
+      "pos": [
+        -360,
+        110
+      ],
+      "size": [
+        460,
+        610
+      ],
+      "title": "Direction Proof Sheet",
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 6,
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 5
+        },
+        {
+          "name": "files",
+          "shape": 7,
+          "type": "GEMINI_INPUT_FILES",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            8
+          ]
+        },
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "slot_index": 1,
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GeminiImage2Node",
+        "cnr_id": "comfy-core",
+        "ver": "0.11.0"
+      },
+      "widgets_values": [
+        "Create a painterly isometric tactical RPG sprite-source proof sheet for this exact character, hybrid Final Fantasy Tactics tone with a softer and friendlier edge, slightly cute adult proportions around a 1 to 4.75 head to body ratio, soft facial planes, readable hands, readable weapon silhouette, grounded medieval-fantasy materials, not super-deformed, not hyper-grim, no gore, no photoreal skin, no modern elements, use a flat solid chroma magenta background using exact #FF00FF with zero gradients and keep that exact color out of the subject, keep the full body and both feet visible in every panel, keep the same centered foot anchor and overall scale in every panel, no labels, no text, no watermark, no borders, no environment scene, arrange the sheet as a 2 by 2 grid with equal full-body panels, panel order must be top-left attack wind-up, top-right cast or skill release, bottom-left hit recoil, bottom-right defeat down pose, keep the same south-facing isometric battle direction in every panel, preserve clear feet, readable hands, readable shield or bow or staff silhouette, and readable face, make the action dramatic enough for combat readability but still cute and production-friendly",
+        "gemini-3-pro-image-preview",
+        910103,
+        "fixed",
+        "4:3",
+        "2K",
+        "IMAGE+TEXT",
+        "You are an expert image-generation engine. You must ALWAYS produce an image. Follow panel order literally. Preserve the exact same character identity, costume, palette, weapon, proportions, and foot anchor across every panel. Treat every provided reference image as binding identity input. Never add labels, captions, borders, numbers, UI, or watermarks.",
+        ""
+      ],
+      "type": "GeminiImage2Node",
+      "pos": [
+        -360,
+        740
+      ],
+      "size": [
+        460,
+        610
+      ],
+      "title": "Action Proof Sheet",
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 7,
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 6
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      },
+      "widgets_values": [
+        "unit_CHANGE_ME_proof_style"
+      ],
+      "type": "SaveImage",
+      "pos": [
+        180,
+        -390
+      ],
+      "size": [
+        320,
+        88
+      ],
+      "title": "Save Style Proof"
+    },
+    {
+      "id": 8,
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 7
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      },
+      "widgets_values": [
+        "unit_CHANGE_ME_proof_direction"
+      ],
+      "type": "SaveImage",
+      "pos": [
+        180,
+        240
+      ],
+      "size": [
+        320,
+        88
+      ],
+      "title": "Save Direction Proof"
+    },
+    {
+      "id": 9,
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 8
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.65"
+      },
+      "widgets_values": [
+        "unit_CHANGE_ME_proof_action"
+      ],
+      "type": "SaveImage",
+      "pos": [
+        180,
+        870
+      ],
+      "size": [
+        320,
+        88
+      ],
+      "title": "Save Action Proof"
+    }
+  ],
+  "links": [
+    {
+      "id": 1,
+      "origin_id": 1,
+      "origin_slot": 0,
+      "target_id": 3,
+      "target_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 2,
+      "origin_id": 2,
+      "origin_slot": 0,
+      "target_id": 3,
+      "target_slot": 1,
+      "type": "IMAGE"
+    },
+    {
+      "id": 3,
+      "origin_id": 3,
+      "origin_slot": 0,
+      "target_id": 4,
+      "target_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 4,
+      "origin_id": 3,
+      "origin_slot": 0,
+      "target_id": 5,
+      "target_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 5,
+      "origin_id": 3,
+      "origin_slot": 0,
+      "target_id": 6,
+      "target_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 6,
+      "origin_id": 4,
+      "origin_slot": 0,
+      "target_id": 7,
+      "target_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 7,
+      "origin_id": 5,
+      "origin_slot": 0,
+      "target_id": 8,
+      "target_slot": 0,
+      "type": "IMAGE"
+    },
+    {
+      "id": 8,
+      "origin_id": 6,
+      "origin_slot": 0,
+      "target_id": 9,
+      "target_slot": 0,
+      "type": "IMAGE"
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Reference Inputs",
+      "bounding": [
+        -1460,
+        -280,
+        780,
+        790
+      ],
+      "color": "#355b74",
+      "font_size": 24,
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "Lookdev Proofs",
+      "bounding": [
+        -400,
+        -560,
+        940,
+        1950
+      ],
+      "color": "#6d5b54",
+      "font_size": 24,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.44919786096256686,
+      "offset": [
+        1106.6310160427806,
+        313.58288770053474
+      ]
+    },
+    "info": {
+      "name": "Glenmoor Gemini Sprite Lookdev",
+      "description": "Hand-authored Gemini-centered workflow for approving a single isometric unit style before batch atlas generation.",
+      "source": "docs/assets/comfy-workflows/unit-gemini-sprite-lookdev.ui-workflow.json"
+    }
+  }
+}

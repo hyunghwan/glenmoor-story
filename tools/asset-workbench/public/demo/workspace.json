@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "rootName": "Demo Workspace",
+  "featuredAssetId": "demo/generated-pass/unit_rowan_battle.png",
+  "onboarding": [
+    {
+      "id": "pass-atlas",
+      "title": "Pass sample",
+      "description": "Open Rowan first to see a contract-clean atlas, linked reference, and duel-ready preview.",
+      "assetId": "demo/generated-pass/unit_rowan_battle.png"
+    },
+    {
+      "id": "portrait-check",
+      "title": "Portrait readability",
+      "description": "Switch to the Rowan portrait to check 128, 38, and 32 pixel readability at a glance.",
+      "assetId": "demo/generated-pass/unit_rowan_head.png"
+    },
+    {
+      "id": "warn-policy",
+      "title": "Purchased candidate",
+      "description": "Jump to the Sable portrait to see size failures softened into warnings for adaptable purchased art.",
+      "assetId": "demo/purchased-candidate/unit_sable_head.png"
+    },
+    {
+      "id": "persistence",
+      "title": "Review persistence",
+      "description": "Edit status or notes and refresh. Demo reviews persist in browser local storage instead of .asset-workbench/workspace.json.",
+      "assetId": "demo/generated-pass/unit_rowan_battle.png"
+    }
+  ],
+  "assets": [
+    {
+      "path": "demo/generated-pass/unit_rowan_battle.png",
+      "kind": "unitAtlas",
+      "sourceType": "generated",
+      "referenceAssetId": "demo/generated-pass/references/unit_rowan_battle_reference.png",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "notes": "Contract-clean demo atlas. Use this first to see sheet, frame, and duel views with a linked reference.",
+        "checklist": {
+          "direction-readability": true,
+          "weapon-identity": true,
+          "foot-anchor": true,
+          "duel-readability": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/unit_rowan_battle.json",
+      "kind": "unitManifest",
+      "sourceType": "generated",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "notes": "Generated demo manifest aligned to the Rowan atlas fixture.",
+        "checklist": {
+          "manifest-contract": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/unit_rowan_head.png",
+      "kind": "portrait",
+      "sourceType": "generated",
+      "referenceAssetId": "demo/generated-pass/references/unit_rowan_head_reference.png",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "notes": "Portrait sample tuned for 38px and 32px chip readability.",
+        "checklist": {
+          "face-legibility": true,
+          "mask-crop": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/terrain_grass_moss_block.png",
+      "kind": "terrainBlock",
+      "sourceType": "generated",
+      "referenceAssetId": "demo/generated-pass/references/terrain_grass_moss_block_reference.png",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "notes": "Terrain block sample with safe corners and a readable tactical center.",
+        "checklist": {
+          "tile-center": true,
+          "diamond-language": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/terrain_grass_moss_overlay.png",
+      "kind": "terrainOverlay",
+      "sourceType": "generated",
+      "referenceAssetId": "demo/generated-pass/references/terrain_grass_moss_block_reference.png",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "notes": "Overlay sample stays decorative without swallowing the tile center.",
+        "checklist": {
+          "overlay-restraint": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/vfx_cast-burst_arc_a.png",
+      "kind": "vfxSheet",
+      "sourceType": "generated",
+      "referenceAssetId": "demo/generated-pass/references/vfx_cast-burst_reference.png",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "notes": "Centered VFX burst fixture with dark and light backdrop checks.",
+        "checklist": {
+          "effect-silhouette": true,
+          "centered-energy": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/references/unit_rowan_battle_reference.png",
+      "kind": "referenceImage",
+      "sourceType": "generated",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "checklist": {
+          "reference-approved": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/references/unit_rowan_head_reference.png",
+      "kind": "referenceImage",
+      "sourceType": "generated",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "checklist": {
+          "reference-approved": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/references/terrain_grass_moss_block_reference.png",
+      "kind": "referenceImage",
+      "sourceType": "generated",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "checklist": {
+          "reference-approved": true
+        }
+      }
+    },
+    {
+      "path": "demo/generated-pass/references/vfx_cast-burst_reference.png",
+      "kind": "referenceImage",
+      "sourceType": "generated",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "checklist": {
+          "reference-approved": true
+        }
+      }
+    },
+    {
+      "path": "demo/purchased-candidate/unit_sable_battle.png",
+      "kind": "unitAtlas",
+      "sourceType": "purchased",
+      "seededEntry": {
+        "reviewStatus": "hold",
+        "notes": "Purchased atlas candidate. It previews well enough to judge silhouette and animation, but still needs runtime adaptation."
+      }
+    },
+    {
+      "path": "demo/purchased-candidate/unit_sable_head.png",
+      "kind": "portrait",
+      "sourceType": "purchased",
+      "referenceAssetId": "demo/purchased-candidate/references/unit_sable_head_reference.png",
+      "seededEntry": {
+        "reviewStatus": "hold",
+        "notes": "Intentional purchased-art warning sample. Size is off-spec, but the workbench softens it to a warning because it can still be padded or scaled."
+      }
+    },
+    {
+      "path": "demo/purchased-candidate/terrain_ruins_cracked_block.png",
+      "kind": "terrainBlock",
+      "sourceType": "purchased",
+      "seededEntry": {
+        "reviewStatus": "hold",
+        "notes": "Ruins block candidate with size drift and a cluttered center to demonstrate warn-first adaptation review."
+      }
+    },
+    {
+      "path": "demo/purchased-candidate/terrain_ruins_cracked_overlay.png",
+      "kind": "terrainOverlay",
+      "sourceType": "purchased",
+      "seededEntry": {
+        "reviewStatus": "hold",
+        "notes": "Overlay intentionally dense so the tactical center warning is easy to spot."
+      }
+    },
+    {
+      "path": "demo/purchased-candidate/vfx_status-pulse_neon_a.png",
+      "kind": "vfxSheet",
+      "sourceType": "purchased",
+      "seededEntry": {
+        "reviewStatus": "hold",
+        "notes": "Over-bright purchased VFX candidate showing center drift and exposure warnings."
+      }
+    },
+    {
+      "path": "demo/purchased-candidate/references/unit_sable_head_reference.png",
+      "kind": "referenceImage",
+      "sourceType": "generated",
+      "seededEntry": {
+        "reviewStatus": "approved",
+        "checklist": {
+          "reference-approved": true
+        }
+      }
+    }
+  ]
+}

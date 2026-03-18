@@ -2,6 +2,9 @@
   "name": "glenmoor-story",
   "private": true,
   "version": "0.1.0",
+  "workspaces": [
+    "tools/asset-workbench"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +12,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "asset-workbench:dev": "npm run dev --workspace @glenmoor/asset-workbench",
+    "asset-workbench:build": "npm run build --workspace @glenmoor/asset-workbench",
+    "asset-workbench:preview": "npm run preview --workspace @glenmoor/asset-workbench",
+    "asset-workbench:test": "npm run test --workspace @glenmoor/asset-workbench",
     "assets:comfy:generate": "node scripts/assets/generate-comfy-master-workflows.mjs",
     "assets:comfy:init": "node scripts/assets/generate-comfy-master-workflows.mjs && node scripts/assets/init-comfy-pipeline.mjs",
     "qa:hud": "node scripts/qa/hud-polish.mjs",

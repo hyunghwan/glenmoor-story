@@ -1,0 +1,75 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: GAW
+      - generic [ref=e7]:
+        - strong [ref=e8]: Glenmoor Asset Workbench
+        - paragraph [ref=e9]: Creative-tool workspace for Glenmoor sprite sheets, portraits, tiles, and VFX.
+    - generic [ref=e10]:
+      - button "Try Demo Workspace" [ref=e11] [cursor=pointer]
+      - button "Open Folder" [ref=e12] [cursor=pointer]
+      - button "Rescan" [disabled] [ref=e13] [cursor=pointer]
+      - generic [ref=e14]: Ready
+      - generic [ref=e15]:
+        - generic [ref=e16]: No workspace
+        - generic [ref=e17]: launchpad
+        - generic [ref=e18]: 0 assets
+        - generic [ref=e19]: 0 fail
+        - generic [ref=e20]: 0 warn
+  - generic [ref=e21]:
+    - complementary [ref=e22]:
+      - generic [ref=e23]:
+        - strong [ref=e24]: Asset Browser
+        - generic [ref=e25]: 0 visible
+      - generic [ref=e26]:
+        - textbox "Search assets" [ref=e27]:
+          - /placeholder: Search path, unit, terrain, cue
+        - generic [ref=e28]:
+          - button "All" [ref=e29] [cursor=pointer]
+          - button "unitAtlas" [ref=e30] [cursor=pointer]
+          - button "unitManifest" [ref=e31] [cursor=pointer]
+          - button "portrait" [ref=e32] [cursor=pointer]
+          - button "terrainBlock" [ref=e33] [cursor=pointer]
+          - button "terrainOverlay" [ref=e34] [cursor=pointer]
+          - button "vfxSheet" [ref=e35] [cursor=pointer]
+          - button "referenceImage" [ref=e36] [cursor=pointer]
+          - button "unknown" [ref=e37] [cursor=pointer]
+      - generic [ref=e39]:
+        - strong [ref=e40]: Demo-first launch
+        - paragraph [ref=e41]: Try the bundled workspace or open a real project folder to begin.
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]:
+          - strong [ref=e46]: Stage
+          - generic [ref=e47]: Try Demo Workspace or open a folder
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: Demo-first workspace
+            - heading "Inspect generated and purchased game assets like a production tool." [level=1] [ref=e52]
+            - paragraph [ref=e53]: Start with a bundled demo workspace that already includes a clean Rowan pass set and a warning-heavy purchased candidate set, then switch to real folders when you are ready.
+            - generic [ref=e54]:
+              - button "Try Demo Workspace" [ref=e55] [cursor=pointer]
+              - button "Open Folder" [ref=e56] [cursor=pointer]
+          - generic [ref=e57]:
+            - article [ref=e58]:
+              - strong [ref=e59]: What you can inspect
+              - paragraph [ref=e60]: Sprite sheets, portraits, terrain blocks, overlays, VFX sheets, reference images, animation flow, direction changes, and runtime-size readability.
+            - article [ref=e61]:
+              - strong [ref=e62]: How reviews persist
+              - paragraph [ref=e63]:
+                - text: The demo stores review notes in browser local storage. Real folders keep the same review model in
+                - code [ref=e64]: .asset-workbench/workspace.json
+                - text: .
+            - article [ref=e65]:
+              - strong [ref=e66]: Next improvements
+              - paragraph [ref=e67]: Completeness matrix, recent workspace reopen, bulk compare boards, richer reference diffing, and filename suggestions for manifest-only folders.
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - strong [ref=e71]: Filmstrip / Compare Dock
+          - generic [ref=e72]: No selection
+        - generic [ref=e74]: No asset selected.
+    - complementary [ref=e76]:
+      - generic [ref=e77]:
+        - strong [ref=e78]: Inspector
+        - generic [ref=e79]: READY
+      - generic [ref=e80]: Start with the demo workspace or open a folder.

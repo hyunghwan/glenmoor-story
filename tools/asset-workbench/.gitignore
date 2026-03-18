@@ -10,11 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.tsbuildinfo
 *.local
-output
-.omx
-.asset-workbench
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
 
 # Editor directories and files
 .vscode/*
