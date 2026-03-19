@@ -1,8 +1,6 @@
 import Phaser from 'phaser'
 import {
   BATTLE_DRAG_THRESHOLD_PX,
-  MAX_BATTLE_ZOOM,
-  MIN_BATTLE_ZOOM,
   clampBattleZoom,
   rotateQuarterTurns,
   stepBattleZoom,
@@ -12,33 +10,55 @@ import {
   buildCommandButtons,
   buildInitiativeEntries,
   buildRangeTiles,
-  buildTargetPreviewSummary,
   buildTargetPreviewStrings,
-  buildTurnStateSummary,
+  buildTargetPreviewSummary,
   buildUnitInitials,
   resolveActiveTurnMode,
   resolveIdleUnitSelection,
 } from '../battle-ui-model'
 import { classDefinitions, skillDefinitions, statusDefinitions, terrainDefinitions } from '../content'
-import {
-  HEIGHT_STEP,
-  TILE_HEIGHT,
-  TILE_WIDTH,
-  type ProjectionOptions,
-  tileDiamond,
-  tileToWorld,
-} from '../iso'
+import { HEIGHT_STEP, TILE_HEIGHT, TILE_WIDTH } from '../iso'
 import { I18n } from '../i18n'
 import { formatBattleFeedEntry } from '../combat-text'
 import { resolveDefaultZoom, resolveDynamicBoardOrigin } from '../responsive'
 import { BattleRuntime } from '../runtime'
+import {
+  buildProjectionOptions as buildSceneProjectionOptions,
+  buildUnitAnchor as buildSceneUnitAnchor,
+  computeCameraFocusScroll as computeSceneCameraFocusScroll,
+  projectGridPointToClient as projectSceneGridPointToClient,
+  projectTileDiamond as projectSceneTileDiamond,
+  projectTilePoint as projectSceneTilePoint,
+} from './battle/scene-camera'
+import {
+  getBridgeDropPreviewPoint as getSceneBridgeDropPreviewPoint,
+  getPulse as getScenePulse,
+  resolveCueColor as resolveSceneCueColor,
+  resolveImpactScale as resolveSceneImpactScale,
+  resolveMarkerToneColor as resolveSceneMarkerToneColor,
+  resolveTerrainReactionColor as resolveSceneTerrainReactionColor,
+  resolveToneColor as resolveSceneToneColor,
+} from './battle/scene-effects'
+import {
+  buildAccessibleOptionsModel,
+  buildAccessiblePanelModel,
+  buildActionMenuModel,
+  buildActiveUnitPanelModel,
+  buildModalModel,
+  buildObjectivePhaseProgressLabel as buildSceneObjectivePhaseProgressLabel,
+  buildTargetDetailModel,
+  buildTargetMarkersModel,
+  buildViewControlsModel,
+  createCombatTextContext as createSceneCombatTextContext,
+  resolveTargetDetailPlacement as resolveSceneTargetDetailPlacement,
+  resolveUnitPresentation as resolveSceneUnitPresentation,
+} from './battle/scene-hud'
 import { drawBattlefieldUnitIcon } from '../unit-visuals'
 import type {
   ActionTarget,
   AccessibilityPreferences,
   BattleAction,
   CombatResolution,
-  CombatRole,
   DuelTelemetry,
   GridPoint,
   HudAnchor,
@@ -48,10 +68,8 @@ import type {
   ReachableTile,
   TerrainReactionId,
   TiledMapData,
-  UnitIconId,
   UnitState,
   ViewportProfile,
-  ViewControlButtonViewModel,
 } from '../types'
 
 function samePoint(left: GridPoint, right: GridPoint): boolean {
@@ -349,142 +367,51 @@ export class BattleScene extends Phaser.Scene {
     this.refreshPresentation()
   }
 
-  private getProjectionOptions(): ProjectionOptions {
-    return {
+  private getProjectionOptions() {
+    return buildSceneProjectionOptions({
       rotationQuarterTurns: this.viewState.rotationQuarterTurns,
       mapWidth: this.runtime?.state.map.width,
       mapHeight: this.runtime?.state.map.height,
       origin: this.projectionOrigin,
-    }
+    })
   }
 
   private projectTilePoint(point: GridPoint, height = 0): { x: number; y: number } {
-    return tileToWorld(point, height, this.getProjectionOptions())
+    return projectSceneTilePoint(point, height, this.getProjectionOptions())
   }
 
   private projectTileDiamond(point: GridPoint, height = 0): { x: number; y: number }[] {
-    return tileDiamond(point, height, this.getProjectionOptions())
+    return projectSceneTileDiamond(point, height, this.getProjectionOptions())
   }
 
   private getPulse(periodMs = 860, phaseMs = 0): number {
-    return (Math.sin(((this.pulseElapsedMs + phaseMs) / periodMs) * Math.PI * 2) + 1) / 2
+    return getScenePulse(this.pulseElapsedMs, periodMs, phaseMs)
   }
 
   private resolveToneColor(tone: string): number {
-    switch (tone) {
-      case 'ember':
-        return 0xf08a4b
-      case 'ward':
-        return 0x7fd9ff
-      case 'shadow':
-        return 0x8b6bff
-      case 'wind':
-        return 0x90cfff
-      case 'radiant':
-        return 0xe7d88a
-      case 'hazard':
-        return 0xff9078
-      case 'steel':
-        return 0xf5d18c
-      default:
-        return 0xbec8d8
-    }
+    return resolveSceneToneColor(tone)
   }
 
   private resolveMarkerToneColor(tone: HudViewModel['targetMarkers'][number]['markerTone']): number {
-    switch (tone) {
-      case 'heal':
-        return 0x7ed6ac
-      case 'lethal':
-        return 0xf6d88d
-      case 'counter':
-        return 0xd7525f
-      case 'status':
-        return 0x7fd9ff
-      case 'effect':
-        return 0xd8bf84
-      default:
-        return 0xff8870
-    }
+    return resolveSceneMarkerToneColor(tone)
   }
 
   private resolveCueColor(fxCueId: string): number {
-    if (fxCueId.includes('ember') || fxCueId.includes('burning')) {
-      return 0xf09046
-    }
-
-    if (fxCueId.includes('ward') || fxCueId.includes('hymn') || fxCueId.includes('aegis')) {
-      return 0x8bdcff
-    }
-
-    if (fxCueId.includes('shadow')) {
-      return 0x9a77ff
-    }
-
-    if (fxCueId.includes('snare') || fxCueId.includes('slow') || fxCueId.includes('ranger')) {
-      return 0x9cd3ff
-    }
-
-    if (fxCueId.includes('guard')) {
-      return 0xffa37d
-    }
-
-    if (fxCueId.includes('bridge')) {
-      return 0x92ccff
-    }
-
-    return 0xf5d18c
+    return resolveSceneCueColor(fxCueId)
   }
 
   private resolveTerrainReactionColor(reactionId: TerrainReactionId): number {
-    switch (reactionId) {
-      case 'forest-kindling':
-        return 0xf09046
-      case 'ruins-echo':
-        return 0x8bdcff
-      case 'bridge-drop':
-        return 0x92ccff
-    }
+    return resolveSceneTerrainReactionColor(reactionId)
   }
 
   private getBridgeDropPreviewPoint(actorPoint: GridPoint, targetPoint: GridPoint): GridPoint | undefined {
-    if (!this.runtime) {
-      return undefined
-    }
-
-    const dx = Phaser.Math.Clamp(targetPoint.x - actorPoint.x, -1, 1)
-    const dy = Phaser.Math.Clamp(targetPoint.y - actorPoint.y, -1, 1)
-
-    if (dx === 0 && dy === 0) {
-      return undefined
-    }
-
-    const targetTile = this.runtime.state.map.tiles[targetPoint.y]?.[targetPoint.x]
-
-    if (!targetTile || targetTile.terrainId !== 'bridge') {
-      return undefined
-    }
-
-    const nextPoint = {
-      x: targetPoint.x + dx,
-      y: targetPoint.y + dy,
-    }
-    const nextTile = this.runtime.state.map.tiles[nextPoint.y]?.[nextPoint.x]
-
-    return nextTile?.terrainId === 'water' ? nextPoint : undefined
+    return this.runtime
+      ? getSceneBridgeDropPreviewPoint(this.runtime.state.map, actorPoint, targetPoint)
+      : undefined
   }
 
   private resolveImpactScale(weight: ImpactWeight): number {
-    switch (weight) {
-      case 'light':
-        return 0.9
-      case 'medium':
-        return 1
-      case 'heavy':
-        return 1.18
-      case 'finisher':
-        return 1.3
-    }
+    return resolveSceneImpactScale(weight)
   }
 
   private getTileHeight(point: GridPoint): number {
@@ -758,17 +685,17 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const world = this.projectTilePoint(point, this.getTileHeight(point))
     const camera = this.cameras.main
-    const visibleWidth = camera.width / camera.zoom
-    const visibleHeight = camera.height / camera.zoom
-    const maxScrollX = Math.max(this.cameraBounds.x, this.cameraBounds.x + this.cameraBounds.width - visibleWidth)
-    const maxScrollY = Math.max(this.cameraBounds.y, this.cameraBounds.y + this.cameraBounds.height - visibleHeight)
 
-    return {
-      x: Phaser.Math.Clamp(world.x - visibleWidth / 2, this.cameraBounds.x, maxScrollX),
-      y: Phaser.Math.Clamp(world.y - visibleHeight / 2, this.cameraBounds.y, maxScrollY),
-    }
+    return computeSceneCameraFocusScroll({
+      point,
+      tileHeight: this.getTileHeight(point),
+      projection: this.getProjectionOptions(),
+      cameraWidth: camera.width,
+      cameraHeight: camera.height,
+      cameraZoom: camera.zoom,
+      cameraBounds: this.cameraBounds,
+    })
   }
 
   private drawStatusAuras(): void {
@@ -2338,108 +2265,49 @@ export class BattleScene extends Phaser.Scene {
     t: (key: string, params?: Record<string, string | number>) => string
     getUnitName: (unitId: string) => string
   } {
-    return {
+    return createSceneCombatTextContext({
       t: this.i18n.t.bind(this.i18n),
       getUnitName: (unitId: string) => this.i18n.t(this.runtime?.getUnit(unitId)?.nameKey ?? unitId),
-    }
+    })
   }
 
-  private resolveUnitPresentation(unit: Pick<UnitState, 'classId'>): {
-    className: string
-    combatRole: CombatRole
-    combatRoleLabel: string
-    roleFlavorLabel: string
-    unitIconId: UnitIconId
-  } {
-    const classDefinition = classDefinitions[unit.classId]
-
-    return {
-      className: this.i18n.t(classDefinition.nameKey),
-      combatRole: classDefinition.combatRole,
-      combatRoleLabel: this.i18n.t(`combatRole.${classDefinition.combatRole}`),
-      roleFlavorLabel: this.i18n.t(classDefinition.roleKey),
-      unitIconId: classDefinition.unitIconId,
-    }
+  private resolveUnitPresentation(unit: Pick<UnitState, 'classId'>) {
+    return resolveSceneUnitPresentation(this.i18n.t.bind(this.i18n), unit)
   }
 
   private buildActiveUnitPanel(unit: UnitState): HudViewModel['activeUnitPanel'] {
-    const presentation = this.resolveUnitPresentation(unit)
-    const turnState = buildTurnStateSummary({
-      hasMoved: unit.hasMovedThisTurn,
-      hasActed: unit.hasActedThisTurn,
-      move: {
-        ready: this.i18n.t('hud.turn.moveReady'),
-        spent: this.i18n.t('hud.turn.moveSpent'),
-        committed: this.i18n.t('hud.turn.commit'),
-      },
-      action: {
-        ready: this.i18n.t('hud.turn.actionReady'),
-        spent: this.i18n.t('hud.turn.actionSpent'),
-        committed: this.i18n.t('hud.turn.commit'),
-      },
-      overall: {
-        ready: this.i18n.t('hud.turn.ready'),
-        spent: this.i18n.t('hud.turn.commit'),
-        committed: this.i18n.t('hud.turn.commit'),
-      },
+    return buildActiveUnitPanelModel({
+      t: this.i18n.t.bind(this.i18n),
+      unit,
     })
-
-    return {
-      id: unit.id,
-      name: this.i18n.t(unit.nameKey),
-      className: presentation.className,
-      combatRole: presentation.combatRole,
-      combatRoleLabel: presentation.combatRoleLabel,
-      roleFlavorLabel: presentation.roleFlavorLabel,
-      team: unit.team,
-      teamLabel: this.i18n.t(`hud.team.${unit.team}`),
-      initials: buildUnitInitials(this.i18n.t(unit.nameKey)),
-      unitIconId: presentation.unitIconId,
-      hp: unit.hp,
-      maxHp: classDefinitions[unit.classId].stats.maxHp,
-      hpRatio: unit.hp / classDefinitions[unit.classId].stats.maxHp,
-      position: unit.position,
-      positionLabel: `${unit.position.x}, ${unit.position.y}`,
-      facing: unit.facing,
-      statuses:
-        unit.statuses.length > 0
-          ? unit.statuses.map((status) => ({
-              id: status.id,
-              label: this.i18n.t(statusDefinitions[status.id].labelKey),
-              stacks: status.stacks,
-              tone: unit.team === 'allies' ? 'ally' : 'enemy',
-            }))
-          : [{
-              id: 'stable',
-              label: this.i18n.t('duel.statusStable'),
-              tone: 'neutral',
-            }],
-      moveStateLabel: turnState.moveStateLabel,
-      actionStateLabel: turnState.actionStateLabel,
-      turnStateLabel: turnState.turnStateLabel,
-    }
   }
 
   private buildActionMenu(unit: UnitState): HudViewModel['actionMenu'] {
-    if (!this.isPlayerTurnInteractive()) {
-      return undefined
-    }
-
-    const presentation = this.viewportProfile.layoutMode === 'desktop' ? 'anchored' : 'dock'
+    const interactive = this.isPlayerTurnInteractive()
     const anchor =
-      presentation === 'anchored' ? this.buildUnitAnchor(unit, 'above-right', { x: 0, y: -46 }) : undefined
+      this.viewportProfile.layoutMode === 'desktop'
+        ? this.buildUnitAnchor(unit, 'above-right', { x: 0, y: -46 })
+        : undefined
 
-    if (presentation === 'anchored' && !anchor) {
-      return undefined
-    }
-
-    return {
-      label: this.i18n.t('hud.commands'),
-      presentation,
+    return buildActionMenuModel({
+      t: this.i18n.t.bind(this.i18n),
+      layoutMode: this.viewportProfile.layoutMode,
+      mode: this.mode,
+      interactive,
       anchor,
-      buttons: this.buildCommandButtons(),
-      avoidClientPoints: presentation === 'anchored' ? this.buildActionMenuAvoidPoints() : [],
-    }
+      canMove: !unit.hasActedThisTurn && this.moveRangeTiles.length > 0,
+      canAttack:
+        interactive &&
+        this.runtime?.getTargetsForAction({ actorId: unit.id, kind: 'attack' }).length !== 0,
+      canSkill:
+        interactive &&
+        this.runtime?.getTargetsForAction({
+          actorId: unit.id,
+          kind: 'skill',
+          skillId: classDefinitions[unit.classId].signatureSkillId,
+        }).length !== 0,
+      avoidClientPoints: this.buildActionMenuAvoidPoints(),
+    })
   }
 
   private buildActionMenuAvoidPoints(): Array<{ clientX: number; clientY: number }> {
@@ -2485,32 +2353,13 @@ export class BattleScene extends Phaser.Scene {
     }
 
     const hoveredUnitId = this.hoveredPoint ? this.findUnitAt(this.hoveredPoint)?.id : undefined
-    const combatText = this.createCombatTextContext()
 
-    return this.targetOptions.flatMap((option) => {
-      const unit = this.runtime?.state.units[option.unitId]
-
-      if (!unit) {
-        return []
-      }
-
-      const anchor = this.buildUnitAnchor(unit, 'above', { x: 0, y: -34 })
-
-      if (!anchor) {
-        return []
-      }
-
-      const preview = buildTargetPreviewStrings(option.forecast, combatText)
-
-      return [{
-        unitId: unit.id,
-        team: unit.team,
-        anchor,
-        amountLabel: preview.markerLabel,
-        amountKind: preview.markerKind,
-        markerTone: preview.markerTone,
-        emphasis: unit.id === hoveredUnitId,
-      }]
+    return buildTargetMarkersModel({
+      targetOptions: this.targetOptions,
+      hoveredUnitId,
+      getUnitById: (unitId) => this.runtime?.state.units[unitId],
+      buildAnchor: (unit) => this.buildUnitAnchor(unit, 'above', { x: 0, y: -34 }),
+      combatText: this.createCombatTextContext(),
     })
   }
 
@@ -2546,42 +2395,21 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const preview = buildTargetPreviewStrings(target.forecast, this.createCombatTextContext())
-    const unitPresentation = this.resolveUnitPresentation(hoveredUnit)
-
-    return {
-      unitId: hoveredUnit.id,
+    return buildTargetDetailModel({
+      t: this.i18n.t.bind(this.i18n),
+      hoveredUnit,
+      target,
       presentation,
       anchor,
-      unitName: this.i18n.t(hoveredUnit.nameKey),
-      className: unitPresentation.className,
-      combatRole: unitPresentation.combatRole,
-      combatRoleLabel: unitPresentation.combatRoleLabel,
-      teamLabel: this.i18n.t(`hud.team.${hoveredUnit.team}`),
-      unitIconId: unitPresentation.unitIconId,
-      title: preview.title,
-      subtitle: preview.subtitle,
-      amountLabel: preview.amountLabel,
-      counterLabel: preview.counterLabel,
-      effectLabel: preview.effectLabel,
-      verdictChips: preview.verdictChips,
-      telegraphSummary: preview.telegraphSummary,
-    }
+      combatText: this.createCombatTextContext(),
+    })
   }
 
   private resolveTargetDetailPlacement(
     activePoint: GridPoint,
     targetPoint: GridPoint,
   ): HudAnchor['preferredPlacement'] {
-    if (targetPoint.x > activePoint.x) {
-      return 'above-right'
-    }
-
-    if (targetPoint.x < activePoint.x) {
-      return 'above-left'
-    }
-
-    return 'above-left'
+    return resolveSceneTargetDetailPlacement(activePoint, targetPoint)
   }
 
   private buildCommandButtons(): NonNullable<HudViewModel['actionMenu']>['buttons'] {
@@ -2617,68 +2445,13 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private buildViewControls(): HudViewModel['viewControls'] {
-    const buttons: ViewControlButtonViewModel[] = [
-      {
-        id: 'view-rotate-left',
-        label: this.i18n.t('hud.action.rotateLeft'),
-        icon: 'rotate_left',
-        disabled: false,
-        active: false,
-      },
-      {
-        id: 'view-rotate-right',
-        label: this.i18n.t('hud.action.rotateRight'),
-        icon: 'rotate_right',
-        disabled: false,
-        active: false,
-      },
-      {
-        id: 'view-zoom-in',
-        label: this.i18n.t('hud.action.zoomIn'),
-        icon: 'zoom_in',
-        disabled: this.viewState.zoom >= MAX_BATTLE_ZOOM,
-        active: false,
-      },
-      {
-        id: 'view-zoom-out',
-        label: this.i18n.t('hud.action.zoomOut'),
-        icon: 'zoom_out',
-        disabled: this.viewState.zoom <= MIN_BATTLE_ZOOM,
-        active: false,
-      },
-      {
-        id: 'view-recenter',
-        label: this.i18n.t('hud.action.recenter'),
-        icon: 'my_location',
-        disabled: false,
-        active: false,
-      },
-    ]
-
-    if (this.viewportProfile.layoutMode === 'desktop') {
-      buttons.push({
-        id: 'view-pan-toggle',
-        label: this.i18n.t('hud.action.pan'),
-        icon: 'open_with',
-        disabled: false,
-        active: this.viewState.panModeActive,
-      })
-    }
-
-    if (this.runtime?.state.phase === 'active') {
-      buttons.push({
-        id: 'restart-battle',
-        label: this.i18n.t('hud.playAgain'),
-        icon: 'replay',
-        disabled: false,
-        active: false,
-      })
-    }
-
-    return {
-      label: this.i18n.t('hud.view'),
-      buttons,
-    }
+    return buildViewControlsModel({
+      t: this.i18n.t.bind(this.i18n),
+      zoom: this.viewState.zoom,
+      panModeActive: this.viewState.panModeActive,
+      layoutMode: this.viewportProfile.layoutMode,
+      phase: this.runtime?.state.phase ?? 'briefing',
+    })
   }
 
   private buildAccessiblePanel(
@@ -2686,34 +2459,18 @@ export class BattleScene extends Phaser.Scene {
     latestMessage: string,
   ): HudViewModel['accessiblePanel'] {
     const options = this.buildAccessibleOptions()
-    const summary = [
-      `${this.i18n.t('hud.activeUnit')}: ${this.i18n.t(active.nameKey)}`,
-      `${this.i18n.t('hud.team.' + active.team)} · ${this.i18n.t(classDefinitions[active.classId].nameKey)}`,
-      `HP ${active.hp}/${classDefinitions[active.classId].stats.maxHp}`,
-      `${this.i18n.t('hud.objective')}: ${this.i18n.t(this.runtime?.state.objectiveKey ?? 'battle.glenmoorPass.objective')}`,
-    ].join(' • ')
 
-    const liveMessage = this.currentModal
-      ? `${this.currentModal.title}. ${this.currentModal.objectiveLabel}`
-      : this.phaseAnnouncementKey
-        ? this.i18n.t(this.phaseAnnouncementKey)
-        : latestMessage
-
-    return {
-      label: this.i18n.t('a11y.panel'),
-      summaryHeading: this.i18n.t('a11y.summary'),
-      summary,
-      commandsHeading: this.i18n.t('a11y.commands'),
+    return buildAccessiblePanelModel({
+      t: this.i18n.t.bind(this.i18n),
+      active,
+      objectiveKey: this.runtime?.state.objectiveKey ?? 'battle.glenmoorPass.objective',
+      latestMessage,
       commandButtons: this.buildCommandButtons().filter((button) => !button.disabled),
-      optionsHeading:
-        this.mode === 'move'
-          ? this.i18n.t('a11y.reachableTiles')
-          : this.mode === 'attack' || this.mode === 'skill'
-            ? this.i18n.t('a11y.targets')
-            : this.i18n.t('a11y.noOptions'),
       options,
-      liveMessage,
-    }
+      mode: this.mode,
+      modal: this.currentModal,
+      phaseAnnouncementKey: this.phaseAnnouncementKey,
+    })
   }
 
   private buildAccessibleOptions(): HudViewModel['accessiblePanel']['options'] {
@@ -2721,37 +2478,15 @@ export class BattleScene extends Phaser.Scene {
       return []
     }
 
-    if (this.mode === 'move') {
-      return this.reachableTiles.map((tile) => {
-        const mapTile = this.runtime?.state.map.tiles[tile.point.y]?.[tile.point.x]
-        const terrainLabel = mapTile ? this.i18n.t(terrainDefinitions[mapTile.terrainId].labelKey) : this.i18n.t('hud.none')
-
-        return {
-          id: `tile-${tile.point.x}-${tile.point.y}`,
-          label: `${this.i18n.t('a11y.tile')} ${tile.point.x}, ${tile.point.y}`,
-          detail: `${terrainLabel} · ${this.i18n.t('a11y.cost')} ${tile.cost}`,
-          command: `accessible:tile:${tile.point.x}:${tile.point.y}`,
-          kind: 'tile',
-        }
-      })
-    }
-
-    if (this.mode === 'attack' || this.mode === 'skill') {
-      return this.targetOptions.map((option) => {
-        const unit = this.runtime?.state.units[option.unitId]
-        const preview = buildTargetPreviewStrings(option.forecast, this.createCombatTextContext())
-
-        return {
-          id: `target-${option.unitId}`,
-          label: unit ? this.i18n.t(unit.nameKey) : option.unitId,
-          detail: [preview.amountLabel, preview.counterLabel, preview.effectLabel].filter(Boolean).join(' · '),
-          command: `accessible:target:${option.unitId}`,
-          kind: 'target',
-        }
-      })
-    }
-
-    return []
+    return buildAccessibleOptionsModel({
+      t: this.i18n.t.bind(this.i18n),
+      mode: this.mode,
+      reachableTiles: this.reachableTiles,
+      targetOptions: this.targetOptions,
+      mapTiles: this.runtime.state.map.tiles,
+      getUnitById: (unitId) => this.runtime?.state.units[unitId],
+      combatText: this.createCombatTextContext(),
+    })
   }
 
   private buildUnitAnchor(
@@ -2769,31 +2504,19 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const world = this.projectTilePoint(unit.position, tile.height)
-    const clientPoint = this.projectWorldPointToClient({
-      x: world.x + offset.x,
-      y: world.y + offset.y,
-    })
-
-    if (!clientPoint) {
-      return undefined
-    }
-
-    const margin = 18
-
-    return {
-      clientX: Phaser.Math.Clamp(
-        clientPoint.clientX,
-        clientPoint.bounds.left + margin,
-        clientPoint.bounds.right - margin,
-      ),
-      clientY: Phaser.Math.Clamp(
-        clientPoint.clientY,
-        clientPoint.bounds.top + margin,
-        clientPoint.bounds.bottom - margin,
-      ),
+    return buildSceneUnitAnchor({
+      point: unit.position,
+      tileHeight: tile.height,
+      projection: this.getProjectionOptions(),
       preferredPlacement,
-    }
+      offset,
+      cameraScrollX: this.cameras.main.scrollX,
+      cameraScrollY: this.cameras.main.scrollY,
+      cameraZoom: this.cameras.main.zoom,
+      cameraWidth: this.cameras.main.width,
+      cameraHeight: this.cameras.main.height,
+      canvasBounds: this.game.canvas.getBoundingClientRect(),
+    })
   }
 
   private projectGridPointToClient(point: GridPoint): { clientX: number; clientY: number } | undefined {
@@ -2807,38 +2530,17 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const world = this.projectTilePoint(point, tile.height)
-    const clientPoint = this.projectWorldPointToClient(world)
-
-    if (!clientPoint) {
-      return undefined
-    }
-
-    return {
-      clientX: clientPoint.clientX,
-      clientY: clientPoint.clientY,
-    }
-  }
-
-  private projectWorldPointToClient(world: { x: number; y: number }): {
-    clientX: number
-    clientY: number
-    bounds: DOMRect
-  } | undefined {
-    const camera = this.cameras.main
-    const canvasBounds = this.game.canvas.getBoundingClientRect()
-
-    if (!canvasBounds.width || !canvasBounds.height) {
-      return undefined
-    }
-
-    return {
-      clientX:
-        canvasBounds.left + (world.x - camera.scrollX) * camera.zoom * (canvasBounds.width / camera.width),
-      clientY:
-        canvasBounds.top + (world.y - camera.scrollY) * camera.zoom * (canvasBounds.height / camera.height),
-      bounds: canvasBounds,
-    }
+    return projectSceneGridPointToClient({
+      point,
+      tileHeight: tile.height,
+      projection: this.getProjectionOptions(),
+      cameraScrollX: this.cameras.main.scrollX,
+      cameraScrollY: this.cameras.main.scrollY,
+      cameraZoom: this.cameras.main.zoom,
+      cameraWidth: this.cameras.main.width,
+      cameraHeight: this.cameras.main.height,
+      canvasBounds: this.game.canvas.getBoundingClientRect(),
+    })
   }
 
   private getActionRangeTiles(): GridPoint[] {
@@ -2874,32 +2576,16 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    if (kind === 'briefing') {
-      return {
-        kind,
-        eyebrow: this.i18n.t('hud.phase.briefing'),
-        title: this.i18n.t(this.runtime.definition.titleKey),
-        body: this.i18n.t(this.runtime.state.briefingKey),
-        phaseLabel: this.buildObjectivePhaseProgressLabel(),
-        objectiveHeading: this.i18n.t('hud.modal.startingObjective'),
-        objectiveLabel: this.i18n.t(this.runtime.state.objectiveKey),
-        buttonLabel: this.i18n.t('hud.startBattle'),
-      }
-    }
-
-    return {
+    return buildModalModel({
+      t: this.i18n.t.bind(this.i18n),
       kind,
-      eyebrow: this.i18n.t(`hud.phase.${kind}`),
-      title: this.i18n.t(this.runtime.definition.titleKey),
-      body:
-        kind === 'victory'
-          ? this.i18n.t(this.runtime.state.victoryKey)
-          : this.i18n.t(this.runtime.state.defeatKey),
-      phaseLabel: this.buildObjectivePhaseProgressLabel(),
-      objectiveHeading: this.i18n.t('hud.modal.finalObjective'),
-      objectiveLabel: this.i18n.t(this.runtime.state.objectiveKey),
-      buttonLabel: this.i18n.t('hud.playAgain'),
-    }
+      titleKey: this.runtime.definition.titleKey,
+      briefingKey: this.runtime.state.briefingKey,
+      victoryKey: this.runtime.state.victoryKey,
+      defeatKey: this.runtime.state.defeatKey,
+      objectiveKey: this.runtime.state.objectiveKey,
+      objectivePhaseLabel: this.buildObjectivePhaseProgressLabel(),
+    })
   }
 
   private getCurrentObjectivePhase(): NonNullable<NonNullable<BattleRuntime['definition']['objectivePhases']>[number]> | undefined {
@@ -2917,20 +2603,10 @@ export class BattleScene extends Phaser.Scene {
       return ''
     }
 
-    const phases = this.runtime.definition.objectivePhases ?? []
-
-    if (phases.length <= 1) {
-      return ''
-    }
-
-    const currentIndex = Math.max(
-      0,
-      phases.findIndex((phase) => phase.id === this.runtime!.state.objectivePhaseId),
-    )
-
-    return this.i18n.t('hud.phaseObjective', {
-      current: currentIndex + 1,
-      total: phases.length,
+    return buildSceneObjectivePhaseProgressLabel({
+      t: this.i18n.t.bind(this.i18n),
+      phases: this.runtime.definition.objectivePhases ?? [],
+      activePhaseId: this.runtime.state.objectivePhaseId,
     })
   }
 

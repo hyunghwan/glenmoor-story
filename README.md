@@ -1,49 +1,85 @@
 # Glenmoor Story
 
-`Glenmoor Story` is a browser-first tactical RPG prototype inspired by `Fire Emblem` and `Final Fantasy Tactics`.
-The goal of v1 is not a full game. It is one polished battle: medieval-fantasy tone, isometric 2D presentation, mouse-first controls, English-first content, and Korean localization from day one.
+## Project overview
 
-## Current Status
+`Glenmoor Story` is a browser-first tactical RPG demo built with `Phaser 3`, `TypeScript`, and `Vite`.
+It focuses on one authored SRPG battle instead of a full campaign: deterministic combat rules, an isometric battlefield, a separate duel scene for each exchange, a DOM HUD layered over the canvas, English source content, and Korean localization.
 
-- Repository initialized on `main`
-- Remote connected to `https://github.com/hyunghwan/glenmoor-story.git`
-- Phaser + TypeScript prototype implemented on top of Vite
-- Deterministic battle core, AI scoring, localized HUD, and duel scene are wired into a playable single battle
-- Vitest tactical rule coverage and Playwright QA artifact generation are in place
-- `js_repl` has been enabled in Codex config for the next session so the `playwright-interactive` workflow can take over
+## Live demo
 
-## Prototype Pillars
+Play the latest deployed build here: <https://glenmoorstory.sqncs.com/>
 
-- One complete battle, not a broad feature list
-- Deterministic tactics core that can be tested without rendering
-- Separate duel scene for every combat exchange
-- DOM HUD layered over the game surface
-- English source strings with Korean locale parity
-- Project planning and progress tracked in Markdown and mirrored to GitHub Project items
+## Feature highlights
 
-## Documentation
+- One handcrafted `16x16` isometric battle designed as a vertical slice
+- Deterministic tactics runtime with initiative order, terrain, height, facing, status effects, counterattacks, and push effects
+- Separate duel presentation for attacks and skills without desyncing map state
+- Mouse-first HUD and battlefield controls with responsive layout support
+- English and Korean localization for gameplay UI and wrapper copy
+- Automated regression coverage for runtime logic, UI models, content loading, and browser QA flows
 
-- `docs/plan.md`: implementation plan and delivery structure
-- `docs/backlog.md`: concrete execution backlog and GitHub Project sync source of truth
-- `docs/game-design.md`: prototype GDD
-- `docs/progress.md`: canonical implementation log
-- `docs/qa-inventory.md`: QA coverage list for functional and visual validation
-- `docs/assets/prototype-visual-asset-spec.md`: canonical tile, unit, duel, VFX, and HUD asset sizing contract
-- `docs/assets/asset-replacement-manifest.md`: placeholder asset slots and replacement targets
-- `docs/assets/comfy-cloud-asset-pipeline.md`: Comfy Cloud production runbook for prototype-grade game assets
-- `docs/assets/comfy-pilot-prompt-pack.md`: pilot prompts for style bible, unit references, terrain, and VFX
-- `docs/assets/comfy-batch/`: machine-readable batch manifests for the master Comfy workflows
-- `docs/assets/comfy-workflows/`: import-ready Comfy UI workflows plus legacy/debug helpers
-- `progress.md`: handoff-friendly agent log required by the web-game workflow
+## Screenshot
 
-## Implemented Slice
+![Glenmoor Story battle demo](docs/assets/demo-battle.png)
 
-The current playable slice includes:
+## Quick start
 
-- a 16x16 isometric map
-- 6 allied units and 6 enemy units
-- initiative-based turn order
-- terrain, height, facing, status, counterattack, and push systems
-- battle HUD, localized story wrapper, and reusable duel presentation
-- English and Korean locale support
-- automated tactical tests and screenshot/state capture under `output/web-game/`
+```bash
+npm install
+npm run dev
+```
+
+Open the local Vite URL in your browser, or skip local setup and use the live demo above.
+
+## Controls
+
+- Click the active allied unit to open movement
+- Click a reachable tile to reposition before committing an action
+- Use `Attack`, `Skill`, `Wait`, or `Cancel` from the HUD command menu
+- Rotate, zoom, recenter, and pan the battlefield from the HUD or mouse input
+- Use the locale toggle to swap between English and Korean
+
+## Scripts
+
+- `npm run dev`: start the main game locally
+- `npm run build`: type-check and build the production bundle
+- `npm run preview`: preview the production build locally
+- `npm test`: run the Vitest suite
+- `npm run qa:playthrough`: run the scripted battle playthrough QA flow
+- `npm run qa:camera`: run battlefield camera QA coverage
+- `npm run qa:hud`: run HUD layout and target-preview QA coverage
+- `npm run qa:mobile`: run responsive/mobile accessibility QA coverage
+- `npm run asset-workbench:dev`: start the optional asset workbench workspace
+
+## Repo structure
+
+- `src/`: game runtime, scenes, HUD, and data loading
+- `public/`: map JSON and bundled placeholder assets
+- `tests/`: Vitest coverage for core tactics and UI helpers
+- `scripts/qa/`: browser QA scripts and automation helpers
+- `docs/`: public documentation, architecture notes, QA inventory, asset attribution, and internal history
+- `tools/asset-workbench/`: optional companion workspace for reviewing visual asset replacements
+
+## Docs
+
+- [Documentation hub](docs/README.md)
+- [Architecture overview](docs/architecture.md)
+- [QA inventory](docs/qa-inventory.md)
+- [Asset replacement and attribution manifest](docs/assets/asset-replacement-manifest.md)
+
+The repository also keeps internal planning and progress notes for historical context:
+
+- [Prototype plan](docs/plan.md)
+- [Execution backlog](docs/backlog.md)
+- [Progress log](docs/progress.md)
+- [Agent handoff log](progress.md)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, validation expectations, and workflow notes for gameplay, content, QA, and documentation changes.
+
+## License / asset attribution
+
+The code in this repository is released under the [MIT License](LICENSE).
+
+Bundled third-party placeholder art and audio keep their own licenses and attribution requirements. See [docs/assets/asset-replacement-manifest.md](docs/assets/asset-replacement-manifest.md) for the current source and license record.

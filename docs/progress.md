@@ -365,3 +365,40 @@ This is the canonical implementation log for `Glenmoor Story`.
 
 - Mobile portrait now reserves more than half of the viewport height for the battlefield and keeps quick controls at or above the `48px` touch target floor in automated QA.
 - The accessible DOM control path is intentionally layered on top of the same tactics commands rather than duplicating game rules in a separate controller.
+
+## 2026-03-19
+
+### Completed
+
+- Reframed the repository for public open-source onboarding:
+  - rewrote the root `README.md` around the live demo, local setup, controls, scripts, docs, and contribution guidance
+  - added `CONTRIBUTING.md`, `LICENSE`, `docs/README.md`, and `docs/architecture.md`
+  - promoted a stable battle screenshot to `docs/assets/demo-battle.png`
+- Split large gameplay files into narrower responsibilities without changing tactical outcomes:
+  - `src/game/runtime.ts` now remains the public runtime surface while pure rules moved into `runtime-effects.ts`, `runtime-sim.ts`, and `runtime-ai.ts`
+  - `src/game/ui.ts` now relies on extracted anchored-placement helpers in `src/game/hud-placement.ts`
+  - `src/game/scenes/BattleScene.ts` now delegates camera math, FX/color helpers, and HUD-model assembly to `src/game/scenes/battle/scene-camera.ts`, `scene-effects.ts`, and `scene-hud.ts`
+- Added small public-demo polish items:
+  - added `public/favicon.svg` and linked it in `index.html`
+  - removed unconditional `@vercel/analytics` injection so local and non-Vercel hosts no longer request `/_vercel/insights/script.js`
+- Expanded regression coverage for the extracted pure helpers:
+  - new `tests/scene-camera.test.ts`
+  - new `tests/scene-effects.test.ts`
+  - new `tests/scene-hud.test.ts`
+  - refreshed `tests/hud-placement.test.ts` to lock the preferred-side slide behavior for anchored HUD popups
+
+### Verification
+
+- `npx tsc --noEmit`
+- `npm test`
+- `npm run build`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+- `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 500 --screenshot-dir output/web-game/smoke-clean`
+
+### Notes
+
+- The dedicated Playwright smoke client still captures the Phaser canvas separately from the DOM HUD, so `output/web-game/smoke-clean/shot-0.png` remains a canvas-only artifact. For visual review of the full interface, use the refreshed screenshots in `output/web-game/playthrough/`.
+- Fresh public-facing evidence worth reusing includes:
+  - `output/web-game/playthrough/01-briefing-en.png`
+  - `output/web-game/playthrough/02-battle-en.png`
+  - `output/web-game/playthrough/16-bridge-after.png`

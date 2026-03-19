@@ -1,5 +1,4 @@
 import Phaser from 'phaser'
-import { inject } from '@vercel/analytics'
 import './style.css'
 import { I18n } from './game/i18n'
 import { BootScene } from './game/scenes/BootScene'
@@ -20,10 +19,6 @@ const app = document.querySelector<HTMLDivElement>('#app')
 if (!app) {
   throw new Error('Missing #app root')
 }
-
-inject({
-  mode: import.meta.env.DEV ? 'development' : 'production',
-})
 
 app.innerHTML = `
   <main class="app-shell" data-layout="desktop" data-high-contrast="false" data-reduced-motion="false">

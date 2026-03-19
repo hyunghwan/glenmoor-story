@@ -285,3 +285,28 @@ The canonical implementation log lives in `docs/progress.md`.
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+
+## 2026-03-19
+
+- Reframed the repository for open-source visitors instead of internal handoff only:
+  - rewrote `README.md` around project overview, live demo, quick start, controls, scripts, docs, contributing, and license guidance
+  - added `CONTRIBUTING.md`, `LICENSE`, `docs/README.md`, and `docs/architecture.md`
+  - promoted `output/web-game/playthrough/02-battle-en.png` into the stable docs asset `docs/assets/demo-battle.png`
+- Completed a safe structure refactor without changing battle rules or JSON formats:
+  - extracted DOM HUD placement math into `src/game/hud-placement.ts`
+  - split runtime internals into `src/game/runtime-effects.ts`, `src/game/runtime-sim.ts`, and `src/game/runtime-ai.ts` while keeping `src/game/runtime.ts` as the public entry point
+  - split `BattleScene` helper logic into `src/game/scenes/battle/scene-camera.ts`, `scene-effects.ts`, and `scene-hud.ts` so the scene stays focused on Phaser orchestration
+- Tightened public-demo polish:
+  - added `public/favicon.svg` and linked it from `index.html`
+  - removed unconditional `@vercel/analytics` injection from `src/main.ts` so local and non-Vercel deployments stop requesting `/_vercel/insights/script.js`
+- Added regression coverage for the extracted helpers:
+  - `tests/scene-camera.test.ts`
+  - `tests/scene-effects.test.ts`
+  - `tests/scene-hud.test.ts`
+  - updated `tests/hud-placement.test.ts` to preserve preferred-placement sliding before placement swaps when only avoid-point pressure is present
+- Verification completed:
+  - `npx tsc --noEmit`
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 500 --screenshot-dir output/web-game/smoke-clean`
