@@ -106,7 +106,6 @@ export class HudController {
         this.mobileObjectiveExpanded = false
         this.mobileOverflowOpen = false
       } else if (
-        view.mobilePresentation?.panelState === 'collapsed' ||
         view.mobilePresentation?.actionDockVisible ||
         view.modal
       ) {

@@ -355,6 +355,9 @@ The canonical implementation log lives in `docs/progress.md`.
 - Cleaned up initiative icon presentation across desktop and mobile:
   - split initiative tokens into an icon plate plus initials label instead of stacking everything inside one tiny badge
   - re-centered HUD SVG icons so combat role glyphs stop sitting low inside initiative tokens
+- Fixed the mobile objective disclosure interaction:
+  - preserved the disclosure's local open state across routine `hud:update` events instead of collapsing it on every mobile refresh
+  - restored tap hit-testing for the mobile status stack so the canvas no longer intercepts the objective toggle button
 - Verification completed:
   - `npm test`
   - `npm run build`
@@ -362,3 +365,4 @@ The canonical implementation log lives in `docs/progress.md`.
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:playthrough`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:mobile`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:camera`
+  - mobile objective toggle smoke check (`before: 0 -> after: 1`) at `390x844`

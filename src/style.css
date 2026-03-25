@@ -284,6 +284,7 @@ button {
   padding: 12px 18px 14px;
   max-width: min(900px, calc(100% - 220px));
   align-items: start;
+  border-radius: 24px;
 }
 
 .hud-status-desktop-top {
@@ -347,13 +348,17 @@ button {
 
 .hud-status-tag {
   flex: 0 0 auto;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 14px;
   border: 1px solid rgba(216, 191, 132, 0.28);
   background: rgba(38, 30, 16, 0.58);
   color: var(--accent);
-  padding: 4px 9px;
+  padding: 4px 12px;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -1256,6 +1261,7 @@ canvas {
     gap: 10px;
     padding: 8px 14px;
     max-width: min(760px, calc(100% - 164px));
+    border-radius: 20px;
   }
 
   .hud-status-desktop-top {
@@ -1281,8 +1287,10 @@ canvas {
   }
 
   .hud-status-tag {
+    min-height: 24px;
+    border-radius: 11px;
     font-size: 9px;
-    padding: 3px 8px;
+    padding: 3px 9px;
   }
 
   .hud-status-columns.is-inline p {
@@ -1644,6 +1652,7 @@ canvas {
 .hud-status-stack.is-mobile {
   justify-items: stretch;
   gap: 6px;
+  pointer-events: auto;
 }
 
 .hud-mobile-status-line {
@@ -1652,6 +1661,7 @@ canvas {
   justify-content: space-between;
   gap: 6px;
   padding: 6px 8px;
+  pointer-events: auto;
 }
 
 .hud-mobile-status-pills {
