@@ -19,6 +19,7 @@ import type {
   HudAnchor,
   HudClientPoint,
   HudViewModel,
+  MobileHudPresentationViewModel,
   UnitIconId,
   UnitState,
   ViewControlButtonViewModel,
@@ -96,6 +97,16 @@ export interface BuildAccessiblePanelModelArgs {
   modal?: HudViewModel['modal']
   phaseAnnouncementKey?: string
 }
+
+export interface ResolveMobileHudPresentationArgs {
+  layoutMode: ViewportProfile['layoutMode']
+  viewportWidth: number
+  mode: HudViewModel['mode']
+  hasActionMenu: boolean
+  hasTargetDetail: boolean
+}
+
+const PHONE_PORTRAIT_COMMAND_DENSITY_MAX_WIDTH = 430
 
 export interface BuildModalModelArgs {
   t: (key: string, params?: Record<string, string | number>) => string
@@ -226,6 +237,13 @@ export function buildActionMenuModel(
         wait: args.t('hud.action.wait'),
         cancel: args.t('hud.action.cancel'),
       },
+      shortLabels: {
+        move: args.t('hud.action.move'),
+        attack: args.t('hud.action.attackShort'),
+        skill: args.t('hud.action.skill'),
+        wait: args.t('hud.action.wait'),
+        cancel: args.t('hud.action.back'),
+      },
     }),
     avoidClientPoints: presentation === 'anchored' ? args.avoidClientPoints : [],
   }
@@ -305,6 +323,31 @@ export function buildTargetDetailModel(
     effectLabel: preview.effectLabel,
     verdictChips: preview.verdictChips,
     telegraphSummary: preview.telegraphSummary,
+  }
+}
+
+export function resolveMobileHudPresentation(
+  args: ResolveMobileHudPresentationArgs,
+): MobileHudPresentationViewModel | undefined {
+  if (args.layoutMode === 'desktop') {
+    return undefined
+  }
+
+  const actionDockVisible = args.hasActionMenu
+  const targetDetailMode = args.hasTargetDetail ? 'detail' : 'summary'
+  const commandDensity =
+    args.layoutMode === 'mobile-portrait' && args.viewportWidth <= PHONE_PORTRAIT_COMMAND_DENSITY_MAX_WIDTH
+      ? 'compact-2row'
+      : 'default'
+
+  return {
+    panelState: 'collapsed',
+    actionDockVisible,
+    initiativeMode: 'compact',
+    commandDensity,
+    overflowOpen: false,
+    objectiveExpanded: false,
+    targetDetailMode,
   }
 }
 

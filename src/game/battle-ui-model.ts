@@ -65,6 +65,14 @@ export interface CommandButtonLabels {
   cancel: string
 }
 
+export interface CommandButtonShortLabels {
+  move?: string
+  attack?: string
+  skill?: string
+  wait?: string
+  cancel?: string
+}
+
 export interface CommandButtonContext {
   interactive: boolean
   mode: HudViewModel['mode']
@@ -72,6 +80,7 @@ export interface CommandButtonContext {
   canAttack: boolean
   canSkill: boolean
   labels: CommandButtonLabels
+  shortLabels?: CommandButtonShortLabels
 }
 
 interface PreviewTextContext {
@@ -201,30 +210,35 @@ export function buildCommandButtons(context: CommandButtonContext): HudActionBut
     {
       id: 'move',
       label: context.labels.move,
+      shortLabel: context.shortLabels?.move,
       disabled: !context.interactive || !context.canMove,
       active: context.mode === 'move',
     },
     {
       id: 'attack',
       label: context.labels.attack,
+      shortLabel: context.shortLabels?.attack,
       disabled: !context.interactive || !context.canAttack,
       active: context.mode === 'attack',
     },
     {
       id: 'skill',
       label: context.labels.skill,
+      shortLabel: context.shortLabels?.skill,
       disabled: !context.interactive || !context.canSkill,
       active: context.mode === 'skill',
     },
     {
       id: 'wait',
       label: context.labels.wait,
+      shortLabel: context.shortLabels?.wait,
       disabled: !context.interactive,
       active: false,
     },
     {
       id: 'cancel',
       label: context.labels.cancel,
+      shortLabel: context.shortLabels?.cancel,
       disabled: !context.interactive || context.mode === 'idle',
       active: false,
     },

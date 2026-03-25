@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { buildCombatStepLines } from '../combat-text'
 import { classDefinitions } from '../content'
+import { resolveDuelLayout } from '../duel-layout'
 import { I18n } from '../i18n'
 import type {
   AccessibilityPreferences,
@@ -100,20 +101,19 @@ export class DuelScene extends Phaser.Scene {
     const isMobile = this.viewportProfile.layoutMode !== 'desktop'
     const isPortraitMobile = this.viewportProfile.layoutMode === 'mobile-portrait'
     const safeTop = this.viewportProfile.safeArea.top
-    const safeBottom = this.viewportProfile.safeArea.bottom
-    const panelY = isPortraitMobile ? height / 2 + 24 : height / 2
-    const frameWidth = width - (isMobile ? 28 : 120)
-    const frameHeight = isPortraitMobile ? height - safeTop - safeBottom - 168 : 420
-    const headerWidth = width - (isMobile ? 72 : 280)
-    const detailWidth = width - (isMobile ? 72 : 360)
+    const layout = resolveDuelLayout({
+      width,
+      height,
+      viewportProfile: this.viewportProfile,
+    })
 
     if (this.textures.exists('duel:backdrop')) {
       this.add.image(width / 2, height / 2, 'duel:backdrop').setDisplaySize(width, height).setAlpha(0.22)
     }
     this.add.rectangle(width / 2, height / 2, width, height, 0x071018, 0.96)
-    this.add.rectangle(width / 2, panelY, frameWidth, frameHeight, 0x13202b, 0.96).setStrokeStyle(2, 0xd8c08a)
-    this.add.rectangle(width / 2, safeTop + 104, headerWidth, isPortraitMobile ? 96 : 86, 0x0d171f, 0.88).setStrokeStyle(1, 0x4d6578)
-    this.add.rectangle(width / 2, isPortraitMobile ? safeTop + 250 : 330, detailWidth, isPortraitMobile ? 128 : 110, 0x0c141a, 0.92).setStrokeStyle(1, 0x3a5568)
+    this.add.rectangle(width / 2, layout.panelY, layout.frameWidth, layout.frameHeight, 0x13202b, 0.96).setStrokeStyle(2, 0xd8c08a)
+    this.add.rectangle(width / 2, layout.headerY, layout.headerWidth, isPortraitMobile ? 88 : 86, 0x0d171f, 0.88).setStrokeStyle(1, 0x4d6578)
+    this.add.rectangle(width / 2, layout.detailY, layout.detailWidth, isPortraitMobile ? 120 : isMobile ? 102 : 110, 0x0c141a, 0.92).setStrokeStyle(1, 0x3a5568)
 
     this.add.text(width / 2, safeTop + 44, this.i18n.t('duel.vs'), {
       fontFamily: 'Cinzel',
@@ -129,68 +129,65 @@ export class DuelScene extends Phaser.Scene {
       fontStyle: '600',
     }).setOrigin(0.5)
 
-    this.actionText = this.add.text(width / 2, safeTop + 142, '', {
+    this.actionText = this.add.text(width / 2, layout.actionY, '', {
       fontFamily: 'Outfit',
-      fontSize: isPortraitMobile ? '26px' : isMobile ? '30px' : '34px',
+      fontSize: isPortraitMobile ? '24px' : isMobile ? '28px' : '34px',
       color: '#f4efe3',
       fontStyle: '700',
     }).setOrigin(0.5)
 
-    this.subtitleText = this.add.text(width / 2, safeTop + 192, '', {
+    this.subtitleText = this.add.text(width / 2, layout.subtitleY, '', {
       fontFamily: 'Outfit',
-      fontSize: isPortraitMobile ? '17px' : isMobile ? '18px' : '20px',
+      fontSize: isPortraitMobile ? '16px' : isMobile ? '17px' : '20px',
       color: '#b8c8d6',
       align: 'center',
+      wordWrap: { width: isPortraitMobile ? width - 64 : width - (isMobile ? 220 : 360) },
     }).setOrigin(0.5)
 
-    this.detailText = this.add.text(width / 2, isPortraitMobile ? safeTop + 250 : 330, '', {
+    this.detailText = this.add.text(width / 2, layout.detailY, '', {
       fontFamily: 'Outfit',
-      fontSize: isPortraitMobile ? '17px' : isMobile ? '20px' : '23px',
+      fontSize: isPortraitMobile ? '16px' : isMobile ? '18px' : '23px',
       color: '#edf4fb',
       align: 'center',
-      lineSpacing: 8,
-      wordWrap: { width: width - (isMobile ? 120 : 460) },
+      lineSpacing: isPortraitMobile ? 5 : 8,
+      wordWrap: { width: isPortraitMobile ? width - 74 : width - (isMobile ? 160 : 460) },
     }).setOrigin(0.5)
 
     const [leftUnit, rightUnit] = this.presentation.units
-    const leftX = isPortraitMobile ? width / 2 : Math.max(160, width * 0.24)
-    const rightX = isPortraitMobile ? width / 2 : width - Math.max(160, width * 0.24)
-    const leftY = isPortraitMobile ? height * 0.44 : panelY + 34
-    const rightY = isPortraitMobile ? height * 0.76 : panelY + 34
 
     if (leftUnit) {
       this.cards.set(
         leftUnit.unitId,
-        this.createCombatantCard(leftUnit, leftX, leftY, this.resolveUnitAccent(leftUnit.unitId)),
+        this.createCombatantCard(leftUnit, layout.leftX, layout.leftY, this.resolveUnitAccent(leftUnit.unitId)),
       )
     }
 
     if (rightUnit) {
       this.cards.set(
         rightUnit.unitId,
-        this.createCombatantCard(rightUnit, rightX, rightY, this.resolveUnitAccent(rightUnit.unitId)),
+        this.createCombatantCard(rightUnit, layout.rightX, layout.rightY, this.resolveUnitAccent(rightUnit.unitId)),
       )
     }
 
     this.fxGraphics = this.add.graphics()
     this.flashGraphics = this.add.graphics().setBlendMode(Phaser.BlendModes.SCREEN)
 
-    const skip = this.add.text(width - 120, height - safeBottom - 50, this.i18n.t('duel.skip'), {
+    const skip = this.add.text(layout.skipX, layout.controlsY, this.i18n.t('duel.skip'), {
       fontFamily: 'Outfit',
       fontSize: isMobile ? '16px' : '18px',
       color: '#f9f2dc',
       backgroundColor: '#203445',
       padding: { x: 14, y: 8 },
-    })
+    }).setOrigin(0.5)
     skip.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.finish())
 
-    const fast = this.add.text(width - 232, height - safeBottom - 50, this.i18n.t('duel.fast'), {
+    const fast = this.add.text(layout.fastX, layout.controlsY, this.i18n.t('duel.fast'), {
       fontFamily: 'Outfit',
       fontSize: isMobile ? '16px' : '18px',
       color: '#f9f2dc',
       backgroundColor: '#3d2b24',
       padding: { x: 14, y: 8 },
-    })
+    }).setOrigin(0.5)
     fast.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
       this.fastMode = !this.fastMode
       fast.setText(this.fastMode ? `${this.i18n.t('duel.fast')} x3` : this.i18n.t('duel.fast'))
@@ -323,19 +320,21 @@ export class DuelScene extends Phaser.Scene {
     }
 
     if (!this.accessibilityPreferences.reducedMotion) {
+      const motionScale = this.viewportProfile.layoutMode === 'desktop' ? 1 : 0.72
+
       if (step.cameraCue === 'impact-heavy') {
-        this.cameras.main.shake(110, 0.0035)
+        this.cameras.main.shake(110, 0.0035 * motionScale)
         this.cameras.main.flash(80, 255, 244, 214, false)
       } else if (step.cameraCue === 'impact-light') {
-        this.cameras.main.shake(70, 0.002)
+        this.cameras.main.shake(70, 0.002 * motionScale)
         this.cameras.main.flash(55, 210, 230, 255, false)
       } else if (step.cameraCue === 'support-pulse') {
         this.cameras.main.flash(75, 196, 255, 236, false)
       } else if (step.cameraCue === 'counter-jolt') {
-        this.cameras.main.shake(90, 0.0028)
+        this.cameras.main.shake(90, 0.0028 * motionScale)
         this.cameras.main.flash(60, 255, 222, 210, false)
       } else if (step.cameraCue === 'defeat-drop') {
-        this.cameras.main.shake(130, 0.0038)
+        this.cameras.main.shake(130, 0.0038 * motionScale)
         this.cameras.main.flash(95, 255, 232, 188, false)
       }
     }
@@ -397,15 +396,18 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private resolveImpactScale(weight: CombatPresentation['steps'][number]['impactWeight']): number {
+    const viewportScale = this.viewportProfile.layoutMode === 'desktop' ? 1 : 0.88
+    const motionScale = this.accessibilityPreferences.reducedMotion ? 0.72 : 1
+
     switch (weight) {
       case 'light':
-        return 0.92
+        return 0.92 * viewportScale * motionScale
       case 'medium':
-        return 1
+        return viewportScale * motionScale
       case 'heavy':
-        return 1.2
+        return 1.2 * viewportScale * motionScale
       case 'finisher':
-        return 1.35
+        return 1.35 * viewportScale * motionScale
     }
   }
 
@@ -522,44 +524,53 @@ export class DuelScene extends Phaser.Scene {
     const unit = this.resolution?.state.units[snapshot.unitId]
     const className = unit ? this.i18n.t(classDefinitions[unit.classId].nameKey) : ''
     const glowColor = Phaser.Display.Color.HexStringToColor(accent).color
+    const layout = resolveDuelLayout({
+      width: this.scale.width,
+      height: this.scale.height,
+      viewportProfile: this.viewportProfile,
+    })
 
-    const glow = this.add.rectangle(x, y, 290, 230, glowColor, 0.08).setStrokeStyle(0, glowColor, 0)
-    const panel = this.add.rectangle(x, y, 270, 210, 0x0b151d, 0.96).setStrokeStyle(2, 0x466175)
-    const token = this.add.circle(x, y - 40, 52, glowColor, 0.92)
-    this.add.circle(x, y - 44, 36, 0x162230, 0.34)
-    this.add.text(x, y - 45, className.slice(0, 2).toUpperCase(), {
+    const glow = this.add
+      .rectangle(x, y, layout.glowWidth, layout.glowHeight, glowColor, 0.08)
+      .setStrokeStyle(0, glowColor, 0)
+    const panel = this.add
+      .rectangle(x, y, layout.cardWidth, layout.cardHeight, 0x0b151d, 0.96)
+      .setStrokeStyle(2, 0x466175)
+    const token = this.add.circle(x, y + layout.tokenOffsetY, layout.tokenRadius, glowColor, 0.92)
+    this.add.circle(x, y + layout.tokenOffsetY - 4, Math.round(layout.tokenRadius * 0.7), 0x162230, 0.34)
+    this.add.text(x, y + layout.tokenOffsetY - 5, className.slice(0, 2).toUpperCase(), {
       fontFamily: 'Cinzel',
-      fontSize: '26px',
+      fontSize: this.viewportProfile.layoutMode === 'mobile-portrait' ? '20px' : '26px',
       color: '#f8f0d9',
       fontStyle: '700',
     }).setOrigin(0.5)
 
-    const nameText = this.add.text(x, y + 30, unit ? this.i18n.t(unit.nameKey) : snapshot.unitId, {
+    const nameText = this.add.text(x, y + (this.viewportProfile.layoutMode === 'mobile-portrait' ? 18 : 30), unit ? this.i18n.t(unit.nameKey) : snapshot.unitId, {
       fontFamily: 'Outfit',
-      fontSize: '24px',
+      fontSize: this.viewportProfile.layoutMode === 'mobile-portrait' ? '20px' : '24px',
       color: '#ffffff',
       fontStyle: '700',
     }).setOrigin(0.5)
 
-    const classText = this.add.text(x, y + 62, className, {
+    const classText = this.add.text(x, y + (this.viewportProfile.layoutMode === 'mobile-portrait' ? 44 : 62), className, {
       fontFamily: 'Outfit',
-      fontSize: '16px',
+      fontSize: this.viewportProfile.layoutMode === 'mobile-portrait' ? '14px' : '16px',
       color: '#b7c8d7',
     }).setOrigin(0.5)
 
-    const hpText = this.add.text(x, y + 98, '', {
+    const hpText = this.add.text(x, y + (this.viewportProfile.layoutMode === 'mobile-portrait' ? 70 : 98), '', {
       fontFamily: 'Outfit',
-      fontSize: '18px',
+      fontSize: this.viewportProfile.layoutMode === 'mobile-portrait' ? '16px' : '18px',
       color: '#f4efe3',
       fontStyle: '600',
     }).setOrigin(0.5)
 
-    const statusText = this.add.text(x, y + 132, '', {
+    const statusText = this.add.text(x, y + (this.viewportProfile.layoutMode === 'mobile-portrait' ? 96 : 132), '', {
       fontFamily: 'Outfit',
-      fontSize: '15px',
+      fontSize: this.viewportProfile.layoutMode === 'mobile-portrait' ? '13px' : '15px',
       color: '#9eb3c4',
       align: 'center',
-      wordWrap: { width: 220 },
+      wordWrap: { width: layout.statusWrapWidth },
     }).setOrigin(0.5)
 
     return {
@@ -572,7 +583,7 @@ export class DuelScene extends Phaser.Scene {
       statusText,
       accentColor: glowColor,
       tokenBaseX: x,
-      tokenBaseY: y - 40,
+      tokenBaseY: y + layout.tokenOffsetY,
     }
   }
 

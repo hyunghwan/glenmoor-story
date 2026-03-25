@@ -20,6 +20,24 @@ describe('responsive battle presentation', () => {
 
     expect(
       resolveViewportProfile({
+        width: 707,
+        height: 463,
+        coarsePointer: false,
+        safeArea: { top: 0, right: 0, bottom: 0, left: 0 },
+      }).layoutMode,
+    ).toBe('desktop')
+
+    expect(
+      resolveViewportProfile({
+        width: 620,
+        height: 844,
+        coarsePointer: false,
+        safeArea: { top: 0, right: 0, bottom: 0, left: 0 },
+      }).layoutMode,
+    ).toBe('mobile-portrait')
+
+    expect(
+      resolveViewportProfile({
         width: 390,
         height: 844,
         coarsePointer: true,

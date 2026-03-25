@@ -3,7 +3,7 @@ import { TILE_HEIGHT, TILE_WIDTH, resolveBoardOrigin } from './iso'
 import type { AccessibilityPreferences, SafeAreaInsets, ViewportProfile } from './types'
 
 export const ACCESSIBILITY_STORAGE_KEY = 'glenmoor:accessibility-preferences'
-export const MOBILE_LAYOUT_BREAKPOINT = 960
+export const NARROW_FINE_POINTER_MOBILE_BREAKPOINT = 640
 const MOBILE_PORTRAIT_BATTLEFIELD_RATIO = 0.58
 const MIN_MOBILE_BATTLEFIELD_HEIGHT = 340
 const BASE_TILE_STEP_DISTANCE = Math.hypot(TILE_WIDTH / 2, TILE_HEIGHT / 2)
@@ -16,7 +16,7 @@ export function resolveViewportProfile(args: {
 }): ViewportProfile {
   const { width, height, coarsePointer, safeArea } = args
   const orientation = width >= height ? 'landscape' : 'portrait'
-  const mobile = coarsePointer || width < MOBILE_LAYOUT_BREAKPOINT
+  const mobile = coarsePointer || width < NARROW_FINE_POINTER_MOBILE_BREAKPOINT
 
   return {
     layoutMode: mobile ? (orientation === 'portrait' ? 'mobile-portrait' : 'mobile-landscape') : 'desktop',

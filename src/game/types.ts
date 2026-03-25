@@ -540,6 +540,7 @@ export interface AiScoredAction {
 export interface HudActionButton {
   id: string
   label: string
+  shortLabel?: string
   disabled: boolean
   active: boolean
 }
@@ -693,6 +694,16 @@ export interface BottomStatusLineViewModel {
   phaseLabel: string
 }
 
+export interface MobileHudPresentationViewModel {
+  panelState: 'collapsed' | 'expanded'
+  actionDockVisible: boolean
+  initiativeMode: 'hidden' | 'compact' | 'full'
+  commandDensity: 'default' | 'compact-2row'
+  overflowOpen: boolean
+  objectiveExpanded: boolean
+  targetDetailMode: 'summary' | 'detail'
+}
+
 export interface HudViewModel {
   locale: Locale
   phase: BattleState['phase']
@@ -700,6 +711,7 @@ export interface HudViewModel {
   layoutMode: BattleLayoutMode
   viewportProfile: ViewportProfile
   accessibilityState: AccessibilityPreferences
+  mobilePresentation?: MobileHudPresentationViewModel
   activeUnitPanel?: ActiveUnitPanelViewModel
   actionMenu?: ActionMenuViewModel
   initiativeRail: InitiativeRailViewModel

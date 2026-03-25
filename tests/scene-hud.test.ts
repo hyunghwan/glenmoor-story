@@ -3,11 +3,20 @@ import {
   buildAccessibleOptionsModel,
   buildActionMenuModel,
   buildObjectivePhaseProgressLabel,
+  resolveMobileHudPresentation,
 } from '../src/game/scenes/battle/scene-hud'
 
 const t = (key: string, params?: Record<string, string | number>): string => {
   if (key === 'hud.phaseObjective') {
     return `${params?.current}/${params?.total}`
+  }
+
+  if (key === 'hud.action.attackShort') {
+    return 'Atk'
+  }
+
+  if (key === 'hud.action.back') {
+    return 'Back'
   }
 
   return key
@@ -35,6 +44,8 @@ describe('battle scene HUD helpers', () => {
     expect(menu?.anchor?.preferredPlacement).toBe('above-right')
     expect(menu?.buttons.find((button) => button.id === 'attack')?.disabled).toBe(true)
     expect(menu?.buttons.find((button) => button.id === 'skill')?.active).toBe(true)
+    expect(menu?.buttons.find((button) => button.id === 'attack')?.shortLabel).toBe('Atk')
+    expect(menu?.buttons.find((button) => button.id === 'cancel')?.shortLabel).toBe('Back')
   })
 
   it('formats objective progress and accessible move options from pure HUD state', () => {
@@ -81,5 +92,37 @@ describe('battle scene HUD helpers', () => {
         kind: 'tile',
       },
     ])
+  })
+
+  it('defaults mobile HUD to collapsed with compact initiative and closed disclosures', () => {
+    const presentation = resolveMobileHudPresentation({
+      layoutMode: 'mobile-portrait',
+      viewportWidth: 390,
+      mode: 'move',
+      hasActionMenu: true,
+      hasTargetDetail: true,
+    })
+
+    expect(presentation).toEqual({
+      panelState: 'collapsed',
+      actionDockVisible: true,
+      initiativeMode: 'compact',
+      commandDensity: 'compact-2row',
+      overflowOpen: false,
+      objectiveExpanded: false,
+      targetDetailMode: 'detail',
+    })
+  })
+
+  it('keeps tablet portrait mobile HUD on default command density', () => {
+    const presentation = resolveMobileHudPresentation({
+      layoutMode: 'mobile-portrait',
+      viewportWidth: 768,
+      mode: 'move',
+      hasActionMenu: true,
+      hasTargetDetail: false,
+    })
+
+    expect(presentation?.commandDensity).toBe('default')
   })
 })

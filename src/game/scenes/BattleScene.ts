@@ -50,6 +50,7 @@ import {
   buildTargetMarkersModel,
   buildViewControlsModel,
   createCombatTextContext as createSceneCombatTextContext,
+  resolveMobileHudPresentation as resolveSceneMobileHudPresentation,
   resolveTargetDetailPlacement as resolveSceneTargetDetailPlacement,
   resolveUnitPresentation as resolveSceneUnitPresentation,
 } from './battle/scene-hud'
@@ -352,13 +353,19 @@ export class BattleScene extends Phaser.Scene {
 
   private handleScaleResize(): void {
     this.applyCameraView(false)
+
+    if (this.runtime && this.viewportProfile.layoutMode !== 'desktop') {
+      const active = this.runtime.getActiveUnit()
+      this.focusCameraOnPoint(active.position)
+      this.lastCameraFocusUnitId = active.id
+    }
+
     this.refreshPresentation()
   }
 
   private handleViewportProfileUpdate(profile: ViewportProfile): void {
     this.viewportProfile = profile
     this.viewState.zoom = resolveDefaultZoom(profile)
-    this.applyCameraView(true)
     this.refreshPresentation()
   }
 
@@ -2139,6 +2146,8 @@ export class BattleScene extends Phaser.Scene {
 
     const active = this.runtime.getActiveUnit()
     const combatText = this.createCombatTextContext()
+    const actionMenu = this.buildActionMenu(active)
+    const targetDetail = this.buildTargetDetail()
     const latestMessage = this.runtime.state.messages[0]
       ? formatBattleFeedEntry(this.runtime.state.messages[0], combatText)
       : this.i18n.t(`hud.mode.${this.mode}`)
@@ -2150,8 +2159,15 @@ export class BattleScene extends Phaser.Scene {
       layoutMode: this.viewportProfile.layoutMode,
       viewportProfile: this.viewportProfile,
       accessibilityState: this.accessibilityPreferences,
+      mobilePresentation: resolveSceneMobileHudPresentation({
+        layoutMode: this.viewportProfile.layoutMode,
+        viewportWidth: this.viewportProfile.width,
+        mode: this.mode,
+        hasActionMenu: Boolean(actionMenu),
+        hasTargetDetail: Boolean(targetDetail),
+      }),
       activeUnitPanel: this.buildActiveUnitPanel(active),
-      actionMenu: this.buildActionMenu(active),
+      actionMenu,
       initiativeRail: {
         label: this.i18n.t('hud.initiative'),
         currentTurnLabel: this.i18n.t('hud.initiative.now'),
@@ -2170,7 +2186,7 @@ export class BattleScene extends Phaser.Scene {
         ),
       },
       targetMarkers: this.buildTargetMarkers(),
-      targetDetail: this.buildTargetDetail(),
+      targetDetail,
       viewControls: this.buildViewControls(),
       accessiblePanel: this.buildAccessiblePanel(active, latestMessage),
       statusLine: {
@@ -2381,7 +2397,7 @@ export class BattleScene extends Phaser.Scene {
       return undefined
     }
 
-    const presentation = this.viewportProfile.layoutMode === 'mobile-portrait' ? 'sheet' : 'anchored'
+    const presentation = this.viewportProfile.layoutMode === 'desktop' ? 'anchored' : 'sheet'
     const anchor =
       presentation === 'anchored'
         ? this.buildUnitAnchor(
@@ -2440,6 +2456,13 @@ export class BattleScene extends Phaser.Scene {
         skill: this.i18n.t('hud.action.skill'),
         wait: this.i18n.t('hud.action.wait'),
         cancel: this.i18n.t('hud.action.cancel'),
+      },
+      shortLabels: {
+        move: this.i18n.t('hud.action.move'),
+        attack: this.i18n.t('hud.action.attackShort'),
+        skill: this.i18n.t('hud.action.skill'),
+        wait: this.i18n.t('hud.action.wait'),
+        cancel: this.i18n.t('hud.action.back'),
       },
     })
   }

@@ -218,6 +218,42 @@ The canonical implementation log lives in `docs/progress.md`.
   - regenerated fresh QA evidence under `output/web-game/playthrough/` and `output/web-game/hud-polish/`
 - Verification completed:
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+
+## 2026-03-25
+
+- Tightened the phone portrait battle HUD:
+  - added `mobilePresentation.commandDensity` and phone-only `compact-2row` command dock behavior for `mobile-portrait` widths `<= 430`
+  - command buttons now carry optional `shortLabel` values so the phone dock can render `Move / Atk / Skill / Wait / Back` without changing desktop or accessibility labels
+  - slimmed the phone initiative strip and forced the mobile dock to stay inside the bottom shell with `width: 100%` / `min-width: 0`
+- Restored full-height mobile battlefield rendering:
+  - `mobile-portrait` `game-frame` now fills from safe-top to the bottom of the viewport instead of stopping at the old reduced battlefield height
+  - manual iPhone 12 capture confirms the black gap under the map is gone and the dock stays inside the viewport
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --click-selector '[data-command="start-battle"]' --iterations 1 --pause-ms 250`
+  - manual Playwright iPhone 12 capture saved to `output/web-game/mobile-accessibility/iphone12-portrait-battle-manual.png`
+- Remaining QA note:
+  - `npm run qa:mobile` still fails its existing `48px` touch-target assertion because the mobile top controls and compact dock buttons are intentionally `44px` tall in the current UI pass
+- Follow-up mobile input quality pass completed:
+  - raised mobile top controls, objective toggle, locale buttons, and compact dock buttons to `48px` touch targets
+  - restored a direct mobile assistive-controls entry point so `qa:mobile` can open the accessibility panel without routing through overflow first
+  - kept the current `full-height battlefield + compact initiative strip + 3x2 command dock` structure while tightening topbar gaps to preserve fit on `390px` portrait
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:camera`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:mobile`
+- Initiative strip readability follow-up completed:
+  - loosened the phone portrait compact initiative strip by increasing container padding, chip gap, chip size, internal padding, and token / label sizing
+  - preserved the single-row scroll strip and the `3x2` command dock layout while allowing slightly fewer units to fit per viewport
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:mobile`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:hud`
   - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 250`
 - Completed the terrain-reaction readability pass without expanding the prototype beyond one battle
@@ -310,3 +346,19 @@ The canonical implementation log lives in `docs/progress.md`.
   - `npm run build`
   - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4173 npm run qa:playthrough`
   - `node "$CODEX_HOME/skills/develop-web-game/scripts/web_game_playwright_client.js" --url http://127.0.0.1:4173 --actions-file scripts/qa/smoke-actions.json --iterations 1 --pause-ms 500 --screenshot-dir output/web-game/smoke-clean`
+
+## 2026-03-25
+
+- Polished the desktop battle HUD without regressing the new mobile layout:
+  - rebuilt the desktop status line into a clearer tag + objective hierarchy, then added short-height compaction so `1280x720` stays within HUD occupancy limits
+  - tightened the short-height active card and initiative rail so desktop QA still passes after the visual refresh
+- Cleaned up initiative icon presentation across desktop and mobile:
+  - split initiative tokens into an icon plate plus initials label instead of stacking everything inside one tiny badge
+  - re-centered HUD SVG icons so combat role glyphs stop sitting low inside initiative tokens
+- Verification completed:
+  - `npm test`
+  - `npm run build`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:hud`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:playthrough`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:mobile`
+  - `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4174 npm run qa:camera`
