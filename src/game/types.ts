@@ -230,6 +230,7 @@ export interface UnitBlueprint {
   classId: string
   team: Team
   position: GridPoint
+  facing?: Direction
   aiProfileId: string
   startingHp?: number
 }

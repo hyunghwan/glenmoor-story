@@ -1,0 +1,872 @@
+{
+  "version": 1,
+  "id": "glenmoorPass",
+  "slug": "glenmoor-pass",
+  "meta": {
+    "author": "Codex",
+    "description": "Seed level bundle migrated from the Glenmoor Pass tactical battle.",
+    "tags": [
+      "seed",
+      "tactics",
+      "vertical-slice"
+    ]
+  },
+  "text": {
+    "ko": {
+      "title": "글렌무어 협곡 전투",
+      "objective": "전장의 적을 모두 섬멸하라.",
+      "briefing": "베이르 대장이 방패 부대로 글렌무어 나루의 도하선을 틀어막았고, 하류에서는 예비대의 뿔나팔이 모여든다. 그들이 협곡을 봉쇄하기 전에 도하선을 돌파하라.",
+      "victory": "베이르 대장이 쓰러지고 예비대의 뿔나팔도 꺾였다. 글렌무어 나루는 다시 우리의 것이다.",
+      "defeat": "예비대의 압박에 도하선이 무너졌다. 글렌무어는 적의 깃발 아래 침묵한다.",
+      "units": {
+        "rowan": "로완",
+        "elira": "엘리라",
+        "sable": "세이블",
+        "maelin": "마엘린",
+        "osric": "오스릭",
+        "talia": "탈리아",
+        "brigandCaptain": "베이르 대장",
+        "huntmaster": "늪지 사냥대장",
+        "hexbinder": "주술 결박사",
+        "shieldbearer": "방패병",
+        "cutpurse": "소매치기",
+        "fanatic": "재의 광신도",
+        "fordStalker": "나루 추격병",
+        "roadReaver": "대로 약탈자"
+      },
+      "phases": {
+        "break-the-line": {
+          "objective": "글렌무어 나루의 도하선을 지키는 방패대를 돌파하라."
+        },
+        "hunt-the-captain": {
+          "objective": "나루 너머에서 예비대의 뿔나팔이 울린다. 도하선이 닫히기 전에 베이르 대장을 쓰러뜨려라.",
+          "announcement": "나루 너머에서 예비대의 뿔나팔이 울린다. 베이르 대장이 모습을 드러냈다.",
+          "victory": "예비대의 포위가 닫히기 전에 베이르 대장을 베어냈다. 글렌무어는 다시 숨을 쉬고 도하선은 열렸다.",
+          "defeat": "예비대의 뿔나팔이 나루를 에워쌌고, 글렌무어는 도하선에서 협공에 짓눌렸다."
+        }
+      }
+    },
+    "en": {
+      "title": "Skirmish at Glenmoor Pass",
+      "objective": "Rout every enemy on the field.",
+      "briefing": "Captain Veyr has locked the ford crossing behind a shielded guard while reserve horns gather downriver. Break the crossing before he can regroup and seal the pass.",
+      "victory": "Captain Veyr is down, the reserve horn is broken, and Glenmoor Ford is ours again.",
+      "defeat": "The crossing collapsed under the reserve push. Glenmoor falls silent beneath enemy banners.",
+      "units": {
+        "rowan": "Rowan",
+        "elira": "Elira",
+        "sable": "Sable",
+        "maelin": "Maelin",
+        "osric": "Osric",
+        "talia": "Talia",
+        "brigandCaptain": "Captain Veyr",
+        "huntmaster": "Mire Huntmaster",
+        "hexbinder": "Hexbinder",
+        "shieldbearer": "Shieldbearer",
+        "cutpurse": "Cutpurse",
+        "fanatic": "Ash Fanatic",
+        "fordStalker": "Ford Stalker",
+        "roadReaver": "Road Reaver"
+      },
+      "phases": {
+        "break-the-line": {
+          "objective": "Break the crossing guard at Glenmoor Ford."
+        },
+        "hunt-the-captain": {
+          "objective": "Reserve horns sound beyond the ford. Strike down Captain Veyr before the crossing closes.",
+          "announcement": "Reserve horns are sounding beyond the ford. Captain Veyr is exposed.",
+          "victory": "Veyr fell before the reserve trap could close. Glenmoor breathes again, and the ford stands open.",
+          "defeat": "The reserve horn closed around the ford, and Glenmoor was crushed at the crossing."
+        }
+      }
+    }
+  },
+  "map": {
+    "width": 16,
+    "height": 16,
+    "tileWidth": 64,
+    "tileHeight": 32,
+    "terrain": [
+      [
+        "forest",
+        "forest",
+        "forest",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "stone",
+        "stone",
+        "stone",
+        "forest",
+        "forest",
+        "forest",
+        "forest"
+      ],
+      [
+        "forest",
+        "forest",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "stone",
+        "stone",
+        "stone",
+        "forest",
+        "forest",
+        "forest",
+        "forest",
+        "forest"
+      ],
+      [
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "stone",
+        "stone",
+        "stone",
+        "ruins",
+        "ruins",
+        "forest",
+        "forest",
+        "forest",
+        "grass"
+      ],
+      [
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "road",
+        "stone",
+        "stone",
+        "ruins",
+        "ruins",
+        "ruins",
+        "stone",
+        "forest",
+        "grass",
+        "grass"
+      ],
+      [
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "stone",
+        "stone",
+        "ruins",
+        "stone",
+        "stone",
+        "stone",
+        "grass",
+        "grass",
+        "grass"
+      ],
+      [
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "stone",
+        "stone",
+        "stone",
+        "stone",
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ],
+      [
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "water",
+        "water",
+        "water",
+        "stone",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ],
+      [
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "water",
+        "bridge",
+        "bridge",
+        "water",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ],
+      [
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "water",
+        "bridge",
+        "bridge",
+        "stone",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ],
+      [
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass"
+      ],
+      [
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass"
+      ],
+      [
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass"
+      ],
+      [
+        "grass",
+        "grass",
+        "forest",
+        "forest",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "grass"
+      ],
+      [
+        "grass",
+        "forest",
+        "forest",
+        "forest",
+        "forest",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "forest",
+        "forest"
+      ],
+      [
+        "forest",
+        "forest",
+        "forest",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "forest",
+        "forest",
+        "forest"
+      ],
+      [
+        "forest",
+        "forest",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "grass",
+        "road",
+        "road",
+        "grass",
+        "grass",
+        "grass",
+        "forest",
+        "forest",
+        "forest",
+        "forest"
+      ]
+    ],
+    "elevation": [
+      [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        2
+      ],
+      [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        2
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        2,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    ]
+  },
+  "units": {
+    "allies": [
+      {
+        "id": "rowan",
+        "classId": "vanguard",
+        "position": {
+          "x": 5,
+          "y": 10
+        },
+        "facing": "north",
+        "aiProfileId": "spearhead"
+      },
+      {
+        "id": "elira",
+        "classId": "ranger",
+        "position": {
+          "x": 3,
+          "y": 10
+        },
+        "facing": "north",
+        "aiProfileId": "artillery"
+      },
+      {
+        "id": "sable",
+        "classId": "skirmisher",
+        "position": {
+          "x": 7,
+          "y": 10
+        },
+        "facing": "north",
+        "aiProfileId": "opportunist"
+      },
+      {
+        "id": "maelin",
+        "classId": "arcanist",
+        "position": {
+          "x": 5,
+          "y": 11
+        },
+        "facing": "north",
+        "aiProfileId": "tactician"
+      },
+      {
+        "id": "osric",
+        "classId": "warden",
+        "position": {
+          "x": 4,
+          "y": 11
+        },
+        "facing": "north",
+        "aiProfileId": "bulwark"
+      },
+      {
+        "id": "talia",
+        "classId": "cleric",
+        "position": {
+          "x": 6,
+          "y": 12
+        },
+        "facing": "north",
+        "aiProfileId": "cantor"
+      }
+    ],
+    "enemies": [
+      {
+        "id": "brigandCaptain",
+        "classId": "vanguard",
+        "position": {
+          "x": 8,
+          "y": 7
+        },
+        "facing": "south",
+        "aiProfileId": "spearhead",
+        "startingHp": 24
+      },
+      {
+        "id": "huntmaster",
+        "classId": "ranger",
+        "position": {
+          "x": 12,
+          "y": 5
+        },
+        "facing": "south",
+        "aiProfileId": "artillery",
+        "startingHp": 18
+      },
+      {
+        "id": "hexbinder",
+        "classId": "arcanist",
+        "position": {
+          "x": 10,
+          "y": 5
+        },
+        "facing": "south",
+        "aiProfileId": "tactician",
+        "startingHp": 16
+      },
+      {
+        "id": "shieldbearer",
+        "classId": "warden",
+        "position": {
+          "x": 10,
+          "y": 6
+        },
+        "facing": "south",
+        "aiProfileId": "bulwark",
+        "startingHp": 26
+      },
+      {
+        "id": "cutpurse",
+        "classId": "skirmisher",
+        "position": {
+          "x": 11,
+          "y": 8
+        },
+        "facing": "south",
+        "aiProfileId": "opportunist",
+        "startingHp": 18
+      },
+      {
+        "id": "fanatic",
+        "classId": "cleric",
+        "position": {
+          "x": 9,
+          "y": 5
+        },
+        "facing": "south",
+        "aiProfileId": "cantor",
+        "startingHp": 21
+      }
+    ]
+  },
+  "objective": {
+    "initialPhaseId": "break-the-line",
+    "phases": [
+      {
+        "id": "break-the-line",
+        "victoryConditions": [
+          {
+            "type": "defeat-unit",
+            "unitId": "shieldbearer"
+          }
+        ]
+      },
+      {
+        "id": "hunt-the-captain",
+        "announcementCueId": "phase-shift",
+        "victoryConditions": [
+          {
+            "type": "defeat-unit",
+            "unitId": "brigandCaptain"
+          }
+        ]
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "shieldbearer-falls",
+      "trigger": {
+        "type": "unit-defeated",
+        "unitId": "shieldbearer",
+        "objectivePhaseId": "break-the-line"
+      },
+      "effects": [
+        {
+          "type": "set-objective-phase",
+          "objectivePhaseId": "hunt-the-captain"
+        },
+        {
+          "type": "deploy-unit",
+          "unit": {
+            "id": "fordStalker",
+            "team": "enemies",
+            "classId": "ranger",
+            "position": {
+              "x": 14,
+              "y": 8
+            },
+            "facing": "west",
+            "aiProfileId": "artillery",
+            "startingHp": 18
+          }
+        },
+        {
+          "type": "deploy-unit",
+          "unit": {
+            "id": "roadReaver",
+            "team": "enemies",
+            "classId": "skirmisher",
+            "position": {
+              "x": 13,
+              "y": 10
+            },
+            "facing": "west",
+            "aiProfileId": "opportunist",
+            "startingHp": 19
+          }
+        }
+      ]
+    }
+  ]
+}

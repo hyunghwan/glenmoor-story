@@ -50,6 +50,9 @@ Open the local Vite URL in your browser, or skip local setup and use the live de
 - `npm run qa:hud`: run HUD layout and target-preview QA coverage
 - `npm run qa:mobile`: run responsive/mobile accessibility QA coverage
 - `npm run asset-workbench:dev`: start the optional asset workbench workspace
+- `npm run level-editor:dev`: start the Photoshop-style level editor workspace
+- `npm run level-editor:build`: build the level editor workspace
+- `npm run level-editor:test`: run the level editor helper tests
 
 ## Repo structure
 
@@ -59,6 +62,7 @@ Open the local Vite URL in your browser, or skip local setup and use the live de
 - `scripts/qa/`: browser QA scripts and automation helpers
 - `docs/`: public documentation, architecture notes, QA inventory, asset attribution, and internal history
 - `tools/asset-workbench/`: optional companion workspace for reviewing visual asset replacements
+- `tools/level-editor/`: Photoshop-style level authoring workspace for maps, units, objectives, events, and playtest preview
 
 ## Docs
 
@@ -66,6 +70,14 @@ Open the local Vite URL in your browser, or skip local setup and use the live de
 - [Architecture overview](docs/architecture.md)
 - [QA inventory](docs/qa-inventory.md)
 - [Asset replacement and attribution manifest](docs/assets/asset-replacement-manifest.md)
+
+## Level editor
+
+The repository now includes a dedicated level editor workspace in [tools/level-editor](tools/level-editor/).
+
+- The editor saves single-file level bundles to `public/data/levels/<slug>.level.json`
+- The bundled `glenmoor-pass.level.json` file is the migrated seed battle for editing and sharing
+- Inline playtest reuses the tactical runtime, and `Open Preview` / `Open Saved` can launch the main game runtime with the current bundle
 
 The repository also keeps internal planning and progress notes for historical context:
 

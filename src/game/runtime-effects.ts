@@ -187,7 +187,7 @@ export function createUnitState(blueprint: UnitBlueprint, deploymentIndex: numbe
     classId: blueprint.classId,
     team: blueprint.team,
     position: clonePoint(blueprint.position),
-    facing: blueprint.team === 'allies' ? 'north' : 'south',
+    facing: blueprint.facing ?? (blueprint.team === 'allies' ? 'north' : 'south'),
     hp: startingHp,
     statuses: [],
     nextActAt: initiative,

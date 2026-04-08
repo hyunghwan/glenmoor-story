@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "workspaces": [
-    "tools/asset-workbench"
+    "tools/asset-workbench",
+    "tools/level-editor"
   ],
   "type": "module",
   "scripts": {
@@ -16,6 +17,10 @@
     "asset-workbench:build": "npm run build --workspace @glenmoor/asset-workbench",
     "asset-workbench:preview": "npm run preview --workspace @glenmoor/asset-workbench",
     "asset-workbench:test": "npm run test --workspace @glenmoor/asset-workbench",
+    "level-editor:dev": "npm run dev --workspace @glenmoor/level-editor",
+    "level-editor:build": "npm run build --workspace @glenmoor/level-editor",
+    "level-editor:preview": "npm run preview --workspace @glenmoor/level-editor",
+    "level-editor:test": "npm run test --workspace @glenmoor/level-editor",
     "assets:comfy:generate": "node scripts/assets/generate-comfy-master-workflows.mjs",
     "assets:comfy:init": "node scripts/assets/generate-comfy-master-workflows.mjs && node scripts/assets/init-comfy-pipeline.mjs",
     "qa:hud": "node scripts/qa/hud-polish.mjs",

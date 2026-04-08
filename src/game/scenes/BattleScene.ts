@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import type { BattleSession } from '../battle-session'
 import {
   BATTLE_DRAG_THRESHOLD_PX,
   clampBattleZoom,
@@ -137,6 +138,7 @@ interface PinchState {
 export class BattleScene extends Phaser.Scene {
   private readonly uiBus: Phaser.Events.EventEmitter
   private readonly i18n: I18n
+  private readonly session: BattleSession
   private readonly getViewportProfile: () => ViewportProfile
   private readonly getAccessibilityPreferences: () => AccessibilityPreferences
   private runtime?: BattleRuntime
@@ -203,12 +205,14 @@ export class BattleScene extends Phaser.Scene {
   constructor(
     uiBus: Phaser.Events.EventEmitter,
     i18n: I18n,
+    session: BattleSession,
     getViewportProfile: () => ViewportProfile,
     getAccessibilityPreferences: () => AccessibilityPreferences,
   ) {
     super('battle')
     this.uiBus = uiBus
     this.i18n = i18n
+    this.session = session
     this.getViewportProfile = getViewportProfile
     this.getAccessibilityPreferences = getAccessibilityPreferences
     this.viewportProfile = getViewportProfile()
@@ -218,8 +222,8 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     this.viewportProfile = this.getViewportProfile()
     this.accessibilityPreferences = this.getAccessibilityPreferences()
-    this.mapData = this.cache.json.get('map:glenmoor-pass') as TiledMapData
-    this.runtime = new BattleRuntime(this.mapData)
+    this.mapData = structuredClone(this.session.mapData)
+    this.runtime = new BattleRuntime(this.mapData, structuredClone(this.session.battleDefinition))
     this.resetViewState()
     this.registerBattlefieldInput()
     this.input.addPointer(2)

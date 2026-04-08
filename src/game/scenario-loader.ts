@@ -97,6 +97,7 @@ function parseUnitBlueprint(value: unknown, path: string): UnitBlueprint {
     classId: expectString(record.classId, `${path}.classId`),
     team: expectTeam(record.team, `${path}.team`),
     position: parsePoint(record.position, `${path}.position`),
+    facing: optionalDirection(record.facing, `${path}.facing`),
     aiProfileId: expectString(record.aiProfileId, `${path}.aiProfileId`),
     startingHp: record.startingHp === undefined ? undefined : expectInteger(record.startingHp, `${path}.startingHp`),
   }

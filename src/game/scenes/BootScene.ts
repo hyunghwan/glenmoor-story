@@ -6,7 +6,6 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.json('map:glenmoor-pass', 'data/maps/glenmoor-pass.json')
     this.load.image('duel:backdrop', 'assets/textures/parchment_background.jpg')
     this.load.audio('music:battle', 'assets/audio/music/cynic_battle_loop.ogg')
     this.load.audio('sfx:confirm', 'assets/audio/sfx/confirm.ogg')

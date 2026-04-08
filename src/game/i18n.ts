@@ -1,6 +1,7 @@
 import type { Locale } from './types'
 
 type Bundle = Record<string, string>
+export type I18nBundleOverlay = Partial<Record<Locale, Bundle>>
 
 const bundles: Record<Locale, Bundle> = {
   en: {
@@ -375,9 +376,11 @@ const bundles: Record<Locale, Bundle> = {
 
 export class I18n {
   private locale: Locale
+  private overlays: I18nBundleOverlay
 
-  constructor(initialLocale: Locale) {
+  constructor(initialLocale: Locale, overlays: I18nBundleOverlay = {}) {
     this.locale = initialLocale
+    this.overlays = overlays
   }
 
   getLocale(): Locale {
@@ -388,9 +391,18 @@ export class I18n {
     this.locale = locale
   }
 
+  setOverlays(overlays: I18nBundleOverlay): void {
+    this.overlays = overlays
+  }
+
   t(key: string, params?: Record<string, string | number>): string {
     const bundle = bundles[this.locale]
-    let template = bundle[key] ?? bundles.en[key] ?? key
+    let template =
+      this.overlays[this.locale]?.[key] ??
+      bundle[key] ??
+      this.overlays.en?.[key] ??
+      bundles.en[key] ??
+      key
 
     for (const [paramKey, value] of Object.entries(params ?? {})) {
       template = template.replaceAll(`{${paramKey}}`, String(value))

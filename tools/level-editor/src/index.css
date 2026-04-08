@@ -1,0 +1,586 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --panel: #151515;
+  --panel-elevated: #1d1d1b;
+  --panel-soft: #23231f;
+  --line: rgba(206, 173, 102, 0.16);
+  --line-strong: rgba(206, 173, 102, 0.3);
+  --text: #f2ebda;
+  --text-muted: rgba(242, 235, 218, 0.68);
+  --amber: #cead66;
+  --amber-soft: rgba(206, 173, 102, 0.16);
+  --danger: #db8d84;
+  --success: #95c8b2;
+  --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  --bottom-panel-height: 260px;
+  font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(206, 173, 102, 0.1) 0%, rgba(206, 173, 102, 0) 28%),
+    radial-gradient(circle at top right, rgba(82, 70, 42, 0.24) 0%, rgba(82, 70, 42, 0) 22%),
+    linear-gradient(180deg, #121212 0%, #090909 100%);
+  color: var(--text);
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--line-strong);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.6rem 0.72rem;
+  background: #111;
+}
+
+textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+code,
+pre {
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.editor-shell {
+  display: grid;
+  height: 100vh;
+  min-height: 100vh;
+  grid-template-rows: auto minmax(0, 1fr) 12px var(--bottom-panel-height);
+  overflow: hidden;
+}
+
+.editor-option-bar {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 0.34rem;
+  padding: 0.42rem 0.55rem;
+  border-bottom: 1px solid var(--line);
+  background: rgba(7, 7, 7, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.option-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.option-bar-row--top {
+  justify-content: space-between;
+}
+
+.option-bar-row--bottom {
+  padding-top: 0.28rem;
+  border-top: 1px solid rgba(206, 173, 102, 0.12);
+  overflow-x: auto;
+}
+
+.option-bar-top-main {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.brand-block p,
+.brand-block h1,
+.topbar-meta {
+  margin: 0;
+}
+
+.brand-block p,
+.editor-menu-label,
+.stage-header p,
+.card-heading p {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.62rem;
+  color: var(--amber);
+}
+
+.brand-block h1 {
+  font-size: 1.05rem;
+}
+
+.brand-block--compact {
+  min-width: 118px;
+}
+
+.topbar-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.topbar-meta--compact {
+  padding: 0.1rem 0.2rem;
+}
+
+.editor-menu-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 0.7rem;
+  border-right: 1px solid var(--line);
+}
+
+.editor-menu-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.editor-menu-actions button,
+.inline-actions button {
+  padding: 0.32rem 0.56rem;
+  font-size: 0.82rem;
+}
+
+.menu-helper {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.editor-body {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 320px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-toolbar,
+.editor-sidebar,
+.editor-stage-frame,
+.bottom-panel,
+.sidebar-card {
+  background: linear-gradient(180deg, rgba(35, 35, 31, 0.92) 0%, rgba(18, 18, 18, 0.96) 100%);
+  box-shadow: var(--shadow);
+}
+
+.editor-toolbar {
+  padding: 0.32rem;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 0.28rem;
+}
+
+.tool-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  position: relative;
+  background: linear-gradient(180deg, #21211f 0%, #131313 100%);
+}
+
+.tool-button svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.tool-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  padding: 0.34rem 0.5rem;
+  border: 1px solid rgba(206, 173, 102, 0.34);
+  background: rgba(10, 10, 10, 0.96);
+  color: var(--text);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  z-index: 20;
+}
+
+.tool-button:hover::after,
+.tool-button:focus-visible::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.tool-button.is-active,
+.panel-tab.is-active,
+.list-item.is-active,
+.terrain-swatch.is-active {
+  border-color: rgba(206, 173, 102, 0.5);
+  background: linear-gradient(180deg, rgba(206, 173, 102, 0.22) 0%, rgba(206, 173, 102, 0.08) 100%);
+}
+
+.editor-stage-stack {
+  min-width: 0;
+  min-height: 0;
+  display: block;
+  padding: 0.45rem;
+}
+
+.editor-stage-frame,
+.bottom-panel,
+.editor-sidebar {
+  border: 1px solid var(--line);
+}
+
+.editor-stage-frame {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.stage-header,
+.card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.55rem 0.7rem 0;
+}
+
+.stage-header strong,
+.card-heading strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.stage-header-tags {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.stage-header-tags span {
+  border: 1px solid var(--line);
+  padding: 0.2rem 0.34rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+}
+
+.editor-canvas {
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.bottom-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  margin: 0 0.45rem 0.45rem;
+}
+
+.bottom-panel-resize-handle {
+  margin: 0 0.45rem;
+  position: relative;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.bottom-panel-resize-handle::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--line);
+  transform: translateY(-50%);
+}
+
+.bottom-panel-resize-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 72px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(206, 173, 102, 0.22);
+  border: 1px solid rgba(206, 173, 102, 0.26);
+  transform: translate(-50%, -50%);
+}
+
+.bottom-panel-resize-handle:hover::after {
+  background: rgba(206, 173, 102, 0.34);
+}
+
+.editor-shell.is-resizing-bottom-panel {
+  user-select: none;
+  cursor: ns-resize;
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.45rem 0.55rem 0;
+}
+
+.panel-tab {
+  padding: 0.34rem 0.58rem;
+  font-size: 0.78rem;
+}
+
+.bottom-panel-content,
+.sidebar-panel {
+  padding: 0.65rem;
+  overflow: auto;
+}
+
+.validation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.validation-grid section,
+.playtest-toolbar,
+.nested-card,
+.sidebar-card,
+.bundle-preview {
+  border: 1px solid var(--line);
+  background: rgba(10, 10, 10, 0.54);
+}
+
+.validation-grid section,
+.nested-card,
+.sidebar-card {
+  padding: 0.7rem;
+}
+
+.bundle-preview {
+  padding: 0.7rem;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow: auto;
+  color: #ddd3bf;
+}
+
+.playtest-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.55rem;
+  min-height: 0;
+}
+
+.playtest-toolbar {
+  display: flex;
+  gap: 0.55rem;
+  align-items: end;
+  padding: 0.55rem;
+}
+
+.playtest-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid var(--line);
+  background: #070707;
+}
+
+.history-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.history-panel li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  background: rgba(9, 9, 9, 0.58);
+}
+
+.history-panel small {
+  color: var(--text-muted);
+}
+
+.editor-sidebar {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.4rem;
+  padding-bottom: 0.45rem;
+}
+
+.sidebar-panel {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.field-stack,
+.list-stack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.field span,
+.layer-row span {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.list-item {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.55rem 0.62rem;
+}
+
+.list-item small {
+  color: var(--text-muted);
+}
+
+.layer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.terrain-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.terrain-swatch {
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+  padding: 0.62rem;
+  border-left: 4px solid var(--swatch-color);
+}
+
+.terrain-swatch small {
+  color: var(--text-muted);
+}
+
+.resize-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.editor-options-bar .field {
+  min-width: 92px;
+}
+
+.option-bar-row--bottom input,
+.option-bar-row--bottom select,
+.option-bar-row--bottom textarea {
+  padding: 0.42rem 0.5rem;
+  font-size: 0.82rem;
+}
+
+.option-bar-row--bottom .field {
+  min-width: 86px;
+}
+
+.editor-sidebar input,
+.editor-sidebar select,
+.editor-sidebar textarea,
+.editor-sidebar button,
+.bottom-panel input,
+.bottom-panel select,
+.bottom-panel textarea,
+.bottom-panel button {
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1400px) {
+  .editor-body {
+    grid-template-columns: 52px minmax(0, 1fr) 280px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .editor-body {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .editor-sidebar {
+    grid-column: 1 / -1;
+  }
+}

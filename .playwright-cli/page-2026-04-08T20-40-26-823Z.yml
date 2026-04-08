@@ -1,0 +1,185 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - paragraph [ref=e7]: Glenmoor Story
+        - heading "Level Editor" [level=1] [ref=e8]
+      - generic [ref=e9]:
+        - generic [ref=e10]: File
+        - generic [ref=e11]:
+          - button "Import" [ref=e12] [cursor=pointer]
+          - button "Save" [ref=e13] [cursor=pointer]
+          - button "Load" [ref=e14] [cursor=pointer]
+      - generic [ref=e15]:
+        - generic [ref=e16]: Edit
+        - generic [ref=e17]:
+          - button "Undo" [disabled] [ref=e18]
+          - button "Redo" [disabled] [ref=e19]
+          - button "Reset" [ref=e20] [cursor=pointer]
+      - generic [ref=e21]:
+        - generic [ref=e22]: Panels
+        - generic [ref=e23]:
+          - button "Layers" [ref=e24] [cursor=pointer]
+          - button "JSON" [ref=e25] [cursor=pointer]
+          - button "History" [ref=e26] [cursor=pointer]
+      - generic [ref=e27]:
+        - generic [ref=e28]: Level
+        - generic [ref=e29]:
+          - button "Phase" [ref=e30] [cursor=pointer]
+          - button "Event" [ref=e31] [cursor=pointer]
+          - button "Deploy" [ref=e32] [cursor=pointer]
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]: glenmoor-pass
+        - strong [ref=e36]: idle
+      - generic [ref=e37]:
+        - generic [ref=e38]: Brush
+        - slider "Brush" [ref=e39]: "1"
+      - generic [ref=e40]:
+        - generic [ref=e41]: Terrain
+        - combobox "Terrain" [ref=e42]:
+          - option "grass" [selected]
+          - option "road"
+          - option "forest"
+          - option "water"
+          - option "stone"
+          - option "bridge"
+          - option "ruins"
+      - generic [ref=e43]:
+        - generic [ref=e44]: Height
+        - combobox "Height" [ref=e45]:
+          - option "+1" [selected]
+          - option "+2"
+          - option "-1"
+      - generic [ref=e46]:
+        - generic [ref=e47]: Team
+        - combobox "Team" [ref=e48]:
+          - option "allies" [selected]
+          - option "enemies"
+      - generic [ref=e49]:
+        - generic [ref=e50]: Class
+        - combobox "Class" [ref=e51]:
+          - option "vanguard" [selected]
+          - option "ranger"
+          - option "arcanist"
+          - option "warden"
+          - option "skirmisher"
+          - option "cleric"
+      - generic [ref=e52]:
+        - generic [ref=e53]: AI
+        - combobox "AI" [ref=e54]:
+          - option "spearhead" [selected]
+          - option "artillery"
+          - option "tactician"
+          - option "bulwark"
+          - option "opportunist"
+          - option "cantor"
+      - generic [ref=e55]:
+        - generic [ref=e56]: Facing
+        - combobox "Facing" [ref=e57]:
+          - option "north" [selected]
+          - option "east"
+          - option "south"
+          - option "west"
+  - generic [ref=e58]:
+    - complementary [ref=e59]:
+      - button "Move (V)" [ref=e60] [cursor=pointer]:
+        - img [ref=e61]
+      - button "Select (S)" [pressed] [ref=e63] [cursor=pointer]:
+        - img [ref=e64]
+      - button "Terrain Brush (T)" [ref=e66] [cursor=pointer]:
+        - img [ref=e67]
+      - button "Height Brush (H)" [ref=e69] [cursor=pointer]:
+        - img [ref=e70]
+      - button "Unit Stamp (U)" [ref=e72] [cursor=pointer]:
+        - img [ref=e73]
+      - button "Erase (E)" [ref=e75] [cursor=pointer]:
+        - img [ref=e76]
+      - button "Eyedropper (I)" [ref=e78] [cursor=pointer]:
+        - img [ref=e79]
+      - button "Marquee (M)" [ref=e81] [cursor=pointer]:
+        - img [ref=e82]
+      - button "Hand (Space)" [ref=e85] [cursor=pointer]:
+        - img [ref=e86]
+      - button "Zoom (Z)" [ref=e88] [cursor=pointer]:
+        - img [ref=e89]
+    - generic [ref=e93]:
+      - generic [ref=e94]:
+        - paragraph [ref=e95]: Canvas Stage
+        - strong [ref=e96]: 16 x 16 tactical board
+      - generic [ref=e97]:
+        - generic [ref=e98]: glenmoorPass
+        - generic [ref=e99]: valid
+    - complementary [ref=e102]:
+      - tablist [ref=e103]:
+        - button "Inspector" [ref=e104] [cursor=pointer]
+        - button "Layers" [ref=e105] [cursor=pointer]
+        - button "Library" [ref=e106] [cursor=pointer]
+      - generic [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - paragraph [ref=e110]: Status
+            - strong [ref=e111]: Seed bundle loaded.
+          - paragraph [ref=e112]: "Workspace: not connected"
+          - paragraph [ref=e113]: "Save path: public/data/levels/glenmoor-pass.level.json"
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - paragraph [ref=e116]: Phases
+            - button "Add" [ref=e117] [cursor=pointer]
+          - generic [ref=e118]:
+            - button "break-the-line 글렌무어 나루의 도하선을 지키는 방패대를 돌파하라." [ref=e119] [cursor=pointer]:
+              - strong [ref=e120]: break-the-line
+              - generic [ref=e121]: 글렌무어 나루의 도하선을 지키는 방패대를 돌파하라.
+            - button "hunt-the-captain 나루 너머에서 예비대의 뿔나팔이 울린다. 도하선이 닫히기 전에 베이르 대장을 쓰러뜨려라." [ref=e122] [cursor=pointer]:
+              - strong [ref=e123]: hunt-the-captain
+              - generic [ref=e124]: 나루 너머에서 예비대의 뿔나팔이 울린다. 도하선이 닫히기 전에 베이르 대장을 쓰러뜨려라.
+        - generic [ref=e125]:
+          - generic [ref=e126]:
+            - paragraph [ref=e127]: Events
+            - generic [ref=e128]:
+              - button "Phase" [ref=e129] [cursor=pointer]
+              - button "Deploy" [ref=e130] [cursor=pointer]
+          - button "shieldbearer-falls unit-defeated" [ref=e132] [cursor=pointer]:
+            - strong [ref=e133]: shieldbearer-falls
+            - generic [ref=e134]: unit-defeated
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - paragraph [ref=e137]: Selection
+            - strong [ref=e138]: level
+          - generic [ref=e139]:
+            - generic [ref=e140]:
+              - generic [ref=e141]: Level Id
+              - textbox "Level Id" [ref=e142]: glenmoorPass
+            - generic [ref=e143]:
+              - generic [ref=e144]: Slug
+              - textbox "Slug" [ref=e145]: glenmoor-pass
+            - generic [ref=e146]:
+              - generic [ref=e147]: Korean Title
+              - textbox "Korean Title" [ref=e148]: 글렌무어 협곡 전투
+            - generic [ref=e149]:
+              - generic [ref=e150]: English Title
+              - textbox "English Title" [ref=e151]: Skirmish at Glenmoor Pass
+            - generic [ref=e152]:
+              - generic [ref=e153]: Korean Briefing
+              - textbox "Korean Briefing" [ref=e154]: 베이르 대장이 방패 부대로 글렌무어 나루의 도하선을 틀어막았고, 하류에서는 예비대의 뿔나팔이 모여든다. 그들이 협곡을 봉쇄하기 전에 도하선을 돌파하라.
+            - generic [ref=e155]:
+              - generic [ref=e156]:
+                - generic [ref=e157]: Map Width
+                - spinbutton "Map Width" [ref=e158]: "16"
+              - generic [ref=e159]:
+                - generic [ref=e160]: Map Height
+                - spinbutton "Map Height" [ref=e161]: "16"
+            - button "Apply Map Resize" [ref=e162] [cursor=pointer]
+  - generic [ref=e163]:
+    - tablist [ref=e164]:
+      - button "Validation" [ref=e165] [cursor=pointer]
+      - button "Playtest" [ref=e166] [cursor=pointer]
+      - button "Bundle JSON" [ref=e167] [cursor=pointer]
+      - button "History" [ref=e168] [cursor=pointer]
+    - generic [ref=e170]:
+      - generic [ref=e171]:
+        - heading "Errors" [level=3] [ref=e172]
+        - paragraph [ref=e173]: No blocking errors.
+      - generic [ref=e174]:
+        - heading "Warnings" [level=3] [ref=e175]
+        - paragraph [ref=e176]: No warnings.

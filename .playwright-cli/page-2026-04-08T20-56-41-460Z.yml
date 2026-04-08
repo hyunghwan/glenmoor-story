@@ -1,0 +1,197 @@
+- main [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - paragraph [ref=e8]: Glenmoor Story
+          - heading "Level Editor" [level=1] [ref=e9]
+        - generic [ref=e10]:
+          - generic [ref=e11]: File
+          - generic [ref=e12]:
+            - button "Import" [ref=e13] [cursor=pointer]
+            - button "Save" [ref=e14] [cursor=pointer]
+            - button "Load" [ref=e15] [cursor=pointer]
+        - generic [ref=e16]:
+          - generic [ref=e17]: Edit
+          - generic [ref=e18]:
+            - button "Undo" [disabled] [ref=e19]
+            - button "Redo" [disabled] [ref=e20]
+            - button "Reset" [ref=e21] [cursor=pointer]
+        - generic [ref=e22]:
+          - generic [ref=e23]: Panels
+          - generic [ref=e24]:
+            - button "Layers" [ref=e25] [cursor=pointer]
+            - button "JSON" [ref=e26] [cursor=pointer]
+            - button "History" [ref=e27] [cursor=pointer]
+        - generic [ref=e28]:
+          - generic [ref=e29]: Level
+          - generic [ref=e30]:
+            - button "Phase" [ref=e31] [cursor=pointer]
+            - button "Event" [ref=e32] [cursor=pointer]
+            - button "Deploy" [ref=e33] [cursor=pointer]
+      - generic [ref=e34]:
+        - generic [ref=e35]: glenmoor-pass
+        - strong [ref=e36]: idle
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]: Brush
+        - slider "Brush" [ref=e40]: "1"
+      - generic [ref=e41]:
+        - generic [ref=e42]: Terrain
+        - combobox "Terrain" [ref=e43]:
+          - option "grass" [selected]
+          - option "road"
+          - option "forest"
+          - option "water"
+          - option "stone"
+          - option "bridge"
+          - option "ruins"
+      - generic [ref=e44]:
+        - generic [ref=e45]: Height
+        - combobox "Height" [ref=e46]:
+          - option "+1" [selected]
+          - option "+2"
+          - option "-1"
+      - generic [ref=e47]:
+        - generic [ref=e48]: Team
+        - combobox "Team" [ref=e49]:
+          - option "allies" [selected]
+          - option "enemies"
+      - generic [ref=e50]:
+        - generic [ref=e51]: Class
+        - combobox "Class" [ref=e52]:
+          - option "vanguard" [selected]
+          - option "ranger"
+          - option "arcanist"
+          - option "warden"
+          - option "skirmisher"
+          - option "cleric"
+      - generic [ref=e53]:
+        - generic [ref=e54]: AI
+        - combobox "AI" [ref=e55]:
+          - option "spearhead" [selected]
+          - option "artillery"
+          - option "tactician"
+          - option "bulwark"
+          - option "opportunist"
+          - option "cantor"
+      - generic [ref=e56]:
+        - generic [ref=e57]: Facing
+        - combobox "Facing" [ref=e58]:
+          - option "north" [selected]
+          - option "east"
+          - option "south"
+          - option "west"
+  - generic [ref=e59]:
+    - complementary [ref=e60]:
+      - button "Move (V)" [ref=e61] [cursor=pointer]:
+        - img [ref=e62]
+        - text: Move [V]
+      - button "Select (S)" [pressed] [ref=e64] [cursor=pointer]:
+        - img [ref=e65]
+        - text: Select [S]
+      - button "Terrain Brush (T)" [ref=e67] [cursor=pointer]:
+        - img [ref=e68]
+        - text: Terrain Brush [T]
+      - button "Height Brush (H)" [ref=e70] [cursor=pointer]:
+        - img [ref=e71]
+        - text: Height Brush [H]
+      - button "Unit Stamp (U)" [ref=e73] [cursor=pointer]:
+        - img [ref=e74]
+        - text: Unit Stamp [U]
+      - button "Erase (E)" [ref=e76] [cursor=pointer]:
+        - img [ref=e77]
+        - text: Erase [E]
+      - button "Eyedropper (I)" [ref=e79] [cursor=pointer]:
+        - img [ref=e80]
+        - text: Eyedropper [I]
+      - button "Marquee (M)" [ref=e82] [cursor=pointer]:
+        - img [ref=e83]
+        - text: Marquee [M]
+      - button "Pan (Space)" [ref=e86] [cursor=pointer]:
+        - img [ref=e87]
+        - text: Pan [Space]
+      - button "Zoom (Z)" [ref=e89] [cursor=pointer]:
+        - img [ref=e90]
+        - text: Zoom [Z]
+    - generic [ref=e94]:
+      - generic [ref=e95]:
+        - paragraph [ref=e96]: Canvas Stage
+        - strong [ref=e97]: 16 x 16 tactical board
+      - generic [ref=e98]:
+        - generic [ref=e99]: glenmoorPass
+        - generic [ref=e100]: valid
+    - complementary [ref=e103]:
+      - tablist [ref=e104]:
+        - button "Inspector" [ref=e105] [cursor=pointer]
+        - button "Layers" [ref=e106] [cursor=pointer]
+        - button "Library" [ref=e107] [cursor=pointer]
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - paragraph [ref=e111]: Status
+            - strong [ref=e112]: Seed bundle loaded.
+          - paragraph [ref=e113]: "Workspace: not connected"
+          - paragraph [ref=e114]: "Save path: public/data/levels/glenmoor-pass.level.json"
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - paragraph [ref=e117]: Phases
+            - button "Add" [ref=e118] [cursor=pointer]
+          - generic [ref=e119]:
+            - button "break-the-line 글렌무어 나루의 도하선을 지키는 방패대를 돌파하라." [ref=e120] [cursor=pointer]:
+              - strong [ref=e121]: break-the-line
+              - generic [ref=e122]: 글렌무어 나루의 도하선을 지키는 방패대를 돌파하라.
+            - button "hunt-the-captain 나루 너머에서 예비대의 뿔나팔이 울린다. 도하선이 닫히기 전에 베이르 대장을 쓰러뜨려라." [ref=e123] [cursor=pointer]:
+              - strong [ref=e124]: hunt-the-captain
+              - generic [ref=e125]: 나루 너머에서 예비대의 뿔나팔이 울린다. 도하선이 닫히기 전에 베이르 대장을 쓰러뜨려라.
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - paragraph [ref=e128]: Events
+            - generic [ref=e129]:
+              - button "Phase" [ref=e130] [cursor=pointer]
+              - button "Deploy" [ref=e131] [cursor=pointer]
+          - button "shieldbearer-falls unit-defeated" [ref=e133] [cursor=pointer]:
+            - strong [ref=e134]: shieldbearer-falls
+            - generic [ref=e135]: unit-defeated
+        - generic [ref=e136]:
+          - generic [ref=e137]:
+            - paragraph [ref=e138]: Selection
+            - strong [ref=e139]: level
+          - generic [ref=e140]:
+            - generic [ref=e141]:
+              - generic [ref=e142]: Level Id
+              - textbox "Level Id" [ref=e143]: glenmoorPass
+            - generic [ref=e144]:
+              - generic [ref=e145]: Slug
+              - textbox "Slug" [ref=e146]: glenmoor-pass
+            - generic [ref=e147]:
+              - generic [ref=e148]: Korean Title
+              - textbox "Korean Title" [ref=e149]: 글렌무어 협곡 전투
+            - generic [ref=e150]:
+              - generic [ref=e151]: English Title
+              - textbox "English Title" [ref=e152]: Skirmish at Glenmoor Pass
+            - generic [ref=e153]:
+              - generic [ref=e154]: Korean Briefing
+              - textbox "Korean Briefing" [ref=e155]: 베이르 대장이 방패 부대로 글렌무어 나루의 도하선을 틀어막았고, 하류에서는 예비대의 뿔나팔이 모여든다. 그들이 협곡을 봉쇄하기 전에 도하선을 돌파하라.
+            - generic [ref=e156]:
+              - generic [ref=e157]:
+                - generic [ref=e158]: Map Width
+                - spinbutton "Map Width" [ref=e159]: "16"
+              - generic [ref=e160]:
+                - generic [ref=e161]: Map Height
+                - spinbutton "Map Height" [ref=e162]: "16"
+            - button "Apply Map Resize" [ref=e163] [cursor=pointer]
+  - separator "Resize bottom panel" [ref=e164]
+  - generic [ref=e165]:
+    - tablist [ref=e166]:
+      - button "Validation" [ref=e167] [cursor=pointer]
+      - button "Playtest" [ref=e168] [cursor=pointer]
+      - button "Bundle JSON" [ref=e169] [cursor=pointer]
+      - button "History" [ref=e170] [cursor=pointer]
+    - generic [ref=e172]:
+      - generic [ref=e173]:
+        - heading "Errors" [level=3] [ref=e174]
+        - paragraph [ref=e175]: No blocking errors.
+      - generic [ref=e176]:
+        - heading "Warnings" [level=3] [ref=e177]
+        - paragraph [ref=e178]: No warnings.
